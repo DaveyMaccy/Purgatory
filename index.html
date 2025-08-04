@@ -7,6 +7,19 @@
   <title>Office Purgatory Simulator</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
+    /* DEBUG STYLES */
+    button {
+      outline: 2px solid red !important;
+      position: relative;
+      z-index: 9999 !important;
+    }
+    #start-menu, #character-creation, #options-menu {
+      outline: 2px dashed lime !important;
+    }
+    .hidden {
+      display: none !important;
+    }
+    
     @keyframes pan {
       0% { transform: translateX(0%); }
       100% { transform: translateX(-50%); }
