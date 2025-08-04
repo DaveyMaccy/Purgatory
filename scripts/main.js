@@ -9,7 +9,7 @@ import PromptTracker from './game/prompttracker.js';
 
 class Game {
     constructor() {
-        this.elements = this.queryDOMElements();
+        this.elements = {};
         this.gameState = new GameState();
         this.debugSystem = new DebugSystem(this.gameState);
         this.chatSystem = new ChatSystem(this.gameState, this.debugSystem, OfficeCharacter);
@@ -23,6 +23,7 @@ class Game {
 
     async initialize() {
         console.log('[Main] Initializing game...');
+        this.elements = this.queryDOMElements();
         if (!this.validateDOMElements()) return;
 
         await this.loadOfficeData();
