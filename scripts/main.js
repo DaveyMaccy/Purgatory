@@ -452,7 +452,5 @@ class Game {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const game = new Game();
-    game.initialize();
-});
+// Export Game class for global access
+window.Game = Game;
