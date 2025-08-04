@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Office Purgatory Simulator</title>
   <link rel="stylesheet" href="/Purgatory/styles/main.css">
   <style>
@@ -39,6 +40,7 @@
       animation: pan 30s linear infinite;
       z-index: -1;
       opacity: 0.8;
+      will-change: transform;
     }
     
     .menu-content {
@@ -218,7 +220,7 @@
   <!-- Hidden file input -->
   <input type="file" id="file-input" accept=".json" hidden>
   
-  <script src="/Purgatory/scripts/main.js" defer></script>
+  <script src="/Purgatory/scripts/main.js" type="module" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       if (typeof Game === 'function') {
