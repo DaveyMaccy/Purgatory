@@ -1,11 +1,11 @@
-import GameState from '/Purgatory/scripts/game/gamestate.js';
-import OfficeCharacter from '/Purgatory/scripts/game/character.js';
-import CanvasRenderer from '/Purgatory/scripts/graphics/canvasrenderer.js';
-import ChatSystem from '/Purgatory/scripts/ui/chatsystem.js';
-import DebugSystem from '/Purgatory/scripts/game/debugsystem.js';
-import SaveSystem from '/Purgatory/scripts/game/savestate.js';
-import AISystem from '/Purgatory/scripts/game/ai_system.js';
-import PromptTracker from '/Purgatory/scripts/game/prompttracker.js';
+import GameState from './game/gamestate.js';
+import OfficeCharacter from './game/character.js';
+import CanvasRenderer from './graphics/canvasrenderer.js';
+import ChatSystem from './ui/chatsystem.js';
+import DebugSystem from './game/debugsystem.js';
+import SaveSystem from './game/savestate.js';
+import AISystem from './game/ai_system.js';
+import PromptTracker from './game/prompttracker.js';
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
