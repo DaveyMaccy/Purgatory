@@ -1,14 +1,51 @@
-import GameState from './game/gamestate.js';
-import OfficeCharacter from './game/character.js';
-import CanvasRenderer from './graphics/canvasrenderer.js';
-import ChatSystem from './ui/chatsystem.js';
-import DebugSystem from './game/debugsystem.js';
-import SaveSystem from './game/savestate.js';
-import AISystem from './game/ai_system.js';
-import PromptTracker from './game/prompttracker.js';
+console.log('[Main] Starting script execution');
 
 // Wait for DOM to be fully loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[Main] DOM fully loaded, starting initialization');
+
+  try {
+    // Verify all required modules are loaded
+    const requiredModules = {
+      GameState: './game/gamestate.js',
+      OfficeCharacter: './game/character.js', 
+      CanvasRenderer: './graphics/canvasrenderer.js',
+      ChatSystem: './ui/chatsystem.js',
+      DebugSystem: './game/debugsystem.js',
+      SaveSystem: './game/savestate.js',
+      AISystem: './game/ai_system.js',
+      PromptTracker: './game/prompttracker.js'
+    };
+
+    // Dynamically check all imports
+    await Promise.all(Object.entries(requiredModules).map(async ([name, path]) => {
+      const module = await import(path);
+      if (!module[name]) {
+        throw new Error(`Module ${name} not found in ${path}`);
+      }
+      window[name] = module[name]; // Make available globally for debugging
+      console.log(`[Main] Successfully loaded ${name} from ${path}`);
+    }));
+
+    console.log('[Main] All modules loaded successfully');
+  } catch (error) {
+    console.error('[Main] Critical module loading error:', error);
+    alert('Failed to load required game modules. See console for details.');
+    return;
+  }
+
+  // Verify critical DOM elements exist before proceeding
+  const requiredElementIds = ['start-menu', 'game-container', 'new-game-btn', 'office-background'];
+  const missingElements = requiredElementIds.filter(id => !document.getElementById(id));
+  
+  if (missingElements.length > 0) {
+    const errorMsg = `Missing required DOM elements: ${missingElements.join(', ')}`;
+    console.error('[Main]', errorMsg);
+    alert(errorMsg);
+    return;
+  }
+  
+  console.log('[Main] All required DOM elements found');
   // Initialize office background
   const bgCanvas = document.getElementById('office-background');
   if (bgCanvas) {
@@ -109,17 +146,16 @@ const elements = {
   characterDetails: document.getElementById('character-details')
 };
 
-// Validate required elements
-const requiredElements = [
+// Validate required UI elements in elements object
+const requiredElementKeys = [
   'startMenu', 'gameContainer', 'newGameBtn', 'loadGameBtn',
   'optionsBtn', 'addCharacterBtn', 'startSimulationBtn'
 ];
 
-requiredElements.forEach(key => {
-  if (!elements[key]) {
-    console.error(`Missing required element: ${key}`);
-  }
-});
+const missingUIElements = requiredElementKeys.filter(key => !elements[key]);
+if (missingUIElements.length > 0) {
+  console.error('[Main] Missing UI elements in elements object:', missingUIElements);
+}
 
 // Initialize character counter
 let characterCount = 0;
