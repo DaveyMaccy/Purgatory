@@ -3,32 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Office-a Purgatory Simulator</title>
+  <title>Office Purgatory Simulator</title>
   <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-  <div id="game-container">
-    <div id="office-map" class="grid-layout"></div>
+  <div id="start-menu" class="glass-panel">
+    <h1>OFFICE PURGATORY</h1>
     
-    <div id="character-panel">
-      <div id="character-stats"></div>
-      <div id="inventory"></div>
+    <div class="menu-section">
+      <h2>Office Type</h2>
+      <select id="office-type">
+        <option value="startup">Startup</option>
+        <option value="corporate">Corporate</option>
+        <option value="agency">Creative Agency</option>
+      </select>
     </div>
     
-    <div id="chat-system">
-      <div id="chat-box"></div>
-      <input 
-        id="chat-input" 
-        type="text" 
-        placeholder="Type action or message..."
-        aria-label="Game command input"
-      >
+    <div class="menu-actions">
+      <button id="new-game-btn">New Game</button>
+      <button id="load-game-btn">Load Game</button>
+      <input type="file" id="save-file-input" accept=".json" hidden>
+    </div>
+  </div>
+  
+  <div id="game-container" class="hidden">
+    <div id="game-header">
+      <div id="game-title">OFFICE PURGATORY</div>
+      <div id="game-controls">
+        <button id="api-toggle">API: ON</button>
+        <button id="export-save">Export Save</button>
+        <button id="import-save">Import Save</button>
+        <button id="debug-toggle">Debug Mode</button>
+      </div>
     </div>
     
-    <div id="control-panel">
-      <button id="api-toggle">API: ON</button>
-      <button id="save-game">Save Game</button>
-      <button id="task-view">View Tasks</button>
+    <div id="office-map-container">
+      <canvas id="game-canvas"></canvas>
+      <div id="debug-overlay"></div>
+    </div>
+    
+    <div id="game-ui">
+      <div id="character-panel" class="glass-panel">
+        <div id="character-stats"></div>
+        <div id="inventory"></div>
+      </div>
+      
+      <div id="chat-system" class="glass-panel">
+        <div id="chat-box"></div>
+        <div id="chat-input-container">
+          <input 
+            id="chat-input" 
+            type="text" 
+            placeholder="Type action or message..."
+            aria-label="Game command input"
+          >
+          <button id="send-btn">➤</button>
+        </div>
+      </div>
     </div>
   </div>
 
