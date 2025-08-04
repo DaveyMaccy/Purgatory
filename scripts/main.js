@@ -452,5 +452,8 @@ class Game {
     }
 }
 
-// Export Game class for global access
-window.Game = Game;
+// Initialize game when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    const game = new Game();
+    game.initialize();
+});
