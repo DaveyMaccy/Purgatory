@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       CanvasRenderer: './graphics/canvasrenderer.js',
       ChatSystem: './ui/chatsystem.js',
       DebugSystem: './game/debugsystem.js',
-      SaveSystem: './game/savestate.js',
+      SaveSystem: './game/savestate.js', 
       AISystem: './game/ai_system.js',
       PromptTracker: './game/prompttracker.js'
     };
