@@ -1,9 +1,3 @@
-import GameState from './game/gamestate.js';
-import OfficeCharacter from './game/character.js';
-import CanvasRenderer from './graphics/canvasrenderer.js';
-import ChatSystem from './ui/chatsystem.js';
-import DebugSystem from './game/debugsystem.js';
-import SaveSystem from './game/savestate.js';
 
 // Initialize game state
 const gameState = new GameState();
