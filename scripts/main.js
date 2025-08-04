@@ -41,6 +41,14 @@ export class Game {
         this.canvasRenderer = null;
         this.characterCount = 0;
         this.eventListeners = [];
+
+        // Bind all methods to ensure proper 'this' context
+        this.addCharacter = this.addCharacter.bind(this);
+        this.startSimulation = this.startSimulation.bind(this);
+        this.backToMenu = this.backToMenu.bind(this);
+        this.saveSettings = this.saveSettings.bind(this);
+        this.toggleGameMenu = this.toggleGameMenu.bind(this);
+        this.sendChatMessage = this.sendChatMessage.bind(this);
     }
 
     async initialize() {
@@ -55,16 +63,28 @@ export class Game {
 
             await this.loadOfficeData();
             
-            // Initialize background renderer
+            // Initialize background renderer with proper timing
+            await new Promise(resolve => setTimeout(resolve, 100)); // Ensure DOM is ready
+            
             try {
-                this.canvasRenderer = new CanvasRenderer(this.gameState, this.debugSystem);
-                if (!this.canvasRenderer.canvas) {
+                const canvas = document.getElementById('game-canvas');
+                if (!canvas) {
                     throw new Error('Canvas element not found');
                 }
-                console.log('[Main] Background renderer initialized');
+                
+                // Verify canvas is properly sized
+                canvas.width = canvas.parentElement.clientWidth || 800;
+                canvas.height = canvas.parentElement.clientHeight || 600;
+                
+                this.canvasRenderer = new CanvasRenderer(this.gameState, this.debugSystem);
+                
+                // Verify textures loaded
+                await this.canvasRenderer.preloadAssets();
+                console.log('[Main] Background renderer initialized successfully');
             } catch (error) {
-                console.error('[Main] Failed to initialize background:', error);
-                alert('Background initialization failed. Using fallback styles.');
+                console.error('[Main] Background initialization failed:', error);
+                // Silent fallback to CSS background
+                document.body.classList.add('fallback-bg');
             }
 
             this.setupCoreButtons();
@@ -159,6 +179,49 @@ export class Game {
         // Hide start menu, show options
         this.elements.startMenu.classList.add('hidden');
         this.elements.optionsMenu.classList.remove('hidden');
+    }
+
+    addCharacter() {
+        console.log('[Game] Adding character');
+        // Create new character and add to game state
+        const char = new OfficeCharacter(`Employee ${++this.characterCount}`);
+        this.gameState.addCharacter(char);
+    }
+
+    startSimulation() {
+        console.log('[Game] Starting simulation');
+        // Hide character creation, show game
+        this.elements.characterCreation.classList.add('hidden');
+        this.elements.gameContainer.classList.remove('hidden');
+        this.gameState.startSimulation();
+    }
+
+    backToMenu() {
+        console.log('[UI] Returning to main menu');
+        // Hide options, show start menu
+        this.elements.optionsMenu.classList.add('hidden');
+        this.elements.startMenu.classList.remove('hidden');
+    }
+
+    saveSettings() {
+        console.log('[UI] Saving settings');
+        // Save current settings
+        this.gameState.saveSettings();
+    }
+
+    toggleGameMenu() {
+        console.log('[UI] Toggling game menu');
+        // Toggle game menu visibility
+        this.elements.gameMenu.classList.toggle('hidden');
+    }
+
+    sendChatMessage() {
+        console.log('[Chat] Sending message');
+        const message = this.elements.chatInput.value;
+        if (message) {
+            this.chatSystem.sendMessage(message);
+            this.elements.chatInput.value = '';
+        }
     }
 
     async loadOfficeData() {
