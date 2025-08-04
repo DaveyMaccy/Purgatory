@@ -13,12 +13,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const requiredModules = {
       GameState: './game/gamestate.js',
       OfficeCharacter: './game/character.js',
-      CanvasRenderer: './graphics/canvasrenderer.js',
-      ChatSystem: './ui/chatsystem.js',
-      DebugSystem: './game/debugsystem.js',
-      SaveSystem: './game/savestate.js', 
-      AISystem: './game/ai_system.js',
-      PromptTracker: './game/prompttracker.js'
+      CanvasRenderer: '../graphics/canvasrenderer.js',
+      ChatSystem: '../ui/chatsystem.js',
+      DebugSystem: './debugsystem.js',
+      SaveSystem: './savestate.js',
+      AISystem: './ai_system.js',
+      PromptTracker: './prompttracker.js'
     };
 
     // Dynamically check all imports
