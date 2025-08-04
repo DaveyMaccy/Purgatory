@@ -1,1 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Office-a Purgatory Simulator</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div id="game-container">
+    <div id="office-map" class="grid-layout"></div>
+    
+    <div id="character-panel">
+      <div id="character-stats"></div>
+      <div id="inventory"></div>
+    </div>
+    
+    <div id="chat-system">
+      <div id="chat-box"></div>
+      <input 
+        id="chat-input" 
+        type="text" 
+        placeholder="Type action or message..."
+        aria-label="Game command input"
+      >
+    </div>
+    
+    <div id="control-panel">
+      <button id="api-toggle">API: ON</button>
+      <button id="save-game">Save Game</button>
+      <button id="task-view">View Tasks</button>
+    </div>
+  </div>
 
+  <script type="module" src="scripts/main.js"></script>
+</body>
+</html>
