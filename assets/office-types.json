@@ -1,0 +1,35 @@
+{
+  "startup": {
+    "name": "Tech Startup",
+    "tasks": ["Code feature", "Attend meeting", "Fix bug", "Brainstorm ideas"],
+    "layout": [
+      ["wall", "wall", "wall", "wall", "wall"],
+      ["wall", "desk", "floor", "desk", "wall"],
+      ["wall", "floor", "coffee-machine", "floor", "wall"],
+      ["wall", "desk", "floor", "desk", "wall"],
+      ["wall", "wall", "door", "wall", "wall"]
+    ]
+  },
+  "corporate": {
+    "name": "Corporate Office",
+    "tasks": ["File report", "Process invoices", "Prepare presentation", "Review contracts"],
+    "layout": [
+      ["wall", "wall", "wall", "wall", "wall", "wall"],
+      ["wall", "desk", "desk", "desk", "desk", "wall"],
+      ["wall", "floor", "water-cooler", "floor", "printer", "wall"],
+      ["wall", "desk", "desk", "desk", "desk", "wall"],
+      ["wall", "wall", "door", "wall", "wall", "wall"]
+    ]
+  },
+  "agency": {
+    "name": "Creative Agency",
+    "tasks": ["Design mockup", "Client research", "Create pitch", "Update portfolio"],
+    "layout": [
+      ["wall", "wall", "wall", "wall", "wall"],
+      ["wall", "sofa", "floor", "tv", "wall"],
+      ["wall", "floor", "whiteboard", "floor", "wall"],
+      ["wall", "desk", "floor", "desk", "wall"],
+      ["wall", "wall", "door", "wall", "wall"]
+    ]
+  }
+}
