@@ -1,20 +1,27 @@
 console.log('[Main] Starting script execution');
 
+// Base path for module imports
+const BASE_PATH = window.location.pathname
+  .split('/')
+  .slice(0, -1) // Remove index.html
+  .join('/') + '/scripts/';
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[Main] DOM fully loaded, starting initialization');
+  console.log('[Main] Base path:', BASE_PATH);
 
   try {
     // Verify all required modules are loaded
     const requiredModules = {
-      GameState: './game/gamestate.js',
-      OfficeCharacter: './game/character.js', 
-      CanvasRenderer: './graphics/canvasrenderer.js',
-      ChatSystem: './ui/chatsystem.js',
-      DebugSystem: './game/debugsystem.js',
-      SaveSystem: './game/savestate.js',
-      AISystem: './game/ai_system.js',
-      PromptTracker: './game/prompttracker.js'
+      GameState: BASE_PATH + 'game/gamestate.js',
+      OfficeCharacter: BASE_PATH + 'game/character.js',
+      CanvasRenderer: BASE_PATH + 'graphics/canvasrenderer.js',
+      ChatSystem: BASE_PATH + 'ui/chatsystem.js',
+      DebugSystem: BASE_PATH + 'game/debugsystem.js',
+      SaveSystem: BASE_PATH + 'game/savestate.js',
+      AISystem: BASE_PATH + 'game/ai_system.js',
+      PromptTracker: BASE_PATH + 'game/prompttracker.js'
     };
 
     // Dynamically check all imports
