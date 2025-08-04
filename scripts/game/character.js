@@ -1,4 +1,4 @@
-class OfficeCharacter {
+export default class OfficeCharacter {
   static STATES = {
     IDLE: 'idle',
     WALKING: 'walking',
@@ -47,7 +47,7 @@ class OfficeCharacter {
     const distance = Math.sqrt(dx * dx + dy * dy);
 
     if (distance < 0.01) {
-      this.position = { 
+      this.position = {
         x: Math.max(0, Math.min(1, this.targetPosition.x)),
         y: Math.max(0, Math.min(1, this.targetPosition.y))
       };
@@ -83,7 +83,7 @@ class OfficeCharacter {
 
   updateMood() {
     const prevMood = this.mood;
-    
+
     if (this.needs.stress > 0.8) {
       this.mood = 'stressed';
     } else if (this.needs.hunger > 0.7) {
@@ -102,7 +102,7 @@ class OfficeCharacter {
         'tired': ['neutral', 'stressed'],
         'neutral': ['stressed', 'hungry', 'tired']
       };
-      
+
       if (!moodChanges[prevMood]?.includes(this.mood)) {
         this.mood = prevMood;
       }
@@ -110,8 +110,8 @@ class OfficeCharacter {
   }
 
   canAcceptPrompt() {
-    return !this.isPlayer && 
-           this.enabled && 
+    return !this.isPlayer &&
+           this.enabled &&
            Date.now() - this.lastPromptTime > 10000; // 10s cooldown
   }
 
@@ -128,5 +128,3 @@ class OfficeCharacter {
     this.state = OfficeCharacter.STATES.IDLE;
   }
 }
-
-export default OfficeCharacter;

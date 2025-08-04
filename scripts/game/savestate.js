@@ -1,109 +1,93 @@
-
-// Initialize game state
-const gameState = new GameState();
-window.gameState = gameState; // For debugging
-
-// Initialize systems
-const canvasRenderer = new CanvasRenderer();
-const chatSystem = new ChatSystem();
-DebugSystem.init();
-
-// DOM elements
-const startMenu = document.getElementById('start-menu');
-const gameContainer = document.getElementById('game-container');
-const newGameBtn = document.getElementById('new-game-btn');
-const loadGameBtn = document.getElementById('load-game-btn');
-const saveFileInput = document.getElementById('save-file-input');
-const apiToggle = document.getElementById('api-toggle');
-const exportSave = document.getElementById('export-save');
-const importSave = document.getElementById('import-save');
-const debugToggle = document.getElementById('debug-toggle');
-
-// Event listeners
-newGameBtn.addEventListener('click', startNewGame);
-loadGameBtn.addEventListener('click', () => saveFileInput.click());
-saveFileInput.addEventListener('change', handleFileUpload);
-apiToggle.addEventListener('click', toggleApi);
-exportSave.addEventListener('click', () => SaveSystem.exportSave());
-importSave.addEventListener('click', () => saveFileInput.click());
-debugToggle.addEventListener('click', toggleDebug);
-
-function startNewGame() {
-  const officeType = document.getElementById('office-type').value;
-  gameState.officeType = officeType;
-  
-  // Create player character
-  const player = new OfficeCharacter({
-    id: 'char_player',
-    name: 'Player',
-    isPlayer: true,
-    job: 'Boss',
-    position: {x: 0.5, y: 0.5}
-  });
-  
-  gameState.addCharacter(player);
-  
-  // Create NPCs
-  for (let i = 0; i < 4; i++) {
-    const npc = new OfficeCharacter({
-      id: `char_npc_${i}`,
-      name: `Employee ${i+1}`,
-      job: GameState.JOB_ROLES[Math.floor(Math.random() * GameState.JOB_ROLES.length)],
-      position: {
-        x: 0.2 + Math.random() * 0.6,
-        y: 0.2 + Math.random() * 0.6
-      }
-    });
-    
-    gameState.addCharacter(npc);
+export default class SaveSystem {
+  constructor(gameState, chatSystem, officeCharacter) {
+    this.gameState = gameState;
+    this.chatSystem = chatSystem;
+    this.OfficeCharacter = officeCharacter;
   }
-  
-  // Show game UI
-  startMenu.classList.add('hidden');
-  gameContainer.classList.remove('hidden');
-  
-  // Start game loop
-  gameLoop();
-}
 
-function gameLoop() {
-  // Update game state
-  gameState.characters.forEach(char => {
-    char.updatePosition();
-    char.updateNeeds();
-  });
-  
-  // Schedule next update
-  setTimeout(gameLoop, 1000 / 30); // 30fps
-}
+  exportSave() {
+    try {
+      const saveData = {
+        timestamp: new Date().toISOString(),
+        gameState: {
+          officeType: this.gameState.officeType,
+          characters: this.gameState.characters.map(c => ({
+            id: c.id,
+            name: c.name,
+            job: c.job,
+            isPlayer: c.isPlayer,
+            position: c.position,
+            state: c.state,
+            mood: c.mood,
+            needs: c.needs,
+            appearance: c.appearance,
+            personality: c.personality,
+            apiKey: c.apiKey,
+          })),
+          playerCharacterId: this.gameState.playerCharacterId,
+          apiEnabled: this.gameState.apiEnabled,
+          debugMode: this.gameState.debugMode,
+        }
+      };
+      const dataStr = JSON.stringify(saveData, null, 2);
+      this.downloadFile(dataStr, `purgatory-save-${Date.now()}.json`);
+      this.chatSystem.addSystemMessage('Game state exported successfully.');
+    } catch (error) {
+      console.error("Failed to export save:", error);
+      this.chatSystem.addSystemMessage('Error exporting save file. See console for details.');
+    }
+  }
 
-function handleFileUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  SaveSystem.importSave(file)
-    .then(() => {
-      startMenu.classList.add('hidden');
-      gameContainer.classList.remove('hidden');
-      gameLoop();
-    })
-    .catch(error => {
-      console.error('Failed to load save:', error);
-      chatSystem.addSystemMessage('Failed to load save file');
+  importSave(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (!data.gameState || !data.gameState.characters) {
+            throw new Error("Invalid save file format.");
+          }
+
+          // Restore game state
+          const loadedGameState = data.gameState;
+          this.gameState.officeType = loadedGameState.officeType;
+          this.gameState.playerCharacterId = loadedGameState.playerCharacterId;
+          this.gameState.apiEnabled = loadedGameState.apiEnabled;
+          this.gameState.debugMode = loadedGameState.debugMode;
+
+          // Re-create character instances
+          this.gameState.characters = loadedGameState.characters.map(charData => {
+            return new this.OfficeCharacter(charData);
+          });
+
+          this.chatSystem.addSystemMessage('Game state loaded successfully.');
+          resolve();
+        } catch (error) {
+          console.error("Failed to parse or load save file:", error);
+          this.chatSystem.addSystemMessage('Error loading save file. See console for details.');
+          reject(error);
+        }
+      };
+      reader.onerror = (error) => {
+        console.error("File reading error:", error);
+        this.chatSystem.addSystemMessage('Failed to read the save file.');
+        reject(error);
+      };
+      reader.readAsText(file);
     });
-}
+  }
 
-function toggleApi() {
-  const status = gameState.toggleApi();
-  apiToggle.textContent = `API: ${status ? 'ON' : 'OFF'}`;
-  chatSystem.addSystemMessage(`API turned ${status ? 'ON' : 'OFF'}`);
+  downloadFile(data, filename) {
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
 }
-
-function toggleDebug() {
-  const status = gameState.toggleDebug();
-  debugToggle.textContent = status ? 'Debug: ON' : 'Debug: OFF';
-  chatSystem.addSystemMessage(`Debug mode ${status ? 'enabled' : 'disabled'}`);
-}
-
-// Initialize save system
-SaveSystem.init();
