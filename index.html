@@ -218,6 +218,15 @@
   <!-- Hidden file input -->
   <input type="file" id="file-input" accept=".json" hidden>
   
-  <script type="module" src="./scripts/main.js"></script>
+  <script src="./scripts/main.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof Game === 'function') {
+        new Game().initialize();
+      } else {
+        console.error('Game class not found');
+      }
+    });
+  </script>
 </body>
 </html>
