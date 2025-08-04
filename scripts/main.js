@@ -167,23 +167,66 @@ class Game {
         bgCanvas.width = window.innerWidth;
         bgCanvas.height = window.innerHeight;
         const bgCtx = bgCanvas.getContext('2d');
+        
+        // Default to startup office if no type selected
+        const officeType = this.gameState.officeType || 'startup';
+        const officeData = GameState.OFFICE_TYPES[officeType];
+        if (!officeData) return;
+
+        const layout = officeData.layout;
+        const tileSize = 200; // Size of each office tile
+        const panSpeed = 0.5; // Panning speed
         let cameraX = 0;
-        const officeWidth = 3000;
-        const panSpeed = 0.5;
+
+        // Create simple textures for background
+        const textures = {
+            'wall': '#2c2c2c',
+            'desk': '#8b4513',
+            'floor': '#3d3d3d',
+            'door': '#a0522d',
+            'coffee-machine': '#6d4c41',
+            'water-cooler': '#2196f3',
+            'printer': '#757575',
+            'sofa': '#795548',
+            'tv': '#212121',
+            'whiteboard': '#f5f5f5'
+        };
 
         const render = () => {
             bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-            bgCtx.fillStyle = '#1a1a2e';
-            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-            bgCtx.fillStyle = '#2c3e50';
-            for (let x = -cameraX % 800; x < bgCanvas.width; x += 800) {
-                bgCtx.fillRect(x + 50, 300, 200, 150);
-                bgCtx.fillRect(x + 300, 300, 200, 150);
-                bgCtx.fillRect(x + 550, 300, 200, 150);
-                bgCtx.fillStyle = '#34495e';
-                bgCtx.fillRect(x + 100, 100, 600, 150);
+            
+            // Draw office tiles with panning effect
+            for (let y = 0; y < layout.length; y++) {
+                for (let x = 0; x < layout[y].length; x++) {
+                    const tileType = layout[y][x];
+                    const drawX = (x * tileSize) - (cameraX % tileSize);
+                    const drawY = y * tileSize;
+                    
+                    // Draw tile
+                    bgCtx.fillStyle = textures[tileType] || '#333333';
+                    bgCtx.fillRect(drawX, drawY, tileSize, tileSize);
+                    
+                    // Add subtle grid lines
+                    bgCtx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                    bgCtx.strokeRect(drawX, drawY, tileSize, tileSize);
+                }
             }
-            cameraX = (cameraX + panSpeed) % officeWidth;
+            
+            // Draw second set for seamless panning
+            for (let y = 0; y < layout.length; y++) {
+                for (let x = 0; x < layout[y].length; x++) {
+                    const tileType = layout[y][x];
+                    const drawX = (x * tileSize) - (cameraX % tileSize) + (layout[y].length * tileSize);
+                    const drawY = y * tileSize;
+                    
+                    bgCtx.fillStyle = textures[tileType] || '#333333';
+                    bgCtx.fillRect(drawX, drawY, tileSize, tileSize);
+                    bgCtx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                    bgCtx.strokeRect(drawX, drawY, tileSize, tileSize);
+                }
+            }
+
+            cameraX += panSpeed;
             requestAnimationFrame(render);
         };
         render();
