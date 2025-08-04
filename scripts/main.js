@@ -49,9 +49,54 @@ export class Game {
         }
 
         await this.loadOfficeData();
-        this.setupEventListeners();
+        this.setupCoreButtons();
         this.renderBackground();
         console.log('[Main] Game initialized successfully.');
+    }
+
+    setupCoreButtons() {
+        console.log('[Main] Setting up core buttons...');
+        
+        // New Game Button
+        this.elements.newGameBtn.addEventListener('click', () => {
+            console.log('[UI] New Game clicked');
+            this.startNewGame();
+        });
+
+        // Load Game Button
+        this.elements.loadGameBtn.addEventListener('click', () => {
+            console.log('[UI] Load Game clicked');
+            this.loadGame();
+        });
+
+        // Options Button
+        this.elements.optionsBtn.addEventListener('click', () => {
+            console.log('[UI] Options clicked');
+            this.showOptions();
+        });
+
+        console.log('[Main] Core buttons setup complete');
+    }
+
+    startNewGame() {
+        console.log('[Game] Starting new game');
+        // Hide start menu, show character creation
+        this.elements.startMenu.classList.add('hidden');
+        this.elements.characterCreation.classList.remove('hidden');
+    }
+
+    loadGame() {
+        console.log('[Game] Loading game');
+        // Trigger file input click
+        this.elements.fileInput.click();
+        this.elements.fileInput.onchange = (e) => this.handleFileLoad(e);
+    }
+
+    showOptions() {
+        console.log('[UI] Showing options');
+        // Hide start menu, show options
+        this.elements.startMenu.classList.add('hidden');
+        this.elements.optionsMenu.classList.remove('hidden');
     }
 
     async loadOfficeData() {
