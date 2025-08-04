@@ -48,30 +48,60 @@ class Game {
     }
 
     queryDOMElements() {
-        const ids = [
-            'start-menu', 'character-creation', 'options-menu', 'game-container',
-            'new-game-btn', 'load-game-btn', 'options-btn', 'add-character-btn',
-            'start-simulation-btn', 'back-to-menu-btn', 'save-settings-btn',
-            'export-prompts-btn', 'export-full-data-btn', 'file-input', 'api-enabled',
-            'prompt-cap', 'api-provider', 'graphics-quality', 'game-menu-btn',
-            'api-status', 'prompt-count', 'character-tabs', 'character-form',
-            'character-selector', 'character-details', 'office-background'
-        ];
-        const elements = {};
-        ids.forEach(id => elements[id] = document.getElementById(id));
+        const elements = {
+            // Main UI containers
+            'startMenu': document.getElementById('start-menu'),
+            'characterCreation': document.getElementById('character-creation'),
+            'optionsMenu': document.getElementById('options-menu'),
+            'gameContainer': document.getElementById('game-container'),
+            
+            // Buttons
+            'newGameBtn': document.getElementById('new-game-btn'),
+            'loadGameBtn': document.getElementById('load-game-btn'),
+            'optionsBtn': document.getElementById('options-btn'),
+            'addCharacterBtn': document.getElementById('add-character-btn'),
+            'startSimulationBtn': document.getElementById('start-simulation-btn'),
+            'backToMenuBtn': document.getElementById('back-to-menu-btn'),
+            'saveSettingsBtn': document.getElementById('save-settings-btn'),
+            'exportPromptsBtn': document.getElementById('export-prompts-btn'),
+            'exportFullDataBtn': document.getElementById('export-full-data-btn'),
+            'gameMenuBtn': document.getElementById('game-menu-btn'),
+            
+            // Form elements
+            'fileInput': document.getElementById('file-input'),
+            'apiEnabled': document.getElementById('api-enabled'),
+            'promptCap': document.getElementById('prompt-cap'),
+            'apiProvider': document.getElementById('api-provider'),
+            'graphicsQuality': document.getElementById('graphics-quality'),
+            
+            // Status displays
+            'apiStatus': document.getElementById('api-status'),
+            'promptCount': document.getElementById('prompt-count'),
+            
+            // Character UI
+            'characterTabs': document.getElementById('character-tabs'),
+            'characterForm': document.getElementById('character-form'),
+            'characterSelector': document.getElementById('character-selector'),
+            'characterDetails': document.getElementById('character-details'),
+            
+            // Canvas
+            'officeBackground': document.getElementById('office-background')
+        };
+        
+        console.log('[DEBUG] Queried elements:', elements);
         return elements;
     }
 
     validateDOMElements() {
-        const requiredElementIds = [
-            'start-menu', 
-            'game-container', 
-            'new-game-btn', 
-            'office-background',
-            'character-tabs',
-            'character-form'
+        const requiredElements = [
+            'startMenu',
+            'gameContainer',
+            'newGameBtn',
+            'officeBackground',
+            'characterTabs',
+            'characterForm'
         ];
-        const missingElements = requiredElementIds.filter(id => !this.elements[id]);
+        const missingElements = requiredElements.filter(key => !this.elements[key]);
         if (missingElements.length > 0) {
             const errorMsg = `Missing required DOM elements: ${missingElements.join(', ')}`;
             console.error('[Main]', errorMsg);
@@ -160,17 +190,29 @@ class Game {
     }
 
     showCharacterCreation() {
+        if (!this.elements.startMenu || !this.elements.characterCreation) {
+            console.error('Missing required UI elements');
+            return;
+        }
         this.elements.startMenu.classList.add('hidden');
         this.elements.characterCreation.classList.remove('hidden');
         this.addNewCharacter();
     }
 
     showOptionsMenu() {
+        if (!this.elements.startMenu || !this.elements.optionsMenu) {
+            console.error('Missing required UI elements');
+            return;
+        }
         this.elements.startMenu.classList.add('hidden');
         this.elements.optionsMenu.classList.remove('hidden');
     }
 
     backToMainMenu() {
+        if (!this.elements.startMenu || !this.elements.characterCreation || !this.elements.optionsMenu) {
+            console.error('Missing required UI elements');
+            return;
+        }
         this.elements.characterCreation.classList.add('hidden');
         this.elements.optionsMenu.classList.add('hidden');
         this.elements.startMenu.classList.remove('hidden');
