@@ -220,13 +220,15 @@
   <!-- Hidden file input -->
   <input type="file" id="file-input" accept=".json" hidden>
   
-  <script src="/Purgatory/scripts/main.js" type="module" defer></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      if (typeof Game === 'function') {
-        new Game().initialize();
-      } else {
-        console.error('Game class not found');
+  <script type="module">
+    import { Game } from './scripts/main.js';
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        const game = new Game();
+        game.initialize();
+      } catch (error) {
+        console.error('Game initialization failed:', error);
+        alert('Failed to initialize game. Check console for details.');
       }
     });
   </script>
