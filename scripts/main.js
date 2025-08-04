@@ -80,11 +80,26 @@ class Game {
     }
 
     setupEventListeners() {
-        this.addListener(this.elements.newGameBtn, 'click', () => this.showCharacterCreation());
-        this.addListener(this.elements.loadGameBtn, 'click', () => this.elements.fileInput.click());
-        this.addListener(this.elements.optionsBtn, 'click', () => this.showOptionsMenu());
-        this.addListener(this.elements.addCharacterBtn, 'click', () => this.addNewCharacter());
-        this.addListener(this.elements.startSimulationBtn, 'click', () => this.startSimulation());
+        this.addListener(this.elements.newGameBtn, 'click', () => {
+            console.log('New Game button clicked');
+            this.showCharacterCreation();
+        });
+        this.addListener(this.elements.loadGameBtn, 'click', () => {
+            console.log('Load Game button clicked');
+            this.elements.fileInput.click();
+        });
+        this.addListener(this.elements.optionsBtn, 'click', () => {
+            console.log('Options button clicked');
+            this.showOptionsMenu();
+        });
+        this.addListener(this.elements.addCharacterBtn, 'click', () => {
+            console.log('Add Character button clicked');
+            this.addNewCharacter();
+        });
+        this.addListener(this.elements.startSimulationBtn, 'click', () => {
+            console.log('Start Simulation button clicked');
+            this.startSimulation();
+        });
         this.addListener(this.elements.backToMenuBtn, 'click', () => this.backToMainMenu());
         this.addListener(this.elements.saveSettingsBtn, 'click', () => this.saveSettings());
         this.addListener(this.elements.exportPromptsBtn, 'click', () => this.promptTracker.exportPromptData());
