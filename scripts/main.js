@@ -7,17 +7,19 @@ import SaveSystem from './game/savestate.js';
 import AISystem from './game/ai_system.js';
 import PromptTracker from './game/prompttracker.js';
 
-// Initialize game state
-const gameState = new GameState();
-window.gameState = gameState; // For debugging
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize game state
+  const gameState = new GameState();
+  window.gameState = gameState; // For debugging
 
-// Initialize systems
-let canvasRenderer;
-let chatSystem;
-const promptTracker = new PromptTracker();
+  // Initialize systems
+  let canvasRenderer;
+  let chatSystem;
+  const promptTracker = new PromptTracker();
 
-// Setup canvas click handler
-document.getElementById('game-canvas').addEventListener('click', (e) => {
+  // Setup canvas click handler
+  document.getElementById('game-canvas')?.addEventListener('click', (e) => {
   if (!gameState.playerCharacterId) return;
   
   const rect = e.target.getBoundingClientRect();
@@ -563,5 +565,6 @@ function showCharacterDetails(charId) {
   `;
 }
 
-// Initialize
-updateCharacterSelector();
+  // Initialize
+  updateCharacterSelector();
+}); // End of DOMContentLoaded
