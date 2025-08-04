@@ -18,8 +18,16 @@ export default class CanvasRenderer {
 
     this.buffer = document.createElement('canvas');
     this.bufferCtx = this.buffer.getContext('2d');
-
+    
+    // Initialize with minimum size
+    this.buffer.width = 1;
+    this.buffer.height = 1;
+    
     this.resizeCanvas();
+    this.preloadAssets().then(() => {
+      this.texturesGenerated = true;
+      this.render();
+    });
     window.addEventListener('resize', this.resizeHandler);
     this.cleanupHandlers.push(() => {
       window.removeEventListener('resize', this.resizeHandler);
