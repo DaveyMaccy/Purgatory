@@ -28,7 +28,6 @@ class Game {
 
         await this.loadOfficeData();
         this.setupEventListeners();
-        this.addNewCharacter();
         this.renderBackground();
         console.log('[Main] Game initialized successfully.');
     }
@@ -49,7 +48,14 @@ class Game {
     }
 
     validateDOMElements() {
-        const requiredElementIds = ['start-menu', 'game-container', 'new-game-btn', 'office-background'];
+        const requiredElementIds = [
+            'start-menu', 
+            'game-container', 
+            'new-game-btn', 
+            'office-background',
+            'character-tabs',
+            'character-form'
+        ];
         const missingElements = requiredElementIds.filter(id => !this.elements[id]);
         if (missingElements.length > 0) {
             const errorMsg = `Missing required DOM elements: ${missingElements.join(', ')}`;
@@ -126,6 +132,7 @@ class Game {
     showCharacterCreation() {
         this.elements.startMenu.classList.add('hidden');
         this.elements.characterCreation.classList.remove('hidden');
+        this.addNewCharacter();
     }
 
     showOptionsMenu() {
