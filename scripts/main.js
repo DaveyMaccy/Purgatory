@@ -11,24 +11,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Verify all required modules are loaded
     const requiredModules = {
-      GameState: '/scripts/game/gamestate.js',
-      OfficeCharacter: '/scripts/game/character.js',
-      CanvasRenderer: '/scripts/graphics/canvasrenderer.js',
-      ChatSystem: '/scripts/ui/chatsystem.js',
-      DebugSystem: '/scripts/game/debugsystem.js',
-      SaveSystem: '/scripts/game/savestate.js',
-      AISystem: '/scripts/game/ai_system.js',
-      PromptTracker: '/scripts/game/prompttracker.js'
+      GameState: './game/gamestate.js',
+      OfficeCharacter: './game/character.js',
+      CanvasRenderer: './graphics/canvasrenderer.js',
+      ChatSystem: './ui/chatsystem.js',
+      DebugSystem: './game/debugsystem.js',
+      SaveSystem: './game/savestate.js',
+      AISystem: './game/ai_system.js',
+      PromptTracker: './game/prompttracker.js'
     };
 
     // Dynamically check all imports
     await Promise.all(Object.entries(requiredModules).map(async ([name, path]) => {
       const module = await import(path);
-      if (!module[name]) {
-        throw new Error(`Module ${name} not found in ${path}`);
+      if (module.default) {
+        window[name] = module.default; // Assign default export to global scope
+        console.log(`[Main] Successfully loaded ${name} from ${path}`);
+      } else {
+        throw new Error(`Module ${name} from ${path} did not have a default export.`);
       }
-      window[name] = module[name]; // Make available globally for debugging
-      console.log(`[Main] Successfully loaded ${name} from ${path}`);
     }));
 
     console.log('[Main] All modules loaded successfully');
