@@ -1,25 +1,22 @@
-import GameState from './game/gamestate.js';
-import OfficeCharacter from './game/character.js';
-import CanvasRenderer from './graphics/canvasrenderer.js';
-import ChatSystem from './ui/chatsystem.js';
-import DebugSystem from './game/debugsystem.js';
-import SaveSystem from './game/savestate.js';
-import AISystem from './game/ai_system.js';
-import PromptTracker from './game/prompttracker.js';
+import GameState from '/Purgatory/scripts/game/gamestate.js';
+import OfficeCharacter from '/Purgatory/scripts/game/character.js';
+import CanvasRenderer from '/Purgatory/scripts/graphics/canvasrenderer.js';
+import ChatSystem from '/Purgatory/scripts/ui/chatsystem.js';
+import DebugSystem from '/Purgatory/scripts/game/debugsystem.js';
+import SaveSystem from '/Purgatory/scripts/game/savestate.js';
+import AISystem from '/Purgatory/scripts/game/ai_system.js';
+import PromptTracker from '/Purgatory/scripts/game/prompttracker.js';
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[DEBUG] DOMContentLoaded event fired.');
-
   // Initialize office background
   const bgCanvas = document.getElementById('office-background');
   if (bgCanvas) {
-    console.log('[DEBUG] office-background canvas found.');
     bgCanvas.width = window.innerWidth;
     bgCanvas.height = window.innerHeight;
     const bgCtx = bgCanvas.getContext('2d');
   } else {
-    console.error('[DEBUG] office-background canvas NOT found.');
+    console.error('office-background canvas NOT found.');
     return; // Stop execution if canvas is missing
   }
 
@@ -84,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // DOM elements
-console.log('[DEBUG] Getting DOM elements...');
 const elements = {
   startMenu: document.getElementById('start-menu'),
   characterCreation: document.getElementById('character-creation'),
@@ -113,15 +109,6 @@ const elements = {
   characterDetails: document.getElementById('character-details')
 };
 
-// Log element findings
-for (const key in elements) {
-  if (elements[key]) {
-    console.log(`[DEBUG] Element found: ${key}`);
-  } else {
-    console.warn(`[DEBUG] Element NOT found: ${key}`);
-  }
-}
-
 // Validate required elements
 const requiredElements = [
   'startMenu', 'gameContainer', 'newGameBtn', 'loadGameBtn',
@@ -142,18 +129,12 @@ const eventListeners = [];
 
 function addListener(element, event, handler) {
   if (element) {
-    console.log(`[DEBUG] Adding listener for '${event}' to element:`, element.id || element.tagName);
     element.addEventListener(event, handler);
     eventListeners.push({ element, event, handler });
-  } else {
-    console.warn(`[DEBUG] Cannot add listener: Element for '${event}' event is null.`);
   }
 }
 
-addListener(elements.newGameBtn, 'click', (e) => {
-  console.log('New Game button clicked', e);
-  showCharacterCreation();
-});
+addListener(elements.newGameBtn, 'click', showCharacterCreation);
 addListener(elements.loadGameBtn, 'click', () => elements.fileInput?.click());
 addListener(elements.optionsBtn, 'click', showOptionsMenu);
 addListener(elements.addCharacterBtn, 'click', addNewCharacter);
@@ -183,38 +164,19 @@ promptTracker.init();
 addNewCharacter();
 
 function showCharacterCreation() {
-  console.log('[DEBUG] showCharacterCreation() called.');
-  if (elements.startMenu) {
-    console.log('[DEBUG] Hiding startMenu. Current classes:', elements.startMenu.className);
-    elements.startMenu.classList.add('hidden');
-    console.log('[DEBUG] startMenu classes after add:', elements.startMenu.className);
-  }
-  if (elements.characterCreation) {
-    console.log('[DEBUG] Showing characterCreation. Current classes:', elements.characterCreation.className);
-    elements.characterCreation.classList.remove('hidden');
-    console.log('[DEBUG] characterCreation classes after remove:', elements.characterCreation.className);
-  }
+  elements.startMenu?.classList.add('hidden');
+  elements.characterCreation?.classList.remove('hidden');
 }
 
 function showOptionsMenu() {
-  console.log('[DEBUG] showOptionsMenu() called.');
-  if (elements.gameContainer) elements.gameContainer.classList.add('hidden');
-  if (elements.optionsMenu) {
-    console.log('[DEBUG] Showing optionsMenu. Current classes:', elements.optionsMenu.className);
-    elements.optionsMenu.classList.remove('hidden');
-    console.log('[DEBUG] optionsMenu classes after remove:', elements.optionsMenu.className);
-  }
+  elements.startMenu?.classList.add('hidden');
+  elements.optionsMenu?.classList.remove('hidden');
 }
 
 function backToMainMenu() {
-  console.log('[DEBUG] backToMainMenu() called.');
-  if (elements.characterCreation) elements.characterCreation.classList.add('hidden');
-  if (elements.optionsMenu) elements.optionsMenu.classList.add('hidden');
-  if (elements.startMenu) {
-    console.log('[DEBUG] Showing startMenu. Current classes:', elements.startMenu.className);
-    elements.startMenu.classList.remove('hidden');
-    console.log('[DEBUG] startMenu classes after remove:', elements.startMenu.className);
-  }
+  elements.characterCreation?.classList.add('hidden');
+  elements.optionsMenu?.classList.add('hidden');
+  elements.startMenu?.classList.remove('hidden');
 }
 
 function addNewCharacter() {
