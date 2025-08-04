@@ -24,10 +24,25 @@ class Game {
     async initialize() {
         console.log('[Main] Initializing game...');
         this.elements = this.queryDOMElements();
-        if (!this.validateDOMElements()) return;
+        console.log('[DEBUG] Queried elements:', Object.keys(this.elements));
+        
+        if (!this.validateDOMElements()) {
+            console.error('[DEBUG] validateDOMElements failed');
+            return;
+        }
 
+        console.log('[DEBUG] Starting loadOfficeData');
         await this.loadOfficeData();
+        
+        console.log('[DEBUG] Setting up event listeners');
         this.setupEventListeners();
+        console.log('[DEBUG] Event listeners setup complete');
+        
+        console.log('[DEBUG] Checking button references:');
+        console.log('newGameBtn:', this.elements.newGameBtn);
+        console.log('loadGameBtn:', this.elements.loadGameBtn);
+        console.log('startSimulationBtn:', this.elements.startSimulationBtn);
+        
         this.renderBackground();
         console.log('[Main] Game initialized successfully.');
     }
