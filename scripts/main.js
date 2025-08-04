@@ -1,21 +1,3 @@
-/**
- * IMPORTANT FILE STRUCTURE NOTE:
- * 
- * This project runs on GitHub Pages at /Purgatory/ path
- * All file references must work both locally and on GitHub
- * 
- * File layout:
- * - scripts/main.js (this file)
- * - scripts/game/ (game logic)
- * - scripts/graphics/ (rendering)
- * - scripts/ui/ (UI components)
- * - assets/ (data files)
- * - styles/ (CSS)
- * 
- * When running locally, use relative paths (./ and ../)
- * GitHub Pages serves from /Purgatory/ so absolute paths work there
- */
-
 import GameState from './game/gamestate.js';
 import OfficeCharacter from './game/character.js';
 import CanvasRenderer from './graphics/canvasrenderer.js';
@@ -109,6 +91,46 @@ export class Game {
             console.error('[Main] Failed to load office-types.json', error);
             alert('Failed to load critical game data. Please check the console.');
         }
+    }
+
+    queryDOMElements() {
+        return {
+            // Main menu elements
+            startMenu: document.getElementById('start-menu'),
+            newGameBtn: document.getElementById('new-game-btn'),
+            loadGameBtn: document.getElementById('load-game-btn'),
+            optionsBtn: document.getElementById('options-btn'),
+            fileInput: document.getElementById('file-input'),
+            
+            // Other screens
+            characterCreation: document.getElementById('character-creation'),
+            optionsMenu: document.getElementById('options-menu'),
+            gameContainer: document.getElementById('game-container'),
+            
+            // Character creation
+            addCharacterBtn: document.getElementById('add-character-btn'),
+            startSimulationBtn: document.getElementById('start-simulation-btn'),
+            
+            // Options screen
+            backToMenuBtn: document.getElementById('back-to-menu-btn'),
+            saveSettingsBtn: document.getElementById('save-settings-btn')
+        };
+    }
+
+    validateDOMElements() {
+        const elements = this.elements;
+        const requiredElements = [
+            'startMenu', 'newGameBtn', 'loadGameBtn', 'optionsBtn',
+            'characterCreation', 'optionsMenu', 'fileInput'
+        ];
+        
+        for (const element of requiredElements) {
+            if (!elements[element]) {
+                console.error(`[DOM] Missing required element: ${element}`);
+                return false;
+            }
+        }
+        return true;
     }
 
     // ... [rest of the existing Game class implementation]
