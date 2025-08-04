@@ -16,7 +16,7 @@ class Game {
         this.saveSystem = new SaveSystem(this.gameState, this.chatSystem, OfficeCharacter);
         this.aiSystem = new AISystem(this.gameState, this.chatSystem);
         this.promptTracker = new PromptTracker(this.gameState);
-        this.canvasRenderer = null; // Initialized after simulation starts
+        this.canvasRenderer = null;
         this.characterCount = 0;
         this.eventListeners = [];
     }
@@ -27,7 +27,7 @@ class Game {
 
         await this.loadOfficeData();
         this.setupEventListeners();
-        this.addNewCharacter(); // Add the first default character
+        this.addNewCharacter();
         this.renderBackground();
         console.log('[Main] Game initialized successfully.');
     }
@@ -225,7 +225,9 @@ class Game {
             }
         });
 
-        this.elements.promptCount.textContent = `Prompts: ${this.promptTracker.getCount()}`;
+        if (this.elements.promptCount) {
+            this.elements.promptCount.textContent = `Prompts: ${this.promptTracker.getCount()}`;
+        }
         requestAnimationFrame(() => this.gameLoop());
     }
 
@@ -254,14 +256,13 @@ class Game {
 
     async callAIAPI(prompt, apiKey) {
         if (!this.gameState.apiEnabled) {
-            // Silently fail if API is disabled, or return a mock response
             return JSON.stringify({ action: "rest", params: {}, reason: "API is disabled." });
         }
         if (!apiKey) {
              console.warn("Attempted to call AI for character without API key.");
              return JSON.stringify({ action: "rest", params: {}, reason: "Missing API key." });
         }
-        // Actual API call logic here...
+        // Placeholder for actual API call
         return JSON.stringify({ action: "work", params: {task: "thinking"}, reason: "Placeholder response." });
     }
 
