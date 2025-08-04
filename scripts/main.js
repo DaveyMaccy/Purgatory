@@ -1,11 +1,29 @@
-import GameState from '/Purgatory/scripts/game/gamestate.js';
-import OfficeCharacter from '/Purgatory/scripts/game/character.js';
-import CanvasRenderer from '/Purgatory/scripts/graphics/canvasrenderer.js';
-import ChatSystem from '/Purgatory/scripts/ui/chatsystem.js';
-import DebugSystem from '/Purgatory/scripts/game/debugsystem.js';
-import SaveSystem from '/Purgatory/scripts/game/savestate.js';
-import AISystem from '/Purgatory/scripts/game/ai_system.js';
-import PromptTracker from '/Purgatory/scripts/game/prompttracker.js';
+/**
+ * IMPORTANT FILE STRUCTURE NOTE:
+ * 
+ * This project runs on GitHub Pages at /Purgatory/ path
+ * All file references must work both locally and on GitHub
+ * 
+ * File layout:
+ * - scripts/main.js (this file)
+ * - scripts/game/ (game logic)
+ * - scripts/graphics/ (rendering)
+ * - scripts/ui/ (UI components)
+ * - assets/ (data files)
+ * - styles/ (CSS)
+ * 
+ * When running locally, use relative paths (./ and ../)
+ * GitHub Pages serves from /Purgatory/ so absolute paths work there
+ */
+
+import GameState from './game/gamestate.js';
+import OfficeCharacter from './game/character.js';
+import CanvasRenderer from './graphics/canvasrenderer.js';
+import ChatSystem from './ui/chatsystem.js';
+import DebugSystem from './game/debugsystem.js';
+import SaveSystem from './game/savestate.js';
+import AISystem from './game/ai_system.js';
+import PromptTracker from './game/prompttracker.js';
 
 export class Game {
     constructor() {
@@ -38,7 +56,7 @@ export class Game {
 
     async loadOfficeData() {
         try {
-            const response = await fetch('/Purgatory/assets/office-types.json');
+            const response = await fetch('../assets/office-types.json');
             const data = await response.json();
             GameState.OFFICE_TYPES = data;
             console.log('[Main] Office types loaded successfully.');
