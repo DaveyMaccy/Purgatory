@@ -1,142 +1,165 @@
-class DebugSystem {
-  static LEVELS = {
-    ERROR: 0,
-    WARN: 1,
-    INFO: 2,
-    DEBUG: 3
-  };
-  
-  static level = DebugSystem.LEVELS.INFO;
-  static logs = [];
-  static maxLogs = 200;
-  
-  static init() {
-    this.logElement = document.getElementById('debug-overlay');
-    this.renderPanel();
+class CanvasRenderer {
+  constructor() {
+    this.canvas = document.getElementById('game-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.resizeCanvas();
+    window.addEventListener('resize', this.resizeCanvas.bind(this));
     
-    // Override console methods
-    console.error = (...args) => {
-      this.log('ERROR', ...args);
-      console._error(...args);
-    };
+    this.tileSize = 80;
+    this.characterSize = 60;
+    this.quality = 'medium';
+    this.assets = {};
+    this.characterColors = {};
     
-    console.warn = (...args) => {
-      this.log('WARN', ...args);
-      console._warn(...args);
-    };
+    this.lastFrameTime = 0;
+    this.frameCount = 0;
+    this.fps = 0;
     
-    console.info = (...args) => {
-      this.log('INFO', ...args);
-      console._info(...args);
-    };
-    
-    console.debug = (...args) => {
-      this.log('DEBUG', ...args);
-      console._debug(...args);
-    };
+    this.preloadAssets();
+    this.render();
   }
   
-  static log(level, ...messages) {
-    const numericLevel = DebugSystem.LEVELS[level] || 0;
-    if (numericLevel > this.level) return;
+  setQuality(quality) {
+    this.quality = quality;
+  }
+  
+  resizeCanvas() {
+    this.canvas.width = this.canvas.parentElement.clientWidth;
+    this.canvas.height = this.canvas.parentElement.clientHeight;
+  }
+  
+  preloadAssets() {
+    // Generate procedural textures
+    this.assets.floor = this.createFloorTexture();
+    this.assets.wall = this.createWallTexture();
+    this.assets.desk = this.createDeskTexture();
+    this.assets.door = this.createDoorTexture();
+  }
+  
+  render() {
+    const now = performance.now();
+    const delta = now - this.lastFrameTime;
     
-    const timestamp = new Date().toISOString().substring(11, 23);
-    const logEntry = {
-      timestamp,
-      level,
-      messages,
-      stack: new Error().stack
-    };
+    // Calculate FPS
+    if (delta > 0) {
+      this.fps = Math.round(1000 / delta);
+    }
+    this.lastFrameTime = now;
     
-    this.logs.push(logEntry);
-    if (this.logs.length > this.maxLogs) {
-      this.logs.shift();
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw office layout
+    this.renderOfficeLayout();
+    
+    // Draw characters
+    gameState.characters.forEach(char => {
+      this.renderCharacter(char);
+    });
+    
+    // Draw debug info
+    if (gameState.debugMode) {
+      this.drawDebugInfo();
     }
     
-    this.renderPanel();
+    // Continue animation loop
+    requestAnimationFrame(this.render.bind(this));
   }
   
-  static renderPanel() {
-    if (!this.logElement) return;
+  renderOfficeLayout() {
+    const officeType = GameState.OFFICE_TYPES[gameState.officeType];
+    if (!officeType) return;
     
-    this.logElement.innerHTML = '';
-    if (!gameState.debugMode) return;
+    const layout = officeType.layout;
+    const tileWidth = this.canvas.width / layout[0].length;
+    const tileHeight = this.canvas.height / layout.length;
     
-    const panel = document.createElement('div');
-    panel.className = 'debug-panel';
-    
-    // Add filter controls
-    const controls = document.createElement('div');
-    controls.style.marginBottom = '10px';
-    
-    ['ERROR', 'WARN', 'INFO', 'DEBUG'].forEach(level => {
-      const btn = document.createElement('button');
-      btn.textContent = level;
-      btn.style.marginRight = '5px';
-      btn.style.opacity = DebugSystem.LEVELS[level] <= this.level ? 1 : 0.5;
-      btn.onclick = () => {
-        this.level = DebugSystem.LEVELS[level];
-        this.renderPanel();
-      };
-      controls.appendChild(btn);
-    });
-    
-    panel.appendChild(controls);
-    
-    // Add log entries
-    const visibleLogs = this.logs.filter(log => 
-      DebugSystem.LEVELS[log.level] <= this.level
-    );
-    
-    visibleLogs.slice(-10).forEach(log => {
-      const entry = document.createElement('div');
-      entry.className = 'debug-entry';
-      
-      const header = document.createElement('div');
-      header.innerHTML = `
-        <span class="debug-timestamp">${log.timestamp}</span>
-        <span class="debug-level-${log.level.toLowerCase()}">${log.level}</span>
-      `;
-      
-      const message = document.createElement('div');
-      message.style.marginTop = '5px';
-      message.textContent = log.messages.map(m => 
-        typeof m === 'object' ? JSON.stringify(m) : m
-      ).join(' ');
-      
-      entry.appendChild(header);
-      entry.appendChild(message);
-      panel.appendChild(entry);
-    });
-    
-    this.logElement.appendChild(panel);
+    for (let y = 0; y < layout.length; y++) {
+      for (let x = 0; x < layout[y].length; x++) {
+        const tileType = layout[y][x];
+        const texture = this.assets[tileType];
+        
+        if (texture) {
+          this.ctx.drawImage(
+            texture,
+            x * tileWidth,
+            y * tileHeight,
+            tileWidth,
+            tileHeight
+          );
+        } else {
+          this.ctx.fillStyle = this.getTileColor(tileType);
+          this.ctx.fillRect(
+            x * tileWidth,
+            y * tileHeight,
+            tileWidth,
+            tileHeight
+          );
+        }
+        
+        // Draw tile border
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+        this.ctx.strokeRect(
+          x * tileWidth,
+          y * tileHeight,
+          tileWidth,
+          tileHeight
+        );
+      }
+    }
   }
   
-  static trackCharacter(character) {
-    if (!gameState.debugMode) return;
+  renderCharacter(character) {
+    if (!character.enabled) return;
     
-    const marker = document.createElement('div');
-    marker.className = 'character-marker';
-    marker.style.backgroundColor = character.isPlayer ? '#4caf50' : '#2196f3';
-    marker.style.left = `${character.position.x * 100}%`;
-    marker.style.top = `${character.position.y * 100}%`;
-    marker.dataset.id = character.id;
+    // Generate unique color for character
+    if (!this.characterColors[character.id]) {
+      this.characterColors[character.id] = this.generateCharacterColor(character);
+    }
     
-    const label = document.createElement('div');
-    label.className = 'character-label';
-    label.textContent = `${character.name} (${character.state})`;
-    label.style.left = `${character.position.x * 100}%`;
-    label.style.top = `${character.position.y * 100}%`;
+    const color = this.characterColors[character.id];
+    const size = this.characterSize;
+    const x = character.position.x * this.canvas.width;
+    const y = character.position.y * this.canvas.height;
     
-    this.logElement.appendChild(marker);
-    this.logElement.appendChild(label);
+    // Draw character body
+    this.ctx.fillStyle = color;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+    this.ctx.fill();
+    
+    // Draw character outline
+    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    this.ctx.lineWidth = 2;
+    this.ctx.stroke();
+    
+    // Draw character mood indicator
+    this.ctx.fillStyle = this.getMoodColor(character.mood);
+    this.ctx.beginPath();
+    this.ctx.arc(x, y - size / 3, size / 6, 0, Math.PI * 2);
+    this.ctx.fill();
+    
+    // Draw character name
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = '12px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText(character.name, x, y + size / 2 + 15);
+    
+    // Draw task progress if applicable
+    if (character.currentTask) {
+      const progress = character.taskProgress / 100;
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      this.ctx.fillRect(x - 30, y + size / 2 + 5, 60, 8);
+      
+      this.ctx.fillStyle = '#4caf50';
+      this.ctx.fillRect(x - 30, y + size / 2 + 5, 60 * progress, 8);
+    }
+    
+    // Track character in debug system
+    DebugSystem.trackCharacter(character);
   }
+  
+  // ... other methods remain the same ...
 }
 
-// Preserve original console methods
-console._error = console.error;
-console._warn = console.warn;
-console._info = console.info;
-console._debug = console.debug;
-
-export default DebugSystem;
+export default CanvasRenderer;
