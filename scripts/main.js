@@ -9,6 +9,50 @@ import PromptTracker from './game/prompttracker.js';
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM fully loaded');
+
+  // Initialize office background
+  const bgCanvas = document.getElementById('office-background');
+  bgCanvas.width = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+  const bgCtx = bgCanvas.getContext('2d');
+
+  // Office scene parameters
+  let cameraX = 0;
+  const officeWidth = 3000;
+  const panSpeed = 0.5;
+
+  // Simple office scene rendering
+  function renderOfficeBackground() {
+    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    
+    // Draw office background
+    bgCtx.fillStyle = '#1a1a2e';
+    bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+    // Draw office elements
+    bgCtx.fillStyle = '#2c3e50';
+    for (let x = -cameraX % 800; x < bgCanvas.width; x += 800) {
+      // Draw cubicles
+      bgCtx.fillRect(x + 50, 300, 200, 150);
+      bgCtx.fillRect(x + 300, 300, 200, 150);
+      bgCtx.fillRect(x + 550, 300, 200, 150);
+      
+      // Draw meeting room
+      bgCtx.fillStyle = '#34495e';
+      bgCtx.fillRect(x + 100, 100, 600, 150);
+    }
+
+    // Update camera position
+    cameraX += panSpeed;
+    if (cameraX > officeWidth) cameraX = 0;
+
+    requestAnimationFrame(renderOfficeBackground);
+  }
+
+  // Start rendering
+  renderOfficeBackground();
+  
   // Initialize game state
   const gameState = new GameState();
   window.gameState = gameState; // For debugging
@@ -87,7 +131,10 @@ function addListener(element, event, handler) {
   }
 }
 
-addListener(elements.newGameBtn, 'click', showCharacterCreation);
+addListener(elements.newGameBtn, 'click', (e) => {
+  console.log('New Game button clicked', e);
+  showCharacterCreation();
+});
 addListener(elements.loadGameBtn, 'click', () => elements.fileInput?.click());
 addListener(elements.optionsBtn, 'click', showOptionsMenu);
 addListener(elements.addCharacterBtn, 'click', addNewCharacter);
@@ -117,8 +164,15 @@ promptTracker.init();
 addNewCharacter();
 
 function showCharacterCreation() {
-  startMenu.classList.add('hidden');
-  characterCreation.classList.remove('hidden');
+  console.log('Showing character creation');
+  console.log('Start menu element:', elements.startMenu);
+  console.log('Character creation element:', elements.characterCreation);
+  
+  elements.startMenu?.classList.add('hidden');
+  elements.characterCreation?.classList.remove('hidden');
+  
+  console.log('Start menu hidden:', elements.startMenu?.classList.contains('hidden'));
+  console.log('Character creation visible:', !elements.characterCreation?.classList.contains('hidden'));
 }
 
 function showOptionsMenu() {
@@ -514,57 +568,3 @@ function updateCharacterSelector() {
 
 function showCharacterDetails(charId) {
   const character = gameState.getCharacter(charId);
-  if (!character) return;
-  
-  characterDetails.innerHTML = `
-    <div class="detail-row">
-      <strong>Name:</strong> ${character.name}
-    </div>
-    <div class="detail-row">
-      <strong>Job:</strong> ${character.job}
-    </div>
-    <div class="detail-row">
-      <strong>Status:</strong> ${character.state}
-    </div>
-    <div class="detail-row">
-      <strong>Mood:</strong> ${character.mood}
-    </div>
-    <div class="progress-container">
-      <div class="progress-label">Task Progress</div>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: ${character.taskProgress}%"></div>
-      </div>
-      <div class="progress-value">${Math.round(character.taskProgress)}%</div>
-    </div>
-    <div class="detail-row">
-      <strong>Tasks Completed:</strong> ${character.tasksCompleted}
-    </div>
-    <div class="stats-grid">
-      <div class="stat-item">
-        <div class="stat-label">Energy</div>
-        <div class="stat-bar">
-          <div class="stat-fill" style="width: ${character.needs.energy * 100}%"></div>
-        </div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-label">Stress</div>
-        <div class="stat-bar">
-          <div class="stat-fill stress" style="width: ${character.needs.stress * 100}%"></div>
-        </div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-label">Hunger</div>
-        <div class="stat-bar">
-          <div class="stat-fill hunger" style="width: ${character.needs.hunger * 100}%"></div>
-        </div>
-      </div>
-    </div>
-    <div class="detail-row">
-      <strong>Personality:</strong> ${character.personality.join(', ')}
-    </div>
-  `;
-}
-
-  // Initialize
-  updateCharacterSelector();
-}); // End of DOMContentLoaded
