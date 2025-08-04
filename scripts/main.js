@@ -1,3 +1,25 @@
+/**
+ * OFFICE PURGATORY SIMULATOR - FILE STRUCTURE NOTE:
+ * 
+ * GitHub Pages Deployment:
+ * - Project runs at /Purgatory/ path on GitHub Pages
+ * - Absolute paths work on GitHub (/Purgatory/path)
+ * - Relative paths work locally (./path or ../path)
+ * 
+ * Local Development File Layout:
+ * - scripts/main.js (this file)
+ * - scripts/game/ (core game logic)
+ * - scripts/graphics/ (rendering system)
+ * - scripts/ui/ (interface components)
+ * - assets/ (data files)
+ * - styles/ (CSS files)
+ * 
+ * Path Handling:
+ * - All imports use relative paths (./)
+ * - Asset loading uses relative paths (../assets/)
+ * - GitHub Pages requires absolute paths (/Purgatory/)
+ */
+
 import GameState from './game/gamestate.js';
 import OfficeCharacter from './game/character.js';
 import CanvasRenderer from './graphics/canvasrenderer.js';
@@ -23,17 +45,34 @@ export class Game {
 
     async initialize() {
         console.log('[Main] Initializing game...');
-        this.elements = this.queryDOMElements();
-        
-        if (!this.validateDOMElements()) {
-            console.error('[DEBUG] validateDOMElements failed');
-            return;
-        }
+        try {
+            this.elements = this.queryDOMElements();
+            
+            if (!this.validateDOMElements()) {
+                console.error('[DEBUG] validateDOMElements failed');
+                return;
+            }
 
-        await this.loadOfficeData();
-        this.setupCoreButtons();
-        this.renderBackground();
-        console.log('[Main] Game initialized successfully.');
+            await this.loadOfficeData();
+            
+            // Initialize background renderer
+            try {
+                this.canvasRenderer = new CanvasRenderer(this.gameState, this.debugSystem);
+                if (!this.canvasRenderer.canvas) {
+                    throw new Error('Canvas element not found');
+                }
+                console.log('[Main] Background renderer initialized');
+            } catch (error) {
+                console.error('[Main] Failed to initialize background:', error);
+                alert('Background initialization failed. Using fallback styles.');
+            }
+
+            this.setupCoreButtons();
+            console.log('[Main] Game initialized successfully.');
+        } catch (error) {
+            console.error('[Main] Initialization failed:', error);
+            alert('Game initialization failed. Please check console for details.');
+        }
     }
 
     setupCoreButtons() {
@@ -82,15 +121,27 @@ export class Game {
     }
 
     async loadOfficeData() {
-        try {
-            const response = await fetch('../assets/office-types.json');
-            const data = await response.json();
-            GameState.OFFICE_TYPES = data;
-            console.log('[Main] Office types loaded successfully.');
-        } catch (error) {
-            console.error('[Main] Failed to load office-types.json', error);
-            alert('Failed to load critical game data. Please check the console.');
+        const pathsToTry = [
+            './assets/office-types.json',
+            '../assets/office-types.json',
+            '/Purgatory/assets/office-types.json'
+        ];
+        
+        for (const path of pathsToTry) {
+            try {
+                console.log('[Path] Attempting to load from:', path);
+                const response = await fetch(path);
+                if (!response.ok) continue;
+                
+                const data = await response.json();
+                GameState.OFFICE_TYPES = data;
+                console.log('[Main] Office types loaded successfully from:', path);
+                return;
+            } catch (error) {
+                console.warn('[Path] Failed to load from', path, error);
+            }
         }
+        throw new Error('Could not load office-types.json from any known path');
     }
 
     queryDOMElements() {
