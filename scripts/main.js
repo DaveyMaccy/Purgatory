@@ -9,13 +9,19 @@ import PromptTracker from './game/prompttracker.js';
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM fully loaded');
+  console.log('[DEBUG] DOMContentLoaded event fired.');
 
   // Initialize office background
   const bgCanvas = document.getElementById('office-background');
-  bgCanvas.width = window.innerWidth;
-  bgCanvas.height = window.innerHeight;
-  const bgCtx = bgCanvas.getContext('2d');
+  if (bgCanvas) {
+    console.log('[DEBUG] office-background canvas found.');
+    bgCanvas.width = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
+    const bgCtx = bgCanvas.getContext('2d');
+  } else {
+    console.error('[DEBUG] office-background canvas NOT found.');
+    return; // Stop execution if canvas is missing
+  }
 
   // Office scene parameters
   let cameraX = 0;
@@ -78,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // DOM elements
+console.log('[DEBUG] Getting DOM elements...');
 const elements = {
   startMenu: document.getElementById('start-menu'),
   characterCreation: document.getElementById('character-creation'),
@@ -106,6 +113,15 @@ const elements = {
   characterDetails: document.getElementById('character-details')
 };
 
+// Log element findings
+for (const key in elements) {
+  if (elements[key]) {
+    console.log(`[DEBUG] Element found: ${key}`);
+  } else {
+    console.warn(`[DEBUG] Element NOT found: ${key}`);
+  }
+}
+
 // Validate required elements
 const requiredElements = [
   'startMenu', 'gameContainer', 'newGameBtn', 'loadGameBtn',
@@ -126,8 +142,11 @@ const eventListeners = [];
 
 function addListener(element, event, handler) {
   if (element) {
+    console.log(`[DEBUG] Adding listener for '${event}' to element:`, element.id || element.tagName);
     element.addEventListener(event, handler);
     eventListeners.push({ element, event, handler });
+  } else {
+    console.warn(`[DEBUG] Cannot add listener: Element for '${event}' event is null.`);
   }
 }
 
@@ -164,26 +183,38 @@ promptTracker.init();
 addNewCharacter();
 
 function showCharacterCreation() {
-  console.log('Showing character creation');
-  console.log('Start menu element:', elements.startMenu);
-  console.log('Character creation element:', elements.characterCreation);
-  
-  elements.startMenu?.classList.add('hidden');
-  elements.characterCreation?.classList.remove('hidden');
-  
-  console.log('Start menu hidden:', elements.startMenu?.classList.contains('hidden'));
-  console.log('Character creation visible:', !elements.characterCreation?.classList.contains('hidden'));
+  console.log('[DEBUG] showCharacterCreation() called.');
+  if (elements.startMenu) {
+    console.log('[DEBUG] Hiding startMenu. Current classes:', elements.startMenu.className);
+    elements.startMenu.classList.add('hidden');
+    console.log('[DEBUG] startMenu classes after add:', elements.startMenu.className);
+  }
+  if (elements.characterCreation) {
+    console.log('[DEBUG] Showing characterCreation. Current classes:', elements.characterCreation.className);
+    elements.characterCreation.classList.remove('hidden');
+    console.log('[DEBUG] characterCreation classes after remove:', elements.characterCreation.className);
+  }
 }
 
 function showOptionsMenu() {
-  gameContainer.classList.add('hidden');
-  optionsMenu.classList.remove('hidden');
+  console.log('[DEBUG] showOptionsMenu() called.');
+  if (elements.gameContainer) elements.gameContainer.classList.add('hidden');
+  if (elements.optionsMenu) {
+    console.log('[DEBUG] Showing optionsMenu. Current classes:', elements.optionsMenu.className);
+    elements.optionsMenu.classList.remove('hidden');
+    console.log('[DEBUG] optionsMenu classes after remove:', elements.optionsMenu.className);
+  }
 }
 
 function backToMainMenu() {
-  characterCreation.classList.add('hidden');
-  optionsMenu.classList.add('hidden');
-  startMenu.classList.remove('hidden');
+  console.log('[DEBUG] backToMainMenu() called.');
+  if (elements.characterCreation) elements.characterCreation.classList.add('hidden');
+  if (elements.optionsMenu) elements.optionsMenu.classList.add('hidden');
+  if (elements.startMenu) {
+    console.log('[DEBUG] Showing startMenu. Current classes:', elements.startMenu.className);
+    elements.startMenu.classList.remove('hidden');
+    console.log('[DEBUG] startMenu classes after remove:', elements.startMenu.className);
+  }
 }
 
 function addNewCharacter() {
@@ -568,3 +599,57 @@ function updateCharacterSelector() {
 
 function showCharacterDetails(charId) {
   const character = gameState.getCharacter(charId);
+  if (!character) return;
+  
+  characterDetails.innerHTML = `
+    <div class="detail-row">
+      <strong>Name:</strong> ${character.name}
+    </div>
+    <div class="detail-row">
+      <strong>Job:</strong> ${character.job}
+    </div>
+    <div class="detail-row">
+      <strong>Status:</strong> ${character.state}
+    </div>
+    <div class="detail-row">
+      <strong>Mood:</strong> ${character.mood}
+    </div>
+    <div class="progress-container">
+      <div class="progress-label">Task Progress</div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: ${character.taskProgress}%"></div>
+      </div>
+      <div class="progress-value">${Math.round(character.taskProgress)}%</div>
+    </div>
+    <div class="detail-row">
+      <strong>Tasks Completed:</strong> ${character.tasksCompleted}
+    </div>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-label">Energy</div>
+        <div class="stat-bar">
+          <div class="stat-fill" style="width: ${character.needs.energy * 100}%"></div>
+        </div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Stress</div>
+        <div class="stat-bar">
+          <div class="stat-fill stress" style="width: ${character.needs.stress * 100}%"></div>
+        </div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Hunger</div>
+        <div class="stat-bar">
+          <div class="stat-fill hunger" style="width: ${character.needs.hunger * 100}%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-row">
+      <strong>Personality:</strong> ${character.personality.join(', ')}
+    </div>
+  `;
+}
+
+  // Initialize
+  updateCharacterSelector();
+}); // End of DOMContentLoaded
