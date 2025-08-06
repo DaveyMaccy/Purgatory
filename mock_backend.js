@@ -69,7 +69,7 @@ const gameState = {
     ],
     map: {
         // This tells the front-end which Tiled map file to load.
-        json: 'assets/maps/purgatorygamemap.json',
+        json: 'assets/maps/purgatorygamemap.json', // This path is correct relative to index (5).html
         data: null // To store the parsed map data
     },
     navGrid: null, // To store the generated navigation grid
