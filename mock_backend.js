@@ -11,7 +11,8 @@ for (let i = 1; i <= 20; i++) {
     PREMADE_CHARACTER_SPRITES.push(`assets/characters/Premade_Character_48x48_${number}.png`);
 }
 
-// const TILE_SIZE = 48; // REMOVED: This line caused the redeclaration error as it's already in main.js
+// REMOVED: const TILE_SIZE = 48; // This line caused the redeclaration error as it's already in main.js
+// It will now implicitly reference the TILE_SIZE from main.js as main.js loads first.
 
 const gameState = {
     characters: [
@@ -24,49 +25,49 @@ const gameState = {
 
             // --- Core Attributes ---
             physicalAttributes: { age: 28, height: 175, weight: 70, build: 'Average', looks: 7 },
-            [cite_start]skills: { competence: 7, laziness: 2, charisma: 6, leadership: 4 }, // Scored 1-10 [cite: 62]
+            skills: { competence: 7, laziness: 2, charisma: 6, leadership: 4 }, // Scored 1-10
 
             // --- Tag System ---
-            [cite_start]personalityTags: ['Creative', 'Introverted', 'Witty', 'Flirty'], [cite: 64]
-            [cite_start]experienceTags: ['5+ Years Experience', 'Startup Background'], [cite: 65]
+            personalityTags: ['Creative', 'Introverted', 'Witty', 'Flirty'],
+            experienceTags: ['5+ Years Experience', 'Startup Background'],
 
             // --- Dynamic State ---
-            [cite_start]needs: { energy: 8, hunger: 9, social: 6, comfort: 10, stress: 1 }, // Scored 1-10 [cite: 67]
-            [cite_start]mood: 'Neutral', // 'Happy', 'Sad', 'Angry', 'Stressed', 'Tired' [cite: 68]
+            needs: { energy: 8, hunger: 9, social: 6, comfort: 10, stress: 1 }, // Scored 1-10
+            mood: 'Neutral', // 'Happy', 'Sad', 'Angry', 'Stressed', 'Tired'
 
             // --- Action & Interaction State ---
-            [cite_start]actionState: 'idle_down', // 'DEFAULT', 'HoldingItem', 'InConversation' [cite: 70]
-            facingAngle: 90, // Current direction in degrees (0-359). [cite_start]Default is 90 (facing down). [cite: 71]
-            [cite_start]maxSightRange: 250, // Maximum sight distance in pixels. [cite: 72]
-            [cite_start]isBusy: false, // Flag to prevent contradictory prompts [cite: 73]
-            [cite_start]currentAction: null, // e.g., { type: 'USE_COMPUTER', duration: 300, elapsedTime: 0 } [cite: 74]
-            [cite_start]currentActionTranscript: [], // A log of the sub-steps of a complex action [cite: 75]
-            [cite_start]pendingIntent: null, // A full action object queued after a prerequisite action is complete. [cite: 76]
-            [cite_start]heldItem: null, // e.g., { id: 'coffee_mug_1', type: 'coffee_mug' } [cite: 77]
-            [cite_start]conversationId: null, // ID of the conversation they are in [cite: 78]
+            actionState: 'idle_down', // 'DEFAULT', 'HoldingItem', 'InConversation'
+            facingAngle: 90, // Current direction in degrees (0-359). Default is 90 (facing down).
+            maxSightRange: 250, // Maximum sight distance in pixels.
+            isBusy: false, // Flag to prevent contradictory prompts
+            currentAction: null, // e.g., { type: 'USE_COMPUTER', duration: 300, elapsedTime: 0 }
+            currentActionTranscript: [], // A log of the sub-steps of a complex action
+            pendingIntent: null, // A full action object queued after a prerequisite action is complete.
+            heldItem: null, // e.g., { id: 'coffee_mug_1', type: 'coffee_mug' }
+            conversationId: null, // ID of the conversation they are in
 
             // --- Memory & Goals ---
-            [cite_start]shortTermMemory: [], // A rolling log of the last 20 fully completed actions by any character in the vicinity. [cite: 80]
-            [cite_start]longTermMemory: [], // A curated list of up to 100 significant events, summarized by the AI itself. [cite: 81]
-            [cite_start]longTermGoal: { type: 'promotion', target: 'Senior Position', progress: 0.0 }, // The AI's current primary ambition. [cite: 82]
-            [cite_start]assignedTask: { displayName: 'Review Q4 Reports', requiredLocation: 'desk_1' }, // The "bullshit busy work" task [cite: 83]
+            shortTermMemory: [], // A rolling log of the last 20 fully completed actions by any character in the vicinity.
+            longTermMemory: [], // A curated list of up to 100 significant events, summarized by the AI itself.
+            longTermGoal: { type: 'promotion', target: 'Senior Position', progress: 0.0 }, // The AI's current primary ambition.
+            assignedTask: { displayName: 'Review Q4 Reports', requiredLocation: 'desk_1' }, // The "bullshit busy work" task
 
             // --- Backend & Visuals ---
-            [cite_start]inventory: [{ id: 'smartphone_1', type: 'smartphone', name: 'Smartphone' }], // Items that are pocketed, not held. [cite: 85]
-            [cite_start]deskItems: [{ id: 'novelty_mug_1', type: 'novelty_mug', name: 'Novelty Mug' }], // Items placed on or under the character's desk at game start. [cite: 86]
-            relationships: { 'char_1': 55, 'char_2': 32 }, // Social standing, 0-100. [cite_start]Initial value is 50. [cite: 87]
-            [cite_start]api: { key: '...', provider: 'gemma-3-27b' }, // User-provided API key and a provider  selected from a dropdown. [cite: 88]
-            [cite_start]promptCount: 0, [cite: 89]
-            [cite_start]deskId: 'desk_1', // Character's "home base" [cite: 90]
-            [cite_start]path: [], // Temporary array of coordinates for movement. [cite: 91]
-            position: { x: -366.667, y: -189.333 }, // Real-time coordinate on the canvas. [cite_start]Updated to spawn_point_1 [cite: 92]
-            portrait: '', // base64 string for the UI portrait. [cite_start]BILO_PLACEHOLDER: This is currently an empty string. [cite: 93]
-            [cite_start]spriteColors: { skin: '#EAC086', hair: '#2C1E10', shirt: '#4A5568', pants: '#2D3748', shoes: '#1A202C' }, // BILO_PLACEHOLDER: Still using spriteColors instead of appearance object. [cite: 94]
+            inventory: [{ id: 'smartphone_1', type: 'smartphone', name: 'Smartphone' }], // Items that are pocketed, not held.
+            deskItems: [{ id: 'novelty_mug_1', type: 'novelty_mug', name: 'Novelty Mug' }], // Items placed on or under the character's desk at game start.
+            relationships: { 'char_1': 55, 'char_2': 32 }, // Social standing, 0-100. Initial value is 50.
+            api: { key: '...', provider: 'gemma-3-27b' }, // User-provided API key and a provider  selected from a dropdown.
+            promptCount: 0,
+            deskId: 'desk_1', // Character's "home base"
+            path: [], // Temporary array of coordinates for movement.
+            position: { x: -366.667, y: -189.333 }, // Real-time coordinate on the canvas. Updated to spawn_point_1
+            portrait: '', // base64 string for the UI portrait. BILO_PLACEHOLDER: This is currently an empty string.
+            spriteColors: { skin: '#EAC086', hair: '#2C1E10', shirt: '#4A5568', pants: '#2D3748', shoes: '#1A202C' }, // BILO_PLACEHOLDER: Still using spriteColors instead of appearance object.
             pixiSprite: null // BILO_PLACEHOLDER: Still using pixiSprite for pre-made character sprites (Phase 1).
         }
     ],
     map: {
-        [cite_start]// This tells the front-end which Tiled map file to load. [cite: 5]
+        // This tells the front-end which Tiled map file to load.
         json: 'assets/maps/purgatorygamemap.json',
         data: null // To store the parsed map data
     },
@@ -175,11 +176,10 @@ function findPath(grid, start, end) {
 
 
 function generateNavGrid(mapData) {
-    // BILO_FIX: Reference TILE_SIZE from the global scope (defined in main.js)
-    const TILE_SIZE_LOCAL = typeof TILE_SIZE !== 'undefined' ? TILE_SIZE : 48; // Fallback for safety
-
-    const gridWidth = Math.ceil(mapData.width * TILE_SIZE_LOCAL / TILE_SIZE_LOCAL); // Map width in tiles
-    const gridHeight = Math.ceil(mapData.height * TILE_SIZE_LOCAL / TILE_SIZE_LOCAL); // Map height in tiles
+    // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
+    // No need for local const or typeof checks, as main.js is loaded first.
+    const gridWidth = Math.ceil(mapData.width * TILE_SIZE / TILE_SIZE); // Map width in tiles
+    const gridHeight = Math.ceil(mapData.height * TILE_SIZE / TILE_SIZE); // Map height in tiles
 
     // 1. Initialize grid with all walkable (0)
     let navGrid = Array(gridHeight).fill(null).map(() => Array(gridWidth).fill(0));
@@ -187,7 +187,7 @@ function generateNavGrid(mapData) {
     // Iterate through layers to find collision data
     for (const layer of mapData.layers) {
         // Check for collision layer property
-        [cite_start]const isCollisionLayer = layer.properties?.some(p => p.name === 'collides' && p.value === true); [cite: 518, 520, 650]
+        const isCollisionLayer = layer.properties?.some(p => p.name === 'collides' && p.value === true);
 
         if (layer.type === 'tilelayer' && isCollisionLayer) {
             for (const chunk of layer.chunks) {
@@ -201,7 +201,7 @@ function generateNavGrid(mapData) {
                     const gridY = chunk.y + Math.floor(i / chunk.width);
 
                     if (gridY >= 0 && gridY < gridHeight && gridX >= 0 && gridX < gridWidth) {
-                        navGrid[gridY][gridX] = 1; [cite_start]// 1 represents an impassable wall [cite: 554]
+                        navGrid[gridY][gridX] = 1; // 1 represents an impassable wall
                     }
                 }
             }
@@ -212,10 +212,10 @@ function generateNavGrid(mapData) {
                 const isObstacle = obj.properties?.some(p => p.name === 'collides' && p.value === true) ||
                                    ['desk', 'chair', 'misc', 'food_and_drink', 'storage', 'office_equipment', 'room'].includes(obj.type); // Added 'room'
                 if (isObstacle) {
-                    const startGridX = Math.floor(obj.x / TILE_SIZE_LOCAL);
-                    const startGridY = Math.floor(obj.y / TILE_SIZE_LOCAL);
-                    const endGridX = Math.ceil((obj.x + obj.width) / TILE_SIZE_LOCAL);
-                    const endGridY = Math.ceil((obj.y + obj.height) / TILE_SIZE_LOCAL);
+                    const startGridX = Math.floor(obj.x / TILE_SIZE);
+                    const startGridY = Math.floor(obj.y / TILE_SIZE);
+                    const endGridX = Math.ceil((obj.x + obj.width) / TILE_SIZE);
+                    const endGridY = Math.ceil((obj.y + obj.height) / TILE_SIZE);
 
                     for (let y = startGridY; y < endGridY; y++) {
                         for (let x = startGridX; x < endGridX; x++) {
@@ -248,8 +248,8 @@ function generateNavGrid(mapData) {
     // This is a temporary fix to ensure characters can start on desks/chairs.
     // A more robust solution involves specific spawn points on walkable tiles.
     for (const char of gameState.characters) {
-        const charGridX = Math.floor(char.position.x / TILE_SIZE_LOCAL);
-        const charGridY = Math.floor(char.position.y / TILE_SIZE_LOCAL);
+        const charGridX = Math.floor(char.position.x / TILE_SIZE);
+        const charGridY = Math.floor(char.position.y / TILE_SIZE);
         if (charGridY >= 0 && charGridY < gridHeight && charGridX >= 0 && charGridX < gridWidth) {
             if (navGrid[charGridY][charGridX] === 1) {
                 navGrid[charGridY][charGridX] = 0; // Temporarily make it walkable
@@ -259,8 +259,8 @@ function generateNavGrid(mapData) {
     }
 
 
-    [cite_start]gameState.navGrid = navGrid; [cite: 560]
-    [cite_start]console.log("Navigation grid generated from map data."); [cite: 561]
+    gameState.navGrid = navGrid;
+    console.log("Navigation grid generated from map data.");
     // console.log(navGrid); // Log the grid for verification
 }
 
@@ -276,11 +276,9 @@ function findDeskById(deskId) {
 }
 
 function findRandomWalkableTileNear(location) {
-    // BILO_FIX: Reference TILE_SIZE from the global scope (defined in main.js)
-    const TILE_SIZE_LOCAL = typeof TILE_SIZE !== 'undefined' ? TILE_SIZE : 48; // Fallback for safety
-
-    const gridX = Math.floor(location.x / TILE_SIZE_LOCAL);
-    const gridY = Math.floor(location.y / TILE_SIZE_LOCAL);
+    // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
+    const gridX = Math.floor(location.x / TILE_SIZE);
+    const gridY = Math.floor(location.y / TILE_SIZE);
 
     // Search a small area around the location
     for (let dy = -1; dy <= 1; dy++) {
@@ -290,7 +288,7 @@ function findRandomWalkableTileNear(location) {
             if (checkY >= 0 && checkY < gameState.navGrid.length &&
                 checkX >= 0 && checkX < gameState.navGrid[0].length &&
                 gameState.navGrid[checkY][checkX] === 0) { // If walkable
-                return { x: checkX * TILE_SIZE_LOCAL + TILE_SIZE_LOCAL / 2, y: checkY * TILE_SIZE_LOCAL + TILE_SIZE_LOCAL / 2 };
+                return { x: checkX * TILE_SIZE + TILE_SIZE / 2, y: checkY * TILE_SIZE + TILE_SIZE / 2 };
             }
         }
     }
@@ -315,14 +313,12 @@ function findRandomSpawnZone(locations) {
 }
 
 function findRandomWalkableTileInZone(zone) {
-    // BILO_FIX: Reference TILE_SIZE from the global scope (defined in main.js)
-    const TILE_SIZE_LOCAL = typeof TILE_SIZE !== 'undefined' ? TILE_SIZE : 48; // Fallback for safety
-
+    // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
     if (!zone) return null;
-    const startGridX = Math.floor(zone.x / TILE_SIZE_LOCAL);
-    const startGridY = Math.floor(zone.y / TILE_SIZE_LOCAL);
-    const endGridX = Math.ceil((zone.x + zone.width) / TILE_SIZE_LOCAL);
-    const endGridY = Math.ceil((zone.y + zone.height) / TILE_SIZE_LOCAL);
+    const startGridX = Math.floor(zone.x / TILE_SIZE);
+    const startGridY = Math.floor(zone.y / TILE_SIZE);
+    const endGridX = Math.ceil((zone.x + zone.width) / TILE_SIZE);
+    const endGridY = Math.ceil((zone.y + zone.height) / TILE_SIZE);
 
     const walkableTiles = [];
     for (let y = startGridY; y < endGridY; y++) {
@@ -330,7 +326,7 @@ function findRandomWalkableTileInZone(zone) {
             if (y >= 0 && y < gameState.navGrid.length &&
                 x >= 0 && x < gameState.navGrid[0].length &&
                 gameState.navGrid[y][x] === 0) { // If walkable
-                walkableTiles.push({ x: x * TILE_SIZE_LOCAL + TILE_SIZE_LOCAL / 2, y: y * TILE_SIZE_LOCAL + TILE_SIZE_LOCAL / 2 });
+                walkableTiles.push({ x: x * TILE_SIZE + TILE_SIZE / 2, y: y * TILE_SIZE + TILE_SIZE / 2 });
             }
         }
     }
@@ -358,7 +354,7 @@ function createWorldObject(type, position, tags = []) {
     return newObject;
 }
 
-[cite_start]const ITEM_SPAWN_LOGIC = { [cite: 573]
+const ITEM_SPAWN_LOGIC = {
     'coffee_mug': { locations: ['break_room', 'desk', 'main_office'], maxCount: 5 }, // Added main_office
     'snack': { locations: ['break_room'], maxCount: 3 },
     'notebook': { locations: ['desk', 'main_office'], maxCount: 4 }, // Added main_office
@@ -366,10 +362,8 @@ function createWorldObject(type, position, tags = []) {
     'photo_frame': { locations: ['desk', 'main_office'], maxCount: 3 } // Example additional item
 };
 
-[cite_start]function populateWorldWithObjects(characters) { [cite: 578]
-    // BILO_FIX: Reference TILE_SIZE from the global scope (defined in main.js)
-    const TILE_SIZE_LOCAL = typeof TILE_SIZE !== 'undefined' ? TILE_SIZE : 48; // Fallback for safety
-
+function populateWorldWithObjects(characters) {
+    // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
     // 1. Place player-selected desk items first
     characters.forEach(character => {
         if (character.deskItems && character.deskId) {
@@ -388,19 +382,19 @@ function createWorldObject(type, position, tags = []) {
     // 2. Place procedurally generated items
     for (const itemType in ITEM_SPAWN_LOGIC) {
         const logic = ITEM_SPAWN_LOGIC[itemType];
-        [cite_start]const count = Math.floor(Math.random() * (logic.maxCount + 1)); [cite: 594]
+        const count = Math.floor(Math.random() * (logic.maxCount + 1));
 
         for (let i = 0; i < count; i++) {
-            const spawnZone = findRandomSpawnZone(logic.locations); [cite_start]// This needs to return a zone bounding box [cite: 596]
+            const spawnZone = findRandomSpawnZone(logic.locations); // This needs to return a zone bounding box
             if (spawnZone) {
-                [cite_start]const position = findRandomWalkableTileInZone(spawnZone); [cite: 598]
+                const position = findRandomWalkableTileInZone(spawnZone);
                 if (position) {
-                    [cite_start]createWorldObject(itemType, position); [cite: 600]
+                    createWorldObject(itemType, position);
                 }
             }
         }
     }
-    [cite_start]console.log("World objects populated:", gameState.worldObjects); [cite: 604]
+    console.log("World objects populated:", gameState.worldObjects);
 }
 
 
@@ -421,16 +415,14 @@ const backend = {
      * Sets a target destination for the character to move towards.
      */
     findPathFor: (character, targetWorldPos) => {
-        // BILO_FIX: Reference TILE_SIZE from the global scope (defined in main.js)
-        const TILE_SIZE_LOCAL = typeof TILE_SIZE !== 'undefined' ? TILE_SIZE : 48; // Fallback for safety
-
+        // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
         const startGridPos = {
-            x: Math.floor(character.position.x / TILE_SIZE_LOCAL),
-            y: Math.floor(character.position.y / TILE_SIZE_LOCAL)
+            x: Math.floor(character.position.x / TILE_SIZE),
+            y: Math.floor(character.position.y / TILE_SIZE)
         };
         const endGridPos = {
-            x: Math.floor(targetWorldPos.x / TILE_SIZE_LOCAL),
-            y: Math.floor(targetWorldPos.y / TILE_SIZE_LOCAL)
+            x: Math.floor(targetWorldPos.x / TILE_SIZE),
+            y: Math.floor(targetWorldPos.y / TILE_SIZE)
         };
 
         if (!gameState.navGrid[endGridPos.y] || gameState.navGrid[endGridPos.y][endGridPos.x] === undefined || gameState.navGrid[endGridPos.y][endGridPos.x] === 1) {
@@ -444,8 +436,8 @@ const backend = {
 
         if (path) {
             character.path = path.map(p => ({
-                x: p.x * TILE_SIZE_LOCAL + TILE_SIZE_LOCAL / 2, // Convert grid back to world coordinates (center of tile)
-                y: p.y * TILE_SIZE_LOCAL + TILE_SIZE_LOCAL / 2
+                x: p.x * TILE_SIZE + TILE_SIZE / 2, // Convert grid back to world coordinates (center of tile)
+                y: p.y * TILE_SIZE + TILE_SIZE / 2
             }));
             console.log("Path found:", character.path);
         } else {
@@ -459,8 +451,7 @@ const backend = {
      * It contains the simplified logic for moving the character along a path.
      */
     update: (deltaTime) => {
-        // BILO_FIX: Reference TILE_SIZE from the global scope (defined in main.js)
-        const TILE_SIZE_LOCAL = typeof TILE_SIZE !== 'undefined' ? TILE_SIZE : 48; // Fallback for safety
+        // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
 
         for (const character of gameState.characters) {
             if (character.path && character.path.length > 0) {
