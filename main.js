@@ -118,8 +118,12 @@ async function renderMap(mapData) {
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        // Correctly resolve the image path relative to the map file's location.
-        const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), mapUrl.href).href;
+        // BILO_FIX: Corrected the image path resolution.
+        // Assuming 'Assets' folder is at the project root, one level up from 'assets/maps/'.
+        const relativePathToRoot = '../../'; // Adjust this if your 'main.js' or 'assets' folder structure changes
+        const correctedImagePath = tilesetDef.image.replace(/\\/g, '/'); // Normalize backslashes
+        const imageUrl = new URL(correctedImagePath, new URL(relativePathToRoot, window.location.href)).href;
+
         console.log(`Loading tileset image from: ${imageUrl}`);
         
         await PIXI.Assets.load(imageUrl);
@@ -371,7 +375,7 @@ function updateUI(character) {
     }
 
     // Update the Tasks Tab (SSOT 3.9)
-    const taskDisplay = document.getElementById('task-content');
+    const taskDisplay = document.getElementById('tasks-content'); // BILO_FIX: Corrected ID to 'tasks-content'
     if (taskDisplay) {
         if (character.assignedTask) {
             taskDisplay.innerHTML = `<p class="font-semibold">Current Task:</p><p>${character.assignedTask.displayName}</p>`;
