@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Office Purgatory - Alpha Test</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@pixi/filter-glow@5.2.0/dist/pixi-filters.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- These script tags load the engines from the internet -->
+    <script src="[https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js](https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js)"></script>
+    <!-- BILO_FIX: Added the missing script for the glow filter, which will be needed later. -->
+    <script src="[https://cdn.jsdelivr.net/npm/@pixi/filter-glow@5.2.0/dist/pixi-filters.js](https://cdn.jsdelivr.net/npm/@pixi/filter-glow@5.2.0/dist/pixi-filters.js)"></script>
+    <!-- Tailwind CSS for styling the UI -->
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
     <style>
         /* Basic styles to make the canvas fill its container */
         #world-canvas-container, #character-selector-canvas-container {
@@ -17,10 +20,15 @@
 </head>
 <body class="bg-gray-800 text-white flex flex-col lg:flex-row h-screen p-4 gap-4">
 
+    <!-- Left Column: World View & Interaction Log -->
     <div class="flex-grow flex flex-col gap-4">
-        <div id="world-canvas-container" class="flex-grow bg-black rounded-lg shadow-lg cursor-pointer">
-            </div>
+        <!-- World View -->
+        <!-- BILO_FIX: Added a minimum height to ensure the canvas container is visible -->
+        <div id="world-canvas-container" class="flex-grow bg-black rounded-lg shadow-lg cursor-pointer min-h-[400px]">
+            <!-- The main game PixiJS canvas will be injected here -->
+        </div>
 
+        <!-- Interaction Log & Input -->
         <div class="bg-gray-700 rounded-lg shadow-lg p-4 flex flex-col">
             <div id="chat-log" class="h-32 overflow-y-auto mb-2 border border-gray-600 rounded p-2 text-sm">
                 <p class="text-gray-400">Welcome to the Office Purgatory test harness.</p>
@@ -35,15 +43,19 @@
         </div>
     </div>
 
+    <!-- Right Column: Status Panel & Character Selector -->
     <div id="status-panel" class="w-full lg:w-80 bg-gray-700 rounded-lg shadow-lg p-4 flex flex-col gap-4">
+        <!-- Clock Display (SSOT 3.13) -->
         <div class="text-right text-xs text-gray-400">Current Time: <span id="current-time-display">00:00</span></div>
 
+        <!-- Character Selector -->
         <div class="text-center bg-gray-900/50 rounded-lg p-2">
             <h2 class="text-lg font-bold mb-2">Select Character</h2>
             <div class="flex items-center justify-center gap-4">
                 <button id="prev-char-btn" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">&lt;</button>
                 <div id="character-selector-canvas-container" class="w-24 h-24 bg-black rounded border-2 border-gray-500 flex items-center justify-center overflow-hidden">
-                    </div>
+                    <!-- The character preview PixiJS canvas goes here -->
+                </div>
                 <button id="next-char-btn" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">&gt;</button>
             </div>
             <p id="char-name-display" class="mt-2 text-sm text-gray-400">Character 1</p>
@@ -53,6 +65,7 @@
             </div>
         </div>
 
+        <!-- Status Panel Tabs (SSOT 3.2, 3.9) -->
         <div>
             <div class="flex border-b border-gray-600">
                 <button id="tab-inventory" class="flex-1 p-2 text-center bg-gray-600">Inventory</button>
@@ -60,6 +73,7 @@
                 <button id="tab-relationships" class="flex-1 p-2 text-center">Relationships</button>
             </div>
             <div id="tab-content" class="p-2 h-64 overflow-y-auto bg-gray-800 rounded-b-lg">
+                <!-- The content here is static for this test harness. -->
                 <div id="inventory-content">
                     <p class="text-gray-400">Inventory items will appear here.</p>
                 </div>
@@ -73,6 +87,7 @@
         </div>
     </div>
 
+    <!-- Load the MOCK backend first, then the main front-end script -->
     <script src="mock_backend.js"></script>
     <script src="main.js"></script>
 
