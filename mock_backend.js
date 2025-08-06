@@ -25,7 +25,6 @@ const gameState = {
     ],
     map: {
         // This tells the front-end which Tiled map file to load.
-        // UPDATED to use your new filename.
         json: 'assets/maps/purgatorygamemap.json'
     }
 };
