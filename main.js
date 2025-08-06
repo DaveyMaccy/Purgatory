@@ -79,9 +79,11 @@ async function preloadCharacterAssets() {
     console.log("Pre-loading character assets...");
     for (const url of PREMADE_CHARACTER_SPRITES) {
         
-        // Use the modern PixiJS workflow correctly.
-        const texture = await PIXI.Assets.load(url);
-        const baseTexture = texture.baseTexture;
+        // **FIX:** Reverted to the asset loading method that is proven to work in renderMap().
+        // First, load the asset into the cache.
+        await PIXI.Assets.load(url);
+        // Then, create the BaseTexture from the (now cached) URL.
+        const baseTexture = PIXI.BaseTexture.from(url);
 
         const frames = {};
         const animations = {};
@@ -381,7 +383,7 @@ function setupPlayerInteraction() {
     mainApp.stage.hitArea = mainApp.screen;
     mainApp.stage.on('pointerdown', (event) => {
         const player = gameState.characters.find(c => c.isPlayer);
-        const worldPos = mainApp.stage.toLocal(event.global);
+        const worldPos = characterContainer.toLocal(event.global);
         backend.findPathFor(player, worldPos);
     });
 
