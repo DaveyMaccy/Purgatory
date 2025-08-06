@@ -114,15 +114,13 @@ async function loadMapData(url) {
 async function renderMap(mapData) {
     console.log("Starting map render with EMBEDDED tileset logic...");
 
-    const mapUrl = new URL(mapData.url, window.location.href);
+    // const mapUrl = new URL(mapData.url, window.location.href); // No longer needed for this pathing strategy
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        // BILO_FIX: Corrected the image path resolution.
-        // Assuming 'Assets' folder is at the project root, one level up from 'assets/maps/'.
-        const relativePathToRoot = '../../'; // Adjust this if your 'main.js' or 'assets' folder structure changes
-        const correctedImagePath = tilesetDef.image.replace(/\\/g, '/'); // Normalize backslashes
-        const imageUrl = new URL(correctedImagePath, new URL(relativePathToRoot, window.location.href)).href;
+        // BILO_FIX: Reverted path logic. Now it correctly expects paths in JSON to be relative to index.html's base URL.
+        // So, if JSON has "assets/path/to/image.png", it will resolve correctly from Purgatory/
+        const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), window.location.href).href;
 
         console.log(`Loading tileset image from: ${imageUrl}`);
         
@@ -443,4 +441,3 @@ function gameLoop(ticker) {
     
     updateCamera();
     updateUI(gameState.characters.find(c => c.isPlayer)); // Update the UI every frame
-}
