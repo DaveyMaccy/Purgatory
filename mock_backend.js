@@ -11,18 +11,58 @@ for (let i = 1; i <= 20; i++) {
     PREMADE_CHARACTER_SPRITES.push(`assets/characters/Premade_Character_48x48_${number}.png`);
 }
 
+const TILE_SIZE = 48; // Global variable defined in main.js, used here for consistency
+
 const gameState = {
     characters: [
         {
             id: 'char_player',
-            name: 'Player',
+            name: 'Alex', // Default name
             isPlayer: true,
-            position: { x: -366.667, y: -189.333 }, // Updated to spawn_point_1
-            actionState: 'idle_down',
-            // The default character sprite. This will be updated by the selector.
-            spriteSheet: PREMADE_CHARACTER_SPRITES[0],
-            pixiSprite: null,
-            path: [] // Added for pathfinding
+            isEnabled: true,
+            jobRole: 'Senior Coder', // Default job role
+
+            // --- Core Attributes ---
+            physicalAttributes: { age: 28, height: 175, weight: 70, build: 'Average', looks: 7 },
+            skills: { competence: 7, laziness: 2, charisma: 6, leadership: 4 }, // Scored 1-10
+
+            // --- Tag System ---
+            personalityTags: ['Creative', 'Introverted', 'Witty', 'Flirty'],
+            experienceTags: ['5+ Years Experience', 'Startup Background'],
+
+            // --- Dynamic State ---
+            needs: { energy: 8, hunger: 9, social: 6, comfort: 10, stress: 1 }, // Scored 1-10
+            mood: 'Neutral', // 'Happy', 'Sad', 'Angry', 'Stressed', 'Tired'
+
+            // --- Action & Interaction State ---
+            actionState: 'idle_down', // 'DEFAULT', 'HoldingItem', 'InConversation'
+            facingAngle: 90, // Current direction in degrees (0-359). Default is 90 (facing down).
+            maxSightRange: 250, // Maximum sight distance in pixels.
+            isBusy: false, // Flag to prevent contradictory prompts
+            currentAction: null, // e.g., { type: 'USE_COMPUTER', duration: 300, elapsedTime: 0 }
+            currentActionTranscript: [], // A log of the sub-steps of a complex action
+            pendingIntent: null, // A full action object queued after a prerequisite action is complete.
+            heldItem: null, // e.g., { id: 'coffee_mug_1', type: 'coffee_mug' }
+            conversationId: null, // ID of the conversation they are in
+
+            // --- Memory & Goals ---
+            shortTermMemory: [], // A rolling log of the last 20 fully completed actions by any character in the vicinity.
+            longTermMemory: [], // A curated list of up to 100 significant events, summarized by the AI itself.
+            longTermGoal: { type: 'promotion', target: 'Senior Position', progress: 0.0 }, // The AI's current primary ambition.
+            assignedTask: { displayName: 'Review Q4 Reports', requiredLocation: 'desk_1' }, // The "bullshit busy work" task
+
+            // --- Backend & Visuals ---
+            inventory: [{ id: 'smartphone_1', type: 'smartphone', name: 'Smartphone' }], // Items that are pocketed, not held.
+            deskItems: [{ id: 'novelty_mug_1', type: 'novelty_mug', name: 'Novelty Mug' }], // Items placed on or under the character's desk at game start.
+            relationships: { 'char_1': 55, 'char_2': 32 }, // Social standing, 0-100. Initial value is 50.
+            api: { key: '...', provider: 'gemma-3-27b' }, // User-provided API key and a provider  selected from a dropdown.
+            promptCount: 0,
+            deskId: 'desk_1', // Character's "home base"
+            path: [], // Temporary array of coordinates for movement.
+            position: { x: -366.667, y: -189.333 }, // Real-time coordinate on the canvas. Updated to spawn_point_1
+            portrait: '', // base64 string for the UI portrait. BILO_PLACEHOLDER: This is currently an empty string.
+            spriteColors: { skin: '#EAC086', hair: '#2C1E10', shirt: '#4A5568', pants: '#2D3748', shoes: '#1A202C' }, // BILO_PLACEHOLDER: Still using spriteColors instead of appearance object.
+            pixiSprite: null // BILO_PLACEHOLDER: Still using pixiSprite for pre-made character sprites (Phase 1).
         }
     ],
     map: {
@@ -30,7 +70,8 @@ const gameState = {
         json: 'assets/maps/purgatorygamemap.json',
         data: null // To store the parsed map data
     },
-    navGrid: null // To store the generated navigation grid
+    navGrid: null, // To store the generated navigation grid
+    worldObjects: [] // Added to store interactive objects in the world
 };
 
 // BILO_PLACEHOLDER: This is a simplified A* implementation.
@@ -133,8 +174,6 @@ function findPath(grid, start, end) {
 }
 
 
-const TILE_SIZE = 48; // Global variable defined in main.js, used here for consistency
-
 function generateNavGrid(mapData) {
     const gridWidth = Math.ceil(mapData.width * TILE_SIZE / TILE_SIZE); // Map width in tiles
     const gridHeight = Math.ceil(mapData.height * TILE_SIZE / TILE_SIZE); // Map height in tiles
@@ -168,7 +207,7 @@ function generateNavGrid(mapData) {
             for (const obj of layer.objects) {
                 // Consider objects with 'collides' property or default types as obstacles
                 const isObstacle = obj.properties?.some(p => p.name === 'collides' && p.value === true) ||
-                                   ['desk', 'chair', 'misc', 'food_and_drink', 'storage', 'office_equipment'].includes(obj.type);
+                                   ['desk', 'chair', 'misc', 'food_and_drink', 'storage', 'office_equipment', 'room'].includes(obj.type); // Added 'room'
                 if (isObstacle) {
                     const startGridX = Math.floor(obj.x / TILE_SIZE);
                     const startGridY = Math.floor(obj.y / TILE_SIZE);
@@ -182,6 +221,20 @@ function generateNavGrid(mapData) {
                             }
                         }
                     }
+                }
+                // Store interactive objects in gameState.worldObjects for later use
+                if (obj.type && !['room', 'spawn_point'].includes(obj.type) && obj.name) { // Exclude 'room' and 'spawn_point' types
+                    gameState.worldObjects.push({
+                        id: obj.id,
+                        name: obj.name,
+                        type: obj.type,
+                        x: obj.x,
+                        y: obj.y,
+                        width: obj.width,
+                        height: obj.height,
+                        // BILO_PLACEHOLDER: Add actual tags based on SSOT for items
+                        tags: []
+                    });
                 }
             }
         }
@@ -204,7 +257,131 @@ function generateNavGrid(mapData) {
 
     gameState.navGrid = navGrid;
     console.log("Navigation grid generated from map data.");
-    console.log(navGrid); // Log the grid for verification
+    // console.log(navGrid); // Log the grid for verification
+}
+
+// BILO_PLACEHOLDER: Simplified findDeskById, findRandomWalkableTileNear, findRandomSpawnZone, findRandomWalkableTileInZone.
+// These would typically be more robust, pulling from map metadata or a defined list of points.
+function findDeskById(deskId) {
+    // For now, hardcode a desk position for the player's desk
+    if (deskId === 'desk_1') {
+        // Coordinates for the first desk in the main office area from purgatorygamemap.json (approximate center)
+        return { x: -382.667 + 129.333 / 2, y: 168 + 54.667 / 2, width: 0, height: 0 };
+    }
+    return { x: 0, y: 0, width: 0, height: 0 }; // Default if not found
+}
+
+function findRandomWalkableTileNear(location) {
+    const gridX = Math.floor(location.x / TILE_SIZE);
+    const gridY = Math.floor(location.y / TILE_SIZE);
+
+    // Search a small area around the location
+    for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+            const checkX = gridX + dx;
+            const checkY = gridY + dy;
+            if (checkY >= 0 && checkY < gameState.navGrid.length &&
+                checkX >= 0 && checkX < gameState.navGrid[0].length &&
+                gameState.navGrid[checkY][checkX] === 0) { // If walkable
+                return { x: checkX * TILE_SIZE + TILE_SIZE / 2, y: checkY * TILE_SIZE + TILE_SIZE / 2 };
+            }
+        }
+    }
+    console.warn("Could not find a walkable tile near", location);
+    return null;
+}
+
+function findRandomSpawnZone(locations) {
+    // BILO_PLACEHOLDER: This needs actual map data for zones.
+    // For now, just return a dummy "break_room" zone.
+    if (locations.includes('break_room')) {
+        return { name: 'break_room', x: 111, y: 482, width: 447, height: 272 }; // Approximate break room bounds
+    }
+    if (locations.includes('desk')) {
+        return { name: 'desk', x: -382.667, y: 168, width: 129.333, height: 54.667 }; // Approx desk 1
+    }
+    return null;
+}
+
+function findRandomWalkableTileInZone(zone) {
+    if (!zone) return null;
+    const startGridX = Math.floor(zone.x / TILE_SIZE);
+    const startGridY = Math.floor(zone.y / TILE_SIZE);
+    const endGridX = Math.ceil((zone.x + zone.width) / TILE_SIZE);
+    const endGridY = Math.ceil((zone.y + zone.height) / TILE_SIZE);
+
+    const walkableTiles = [];
+    for (let y = startGridY; y < endGridY; y++) {
+        for (let x = startGridX; x < endGridX; x++) {
+            if (y >= 0 && y < gameState.navGrid.length &&
+                x >= 0 && x < gameState.navGrid[0].length &&
+                gameState.navGrid[y][x] === 0) { // If walkable
+                walkableTiles.push({ x: x * TILE_SIZE + TILE_SIZE / 2, y: y * TILE_SIZE + TILE_SIZE / 2 });
+            }
+        }
+    }
+
+    if (walkableTiles.length > 0) {
+        return walkableTiles[Math.floor(Math.random() * walkableTiles.length)];
+    }
+    return null;
+}
+
+function createWorldObject(type, position, tags = []) {
+    // BILO_PLACEHOLDER: Generate a unique ID for the object
+    const id = `${type}_${Math.random().toString(36).substr(2, 9)}`;
+    const newObject = {
+        id: id,
+        type: type,
+        name: type.replace('_', ' '), // Simple name for now
+        position: position,
+        tags: tags,
+        // BILO_PLACEHOLDER: Add visual properties for the object here, or link to a rendering system
+        // For now, this just updates the backend state.
+    };
+    gameState.worldObjects.push(newObject);
+    console.log("Created world object:", newObject);
+    return newObject;
+}
+
+const ITEM_SPAWN_LOGIC = {
+    'coffee_mug': { locations: ['break_room', 'desk'], maxCount: 5 },
+    'snack': { locations: ['break_room'], maxCount: 3 },
+    'notebook': { locations: ['desk', 'meeting_room'], maxCount: 4 }
+};
+
+function populateWorldWithObjects(characters) {
+    // 1. Place player-selected desk items first
+    characters.forEach(character => {
+        if (character.deskItems && character.deskId) {
+            const deskLocation = findDeskById(character.deskId); // This needs to return a world position for the desk
+            if (deskLocation) {
+                character.deskItems.forEach(itemToPlace => {
+                    const position = findRandomWalkableTileNear(deskLocation);
+                    if (position) {
+                        createWorldObject(itemToPlace.type, position, itemToPlace.tags);
+                    }
+                });
+            }
+        }
+    });
+
+    // 2. Place procedurally generated items
+    for (const itemType in ITEM_SPAWN_LOGIC) {
+        const logic = ITEM_SPAWN_LOGIC[itemType];
+        const count = Math.floor(Math.random() * (logic.maxCount + 1));
+
+        for (let i = 0; i < count; i++) {
+            const spawnZone = findRandomSpawnZone(logic.locations); // This needs to return a zone bounding box
+            if (spawnZone) {
+                const position = findRandomWalkableTileInZone(spawnZone);
+                if (position) {
+                    createWorldObject(itemType, position);
+                }
+            }
+        }
+    }
+    console.log("World objects populated:", gameState.worldObjects);
 }
 
 
@@ -216,7 +393,8 @@ const backend = {
     initialize: (mapData) => {
         gameState.map.data = mapData;
         generateNavGrid(mapData);
-        console.log("Backend initialized with map data and nav grid.");
+        populateWorldWithObjects(gameState.characters); // Populate items after grid is ready
+        console.log("Backend initialized with map data, nav grid, and world objects.");
     },
 
     /**
