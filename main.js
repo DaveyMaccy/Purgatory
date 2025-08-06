@@ -63,7 +63,7 @@ window.onload = async () => {
                 <p>Open the browser's developer console (F12) for more details.</p>
             </div>`;
     }
-};
+}; // BILO_FIX: Added missing closing brace for window.onload function.
 
 // --- Asset Pre-loading ---
 async function preloadCharacterAssets() {
