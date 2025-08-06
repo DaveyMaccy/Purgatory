@@ -1,5 +1,8 @@
 // This file simulates the game's backend for the test harness.
 
+// **FIX:** Re-added the TILE_SIZE constant to make this file self-contained and remove the fragile dependency on main.js's load order.
+const TILE_SIZE = 48;
+
 // BILO_FIX: Corrected the base path for character sprites to reflect the lowercase 'assets' folder
 // and the new definitive file structure.
 const PREMADE_CHARACTER_SPRITES = [];
@@ -11,9 +14,6 @@ for (let i = 1; i <= 20; i++) {
     // Path is now relative to the HTML file, so it's 'assets/characters/'
     PREMADE_CHARACTER_SPRITES.push(`assets/characters/Premade_Character_48x48_${number}.png`);
 }
-
-// REMOVED: const TILE_SIZE = 48; // This line caused the redeclaration error as it's already in main.js
-// It will now implicitly reference the TILE_SIZE from main.js as main.js loads first.
 
 const gameState = {
     characters: [
@@ -177,8 +177,6 @@ function findPath(grid, start, end) {
 
 
 function generateNavGrid(mapData) {
-    // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
-    // No need for local const or typeof checks, as main.js is loaded first.
     const gridWidth = Math.ceil(mapData.width * TILE_SIZE / TILE_SIZE); // Map width in tiles
     const gridHeight = Math.ceil(mapData.height * TILE_SIZE / TILE_SIZE); // Map height in tiles
 
@@ -277,7 +275,6 @@ function findDeskById(deskId) {
 }
 
 function findRandomWalkableTileNear(location) {
-    // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
     const gridX = Math.floor(location.x / TILE_SIZE);
     const gridY = Math.floor(location.y / TILE_SIZE);
 
@@ -314,7 +311,6 @@ function findRandomSpawnZone(locations) {
 }
 
 function findRandomWalkableTileInZone(zone) {
-    // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
     if (!zone) return null;
     const startGridX = Math.floor(zone.x / TILE_SIZE);
     const startGridY = Math.floor(zone.y / TILE_SIZE);
@@ -364,7 +360,6 @@ const ITEM_SPAWN_LOGIC = {
 };
 
 function populateWorldWithObjects(characters) {
-    // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
     // 1. Place player-selected desk items first
     characters.forEach(character => {
         if (character.deskItems && character.deskId) {
@@ -416,7 +411,6 @@ const backend = {
      * Sets a target destination for the character to move towards.
      */
     findPathFor: (character, targetWorldPos) => {
-        // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
         const startGridPos = {
             x: Math.floor(character.position.x / TILE_SIZE),
             y: Math.floor(character.position.y / TILE_SIZE)
@@ -452,8 +446,6 @@ const backend = {
      * It contains the simplified logic for moving the character along a path.
      */
     update: (deltaTime) => {
-        // BILO_FIX: Directly reference TILE_SIZE from the global scope (defined in main.js)
-
         for (const character of gameState.characters) {
             if (character.path && character.path.length > 0) {
                 const speed = 2.5; // Movement speed in pixels per frame
