@@ -17,6 +17,7 @@ window.onload = async () => {
             background: '#000000',
         });
         document.getElementById('world-canvas-container').appendChild(mainApp.view);
+        mainApp.resize(); // BILO_FIX: Manually trigger a resize to ensure canvas fills container
         console.log("Main game canvas initialized.");
 
         // Initialize the character selector preview canvas
