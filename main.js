@@ -4,9 +4,10 @@
 let sheet; // Will hold the parsed spritesheet data for the current character
 const TILE_SIZE = 48; // The size of your tiles in the Tiled map
 
-// --- Application Setup ---
+// BILO_FIX: The PIXI.Application constructor is now used for initialization.
+// The old .init() method was incorrect for the version of PixiJS we are using.
 const mainApp = new PIXI.Application();
-const selectorApp = new PIXI.Application(); // A separate app for the character preview
+const selectorApp = new PIXI.Application();
 
 // --- Main Initialization Function ---
 window.onload = async () => {
@@ -71,14 +72,19 @@ async function renderMap(mapData) {
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        const tilesetUrl = new URL(tilesetDef.source, mapUrl).href.replace('.tsx', '.png');
-        await PIXI.Assets.load(tilesetUrl);
+        // BILO_FIX: Correctly handle both .tsx and .json tileset source files.
+        const tilesetSourceUrl = new URL(tilesetDef.source, mapUrl).href;
+        const tilesetResponse = await fetch(tilesetSourceUrl);
+        const tilesetData = await tilesetResponse.json();
+        const imageUrl = new URL(tilesetData.image, tilesetSourceUrl).href;
+
+        await PIXI.Assets.load(imageUrl);
         tilesets[tilesetDef.firstgid] = {
-            texture: PIXI.BaseTexture.from(tilesetUrl),
-            columns: tilesetDef.columns,
-            tileSize: tilesetDef.tilewidth // Assuming square tiles
+            texture: PIXI.BaseTexture.from(imageUrl),
+            columns: tilesetData.columns,
+            tileSize: tilesetData.tilewidth
         };
-        console.log(`Loaded tileset with first GID ${tilesetDef.firstgid} from ${tilesetUrl}`);
+        console.log(`Loaded tileset with first GID ${tilesetDef.firstgid} from ${imageUrl}`);
     }
 
     for (const layer of mapData.layers) {
@@ -114,8 +120,9 @@ function renderTileLayer(layer, mapData, tilesets) {
             const x = (i % chunk.width) + chunk.x;
             const y = Math.floor(i / chunk.width) + chunk.y;
 
-            const tileX = ((tileId - tilesetDef.firstgid) % tileset.columns) * tileset.tileSize;
-            const tileY = Math.floor((tileId - tilesetDef.firstgid) / tileset.columns) * tileset.tileSize;
+            const localTileId = tileId - tilesetDef.firstgid;
+            const tileX = (localTileId % tileset.columns) * tileset.tileSize;
+            const tileY = Math.floor(localTileId / tileset.columns) * tileset.tileSize;
 
             const tileRect = new PIXI.Rectangle(tileX, tileY, tileset.tileSize, tileset.tileSize);
             const texture = new PIXI.Texture(tileset.texture, tileRect);
@@ -141,8 +148,9 @@ function renderObjectLayer(layer, mapData, tilesets) {
         if (!tilesetDef) continue;
 
         const tileset = tilesets[tilesetDef.firstgid];
-        const tileX = ((tileId - tilesetDef.firstgid) % tileset.columns) * tileset.tileSize;
-        const tileY = Math.floor((tileId - tilesetDef.firstgid) / tileset.columns) * tileset.tileSize;
+        const localTileId = tileId - tilesetDef.firstgid;
+        const tileX = (localTileId % tileset.columns) * tileset.tileSize;
+        const tileY = Math.floor(localTileId / tileset.columns) * tileset.tileSize;
 
         const tileRect = new PIXI.Rectangle(tileX, tileY, tileset.tileSize, tileset.tileSize);
         const texture = new PIXI.Texture(tileset.texture, tileRect);
