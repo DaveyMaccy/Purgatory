@@ -9,15 +9,18 @@ const TILE_SIZE = 48; // The size of your tiles in the Tiled map
 // --- Main Initialization Function ---
 window.onload = async () => {
     try {
-        // BILO_FIX: The PIXI.Application is now created using the correct async static `init` method.
+        // BILO_FIX: The PIXI.Application is now created with the correct syntax for PixiJS v7.
+        // First, create a new instance, THEN call the async init method on that instance.
         // This was the cause of the "mainApp.init is not a function" error.
-        mainApp = await PIXI.Application.init({
+        mainApp = new PIXI.Application();
+        await mainApp.init({
             resizeTo: document.getElementById('world-canvas-container'),
             background: '#000000',
         });
         document.getElementById('world-canvas-container').appendChild(mainApp.view);
 
-        selectorApp = await PIXI.Application.init({
+        selectorApp = new PIXI.Application();
+        await selectorApp.init({
             resizeTo: document.getElementById('character-selector-canvas-container'),
             background: '#1a202c',
         });
