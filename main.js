@@ -26,6 +26,7 @@ window.onload = async () => {
             background: '#1a202c',
         });
         document.getElementById('character-selector-canvas-container').appendChild(selectorApp.view);
+        selectorApp.resize(); // BILO_FIX: Manually trigger a resize for selector canvas
         console.log("Character selector canvas initialized.");
 
         // Pre-load all character assets
