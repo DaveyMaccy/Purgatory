@@ -82,69 +82,102 @@ async function preloadCharacterAssets() {
 
         const frameWidth = 48;
         const frameHeight = 48;
-        const framesPerAnimationRow = 3; // Most animations in the guide have 3 frames
 
-        // Helper to define frames for a row and add to animations
-        const defineAnimation = (animationName, rowNumber, numFrames = framesPerAnimationRow) => {
-            const startY = rowNumber * frameHeight;
-            const currentAnimationFrames = [];
-            for (let i = 0; i < numFrames; i++) {
-                const frameKey = `${charPrefix}${animationName}_${i}`;
-                frames[frameKey] = { frame: { x: i * frameWidth, y: startY, w: frameWidth, h: frameHeight } };
-                currentAnimationFrames.push(frameKey);
-            }
-            animations[animationName] = currentAnimationFrames;
-        };
+        // --- Define ALL Frames based on Spritesheet_animations_GUIDE.png (48x48 grid) ---
+        // Row 0: Walk Down (3 frames)
+        frames[`${charPrefix}walk_down_0`] = { frame: { x: 0, y: 0, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}walk_down_1`] = { frame: { x: 48, y: 0, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}walk_down_2`] = { frame: { x: 96, y: 0, w: frameWidth, h: frameHeight } };
+        animations['walk_down'] = [`${charPrefix}walk_down_0`, `${charPrefix}walk_down_1`, `${charPrefix}walk_down_2`, `${charPrefix}walk_down_1`];
+        animations['idle_down'] = [`${charPrefix}walk_down_1`];
 
-        // --- Define Animations based on Spritesheet_animations_GUIDE.png ---
-        // Row 0: Walk Down
-        defineAnimation('walk_down', 0);
-        animations['idle_down'] = [`${charPrefix}walk_down_1`]; // Idle is the middle frame of walk_down
-
-        // Row 1: Walk Left
-        defineAnimation('walk_left', 1);
+        // Row 1: Walk Left (3 frames)
+        frames[`${charPrefix}walk_left_0`] = { frame: { x: 0, y: 48, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}walk_left_1`] = { frame: { x: 48, y: 48, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}walk_left_2`] = { frame: { x: 96, y: 48, w: frameWidth, h: frameHeight } };
+        animations['walk_left'] = [`${charPrefix}walk_left_0`, `${charPrefix}walk_left_1`, `${charPrefix}walk_left_2`, `${charPrefix}walk_left_1`];
         animations['idle_left'] = [`${charPrefix}walk_left_1`];
 
-        // Row 2: Walk Right
-        defineAnimation('walk_right', 2);
+        // Row 2: Walk Right (3 frames)
+        frames[`${charPrefix}walk_right_0`] = { frame: { x: 0, y: 96, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}walk_right_1`] = { frame: { x: 48, y: 96, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}walk_right_2`] = { frame: { x: 96, y: 96, w: frameWidth, h: frameHeight } };
+        animations['walk_right'] = [`${charPrefix}walk_right_0`, `${charPrefix}walk_right_1`, `${charPrefix}walk_right_2`, `${charPrefix}walk_right_1`];
         animations['idle_right'] = [`${charPrefix}walk_right_1`];
 
-        // Row 3: Walk Up
-        defineAnimation('walk_up', 3);
+        // Row 3: Walk Up (3 frames)
+        frames[`${charPrefix}walk_up_0`] = { frame: { x: 0, y: 144, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}walk_up_1`] = { frame: { x: 48, y: 144, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}walk_up_2`] = { frame: { x: 96, y: 144, w: frameWidth, h: frameHeight } };
+        animations['walk_up'] = [`${charPrefix}walk_up_0`, `${charPrefix}walk_up_1`, `${charPrefix}walk_up_2`, `${charPrefix}walk_up_1`];
         animations['idle_up'] = [`${charPrefix}walk_up_1`];
 
-        // Row 4: Sleep (appears to be 3 frames)
-        defineAnimation('sleep', 4);
+        // Row 4: Sleep (3 frames)
+        frames[`${charPrefix}sleep_0`] = { frame: { x: 0, y: 192, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}sleep_1`] = { frame: { x: 48, y: 192, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}sleep_2`] = { frame: { x: 96, y: 192, w: frameWidth, h: frameHeight } };
+        animations['sleep'] = [`${charPrefix}sleep_0`, `${charPrefix}sleep_1`, `${charPrefix}sleep_2`, `${charPrefix}sleep_1`];
 
-        // Row 5: Sit (appears to be 3 frames)
-        defineAnimation('sit', 5);
+        // Row 5: Sit (3 frames)
+        frames[`${charPrefix}sit_0`] = { frame: { x: 0, y: 240, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}sit_1`] = { frame: { x: 48, y: 240, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}sit_2`] = { frame: { x: 96, y: 240, w: frameWidth, h: frameHeight } };
+        animations['sit'] = [`${charPrefix}sit_0`, `${charPrefix}sit_1`, `${charPrefix}sit_2`, `${charPrefix}sit_1`];
 
-        // Row 6: Phase (appears to be 3 frames)
-        defineAnimation('phase', 6);
+        // Row 6: Phase (3 frames)
+        frames[`${charPrefix}phase_0`] = { frame: { x: 0, y: 288, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}phase_1`] = { frame: { x: 48, y: 288, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}phase_2`] = { frame: { x: 96, y: 288, w: frameWidth, h: frameHeight } };
+        animations['phase'] = [`${charPrefix}phase_0`, `${charPrefix}phase_1`, `${charPrefix}phase_2`, `${charPrefix}phase_1`];
 
-        // Row 7: Push (appears to be 3 frames)
-        defineAnimation('push', 7);
+        // Row 7: Push (3 frames)
+        frames[`${charPrefix}push_0`] = { frame: { x: 0, y: 336, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}push_1`] = { frame: { x: 48, y: 336, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}push_2`] = { frame: { x: 96, y: 336, w: frameWidth, h: frameHeight } };
+        animations['push'] = [`${charPrefix}push_0`, `${charPrefix}push_1`, `${charPrefix}push_2`, `${charPrefix}push_1`];
 
-        // Row 8: Pick Up (appears to be 3 frames)
-        defineAnimation('pick_up', 8);
+        // Row 8: Pick Up (3 frames)
+        frames[`${charPrefix}pick_up_0`] = { frame: { x: 0, y: 384, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}pick_up_1`] = { frame: { x: 48, y: 384, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}pick_up_2`] = { frame: { x: 96, y: 384, w: frameWidth, h: frameHeight } };
+        animations['pick_up'] = [`${charPrefix}pick_up_0`, `${charPrefix}pick_up_1`, `${charPrefix}pick_up_2`, `${charPrefix}pick_up_1`];
 
-        // Row 9: Lift (appears to be 3 frames)
-        defineAnimation('lift', 9);
+        // Row 9: Lift (3 frames)
+        frames[`${charPrefix}lift_0`] = { frame: { x: 0, y: 432, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}lift_1`] = { frame: { x: 48, y: 432, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}lift_2`] = { frame: { x: 96, y: 432, w: frameWidth, h: frameHeight } };
+        animations['lift'] = [`${charPrefix}lift_0`, `${charPrefix}lift_1`, `${charPrefix}lift_2`, `${charPrefix}lift_1`];
 
-        // Row 10: Throw (appears to be 3 frames)
-        defineAnimation('throw', 10);
+        // Row 10: Throw (3 frames)
+        frames[`${charPrefix}throw_0`] = { frame: { x: 0, y: 480, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}throw_1`] = { frame: { x: 48, y: 480, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}throw_2`] = { frame: { x: 96, y: 480, w: frameWidth, h: frameHeight } };
+        animations['throw'] = [`${charPrefix}throw_0`, `${charPrefix}throw_1`, `${charPrefix}throw_2`, `${charPrefix}throw_1`];
 
-        // Row 11: Hit (appears to be 3 frames)
-        defineAnimation('hit', 11);
+        // Row 11: Hit (3 frames)
+        frames[`${charPrefix}hit_0`] = { frame: { x: 0, y: 528, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}hit_1`] = { frame: { x: 48, y: 528, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}hit_2`] = { frame: { x: 96, y: 528, w: frameWidth, h: frameHeight } };
+        animations['hit'] = [`${charPrefix}hit_0`, `${charPrefix}hit_1`, `${charPrefix}hit_2`, `${charPrefix}hit_1`];
 
-        // Row 12: Punch (appears to be 3 frames)
-        defineAnimation('punch', 12);
+        // Row 12: Punch (3 frames)
+        frames[`${charPrefix}punch_0`] = { frame: { x: 0, y: 576, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}punch_1`] = { frame: { x: 48, y: 576, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}punch_2`] = { frame: { x: 96, y: 576, w: frameWidth, h: frameHeight } };
+        animations['punch'] = [`${charPrefix}punch_0`, `${charPrefix}punch_1`, `${charPrefix}punch_2`, `${charPrefix}punch_1`];
 
-        // Row 13: Shoot (appears to be 3 frames)
-        defineAnimation('shoot', 13);
+        // Row 13: Shoot (3 frames)
+        frames[`${charPrefix}shoot_0`] = { frame: { x: 0, y: 624, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}shoot_1`] = { frame: { x: 48, y: 624, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}shoot_2`] = { frame: { x: 96, y: 624, w: frameWidth, h: frameHeight } };
+        animations['shoot'] = [`${charPrefix}shoot_0`, `${charPrefix}shoot_1`, `${charPrefix}shoot_2`, `${charPrefix}shoot_1`];
 
-        // Row 14: Hurt (appears to be 3 frames)
-        defineAnimation('hurt', 14);
+        // Row 14: Hurt (3 frames)
+        frames[`${charPrefix}hurt_0`] = { frame: { x: 0, y: 672, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}hurt_1`] = { frame: { x: 48, y: 672, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}hurt_2`] = { frame: { x: 96, y: 672, w: frameWidth, h: frameHeight } };
+        animations['hurt'] = [`${charPrefix}hurt_0`, `${charPrefix}hurt_1`, `${charPrefix}hurt_2`, `${charPrefix}hurt_1`];
+
 
         // BILO_PLACEHOLDER: This spritesheet definition is manually derived.
         // For a production system, this data should be loaded from a JSON atlas file
