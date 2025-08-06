@@ -10,32 +10,38 @@ const selectorApp = new PIXI.Application(); // A separate app for the character 
 
 // --- Main Initialization Function ---
 window.onload = async () => {
-    // Initialize the main game canvas
-    await mainApp.init({
-        resizeTo: document.getElementById('world-canvas-container'),
-        background: '#000000',
-    });
-    document.getElementById('world-canvas-container').appendChild(mainApp.view);
+    try {
+        // Initialize the main game canvas
+        await mainApp.init({
+            resizeTo: document.getElementById('world-canvas-container'),
+            background: '#000000',
+        });
+        document.getElementById('world-canvas-container').appendChild(mainApp.view);
 
-    // Initialize the character selector canvas
-    await selectorApp.init({
-        resizeTo: document.getElementById('character-selector-canvas-container'),
-        background: '#1a202c',
-    });
-    document.getElementById('character-selector-canvas-container').appendChild(selectorApp.view);
+        // Initialize the character selector canvas
+        await selectorApp.init({
+            resizeTo: document.getElementById('character-selector-canvas-container'),
+            background: '#1a202c',
+        });
+        document.getElementById('character-selector-canvas-container').appendChild(selectorApp.view);
 
-    // Load the Tiled map data
-    const mapData = await loadMapData(gameState.map.json);
-    await renderMap(mapData);
+        // Load the Tiled map data and render it
+        const mapData = await loadMapData(gameState.map.json);
+        await renderMap(mapData);
 
-    // Set up the character selector
-    setupCharacterSelector();
-    
-    // Set up keyboard controls for camera panning
-    setupKeyboardControls();
+        // Set up the character selector and load the initial character
+        await setupCharacterSelector();
+        
+        // Set up player interaction (clicking)
+        setupPlayerInteraction();
 
-    // Start the main game loop
-    mainApp.ticker.add(gameLoop);
+        // Start the main game loop
+        mainApp.ticker.add(gameLoop);
+
+    } catch (error) {
+        console.error("Initialization failed:", error);
+        document.body.innerHTML = `<div style="color: red; padding: 20px;">Error during setup. Check console for details. Most likely a file path is incorrect.</div>`;
+    }
 };
 
 // --- Tiled Map Rendering ---
@@ -45,7 +51,11 @@ window.onload = async () => {
  * @returns {object} - The parsed map data.
  */
 async function loadMapData(url) {
+    console.log(`Loading map data from: ${url}`);
     const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Failed to load map data: ${response.statusText}`);
+    }
     const mapJson = await response.json();
     // Store the URL on the object so we can resolve relative paths later
     mapJson.url = url; 
@@ -58,22 +68,30 @@ async function loadMapData(url) {
  * @param {object} mapData - The loaded Tiled map data.
  */
 async function renderMap(mapData) {
-    // BILO_PLACEHOLDER: This assumes your tileset image file is located relative
-    // to your JSON file as specified within the Tiled editor.
-    // e.g., if Tiled says "../tilesets/my_tiles.png", make sure that path is correct.
-    const tilesetUrl = new URL(mapData.tilesets[0].source, new URL(mapData.url, window.location.href)).href;
+    // FIX: Correctly determine the tileset image path relative to the map JSON file.
+    // This is more robust for servers like GitHub Pages.
+    const mapUrl = new URL(mapData.url, window.location.href);
+    const tilesetUrl = new URL(mapData.tilesets[0].image, mapUrl).href;
+    
+    console.log(`Loading tileset from: ${tilesetUrl}`);
     await PIXI.Assets.load(tilesetUrl);
     const tilesetTexture = PIXI.BaseTexture.from(tilesetUrl);
 
     for (const layer of mapData.layers) {
-        if (layer.type === 'tilelayer') {
-            // Skip layers with the custom property 'collides' set to true
-            if (layer.properties && layer.properties.some(p => p.name === 'collides' && p.value === true)) {
+        // We only render tile layers that are visible and NOT collision layers.
+        if (layer.type === 'tilelayer' && layer.visible) {
+            // Check for our custom 'collides' property on the layer.
+            const isCollisionLayer = layer.properties?.some(p => p.name === 'collides' && p.value === true);
+            if (isCollisionLayer) {
+                console.log(`Skipping rendering of collision layer: ${layer.name}`);
                 continue;
             }
+
             for (const chunk of layer.chunks) {
                 for (let i = 0; i < chunk.data.length; i++) {
-                    const tileId = chunk.data[i] & 0x1FFFFFFF; // Mask out flip flags
+                    // FIX: Tiled uses the highest bits of the tile ID for flip flags.
+                    // We need to remove these flags to get the actual tile index.
+                    const tileId = chunk.data[i] & 0x1FFFFFFF; 
                     if (tileId === 0) continue; // Skip empty tiles
 
                     const x = (i % chunk.width) + chunk.x;
@@ -103,19 +121,8 @@ let selectorSprite;
  * Sets up the character selector UI and initial character.
  */
 async function setupCharacterSelector() {
-    const player = gameState.characters.find(c => c.isPlayer);
-
     // Initial character load
-    await loadCharacterSheet(PREMADE_CHARACTER_SPRITES[currentCharacterIndex]);
-    player.pixiSprite = createAnimatedSprite(sheet);
-    mainApp.stage.addChild(player.pixiSprite);
-
-    // Setup selector preview
-    selectorSprite = createAnimatedSprite(sheet);
-    selectorSprite.x = selectorApp.screen.width / 2;
-    selectorSprite.y = selectorApp.screen.height / 2;
-    selectorApp.stage.addChild(selectorSprite);
-    updateCharacterName();
+    await changeCharacter(0); // Load the first character
 
     // Button listeners
     document.getElementById('next-char-btn').addEventListener('click', () => changeCharacter(1));
@@ -124,24 +131,26 @@ async function setupCharacterSelector() {
 
 /**
  * Handles changing the selected character.
- * @param {number} direction - 1 for next, -1 for previous.
+ * @param {number} direction - 1 for next, -1 for previous, 0 to initialize.
  */
 async function changeCharacter(direction) {
-    currentCharacterIndex += direction;
-    if (currentCharacterIndex >= PREMADE_CHARACTER_SPRITES.length) {
-        currentCharacterIndex = 0;
-    }
-    if (currentCharacterIndex < 0) {
-        currentCharacterIndex = PREMADE_CHARACTER_SPRITES.length - 1;
+    if (direction !== 0) {
+        currentCharacterIndex += direction;
+        if (currentCharacterIndex >= PREMADE_CHARACTER_SPRITES.length) {
+            currentCharacterIndex = 0;
+        }
+        if (currentCharacterIndex < 0) {
+            currentCharacterIndex = PREMADE_CHARACTER_SPRITES.length - 1;
+        }
     }
 
     const player = gameState.characters.find(c => c.isPlayer);
     const newSpritePath = PREMADE_CHARACTER_SPRITES[currentCharacterIndex];
     player.spriteSheet = newSpritePath;
 
-    // Remove old sprites
-    mainApp.stage.removeChild(player.pixiSprite);
-    selectorApp.stage.removeChild(selectorSprite);
+    // Remove old sprites if they exist
+    if (player.pixiSprite) mainApp.stage.removeChild(player.pixiSprite);
+    if (selectorSprite) selectorApp.stage.removeChild(selectorSprite);
 
     // Load and create new sprites
     await loadCharacterSheet(newSpritePath);
@@ -166,28 +175,25 @@ function updateCharacterName() {
  * @param {string} url - The path to the character's sprite sheet .png file.
  */
 async function loadCharacterSheet(url) {
+    console.log(`Loading character sheet: ${url}`);
     await PIXI.Assets.load(url);
     const baseTexture = PIXI.BaseTexture.from(url);
 
-    // BILO_PLACEHOLDER: This sprite sheet definition is an EXAMPLE based on your guide.
+    // BILO_PLACEHOLDER: This sprite sheet definition is an EXAMPLE.
     // You MUST change the coordinates (x, y) and dimensions (w, h) to match your
     // specific character sprite sheet assets. This assumes all your pre-made
     // characters use the exact same animation layout.
     sheet = new PIXI.Spritesheet(baseTexture, {
         frames: {
-            // Assumes a 3-frame animation, 48x48 pixels per frame
             'walk_down_0': { frame: { x: 0, y: 0, w: 48, h: 48 } },
             'walk_down_1': { frame: { x: 48, y: 0, w: 48, h: 48 } },
             'walk_down_2': { frame: { x: 96, y: 0, w: 48, h: 48 } },
-
             'walk_left_0': { frame: { x: 0, y: 48, w: 48, h: 48 } },
             'walk_left_1': { frame: { x: 48, y: 48, w: 48, h: 48 } },
             'walk_left_2': { frame: { x: 96, y: 48, w: 48, h: 48 } },
-
             'walk_right_0': { frame: { x: 0, y: 96, w: 48, h: 48 } },
             'walk_right_1': { frame: { x: 48, y: 96, w: 48, h: 48 } },
             'walk_right_2': { frame: { x: 96, y: 96, w: 48, h: 48 } },
-
             'walk_up_0': { frame: { x: 0, y: 144, w: 48, h: 48 } },
             'walk_up_1': { frame: { x: 48, y: 144, w: 48, h: 48 } },
             'walk_up_2': { frame: { x: 96, y: 144, w: 48, h: 48 } },
@@ -212,62 +218,26 @@ async function loadCharacterSheet(url) {
  */
 function createAnimatedSprite(currentSheet) {
     const sprite = new PIXI.AnimatedSprite(currentSheet.animations.idle_down);
-    sprite.animationSpeed = 0.1;
+    sprite.animationSpeed = 0.15;
     sprite.anchor.set(0.5);
     sprite.play();
     return sprite;
 }
 
-// --- Player Interaction & Camera Controls ---
-const keys = {}; // Object to hold the state of keyboard keys
-
-/**
- * Sets up keyboard event listeners for camera panning.
- */
-function setupKeyboardControls() {
-    window.addEventListener('keydown', (e) => {
-        keys[e.code] = true;
-    });
-    window.addEventListener('keyup', (e) => {
-        keys[e.code] = false;
+// --- Player Interaction ---
+function setupPlayerInteraction() {
+    mainApp.stage.interactive = true;
+    mainApp.stage.hitArea = mainApp.screen;
+    mainApp.stage.on('pointerdown', (event) => {
+        const player = gameState.characters.find(c => c.isPlayer);
+        backend.findPathFor(player, event.global);
     });
 }
-
-/**
- * Updates the camera position based on which arrow keys are pressed.
- */
-function updateCamera() {
-    const panSpeed = 5; // Pixels per frame
-    if (keys['ArrowUp']) {
-        mainApp.stage.y += panSpeed;
-    }
-    if (keys['ArrowDown']) {
-        mainApp.stage.y -= panSpeed;
-    }
-    if (keys['ArrowLeft']) {
-        mainApp.stage.x += panSpeed;
-    }
-    if (keys['ArrowRight']) {
-        mainApp.stage.x -= panSpeed;
-    }
-}
-
-// Setup click-to-move interaction
-mainApp.stage.interactive = true;
-mainApp.stage.hitArea = mainApp.screen;
-mainApp.stage.on('pointerdown', (event) => {
-    const player = gameState.characters.find(c => c.isPlayer);
-    // Convert the screen click coordinates to world coordinates
-    const worldPos = mainApp.stage.toLocal(event.global);
-    backend.findPathFor(player, worldPos);
-});
 
 // --- Game Loop ---
 function gameLoop(ticker) {
-    // 1. Update the backend logic (which handles character movement)
     backend.update(ticker.deltaTime);
 
-    // 2. Sync the front-end visuals with the backend data
     for (const character of gameState.characters) {
         if (character.pixiSprite) {
             character.pixiSprite.x = character.position.x;
@@ -283,10 +253,7 @@ function gameLoop(ticker) {
         }
     }
     
-    // 3. Update the camera based on keyboard input
-    updateCamera();
-
-    // 4. Also update the selector sprite's animation to keep it lively
+    // Also update the selector sprite's animation to keep it lively
     if(selectorSprite && selectorSprite.currentAnimationName !== 'walk_down') {
         selectorSprite.textures = sheet.animations['walk_down'];
         selectorSprite.play();
