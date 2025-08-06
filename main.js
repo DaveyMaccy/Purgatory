@@ -102,7 +102,7 @@ async function loadMapData(url) {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}, failed to fetch ${url}`);
     const mapJson = await response.json();
-    mapJson.url = url;
+    mapJson.url = url; // Store the URL from which the map data was loaded
     console.log("Map data loaded successfully.");
     return mapJson;
 }
@@ -114,13 +114,12 @@ async function loadMapData(url) {
 async function renderMap(mapData) {
     console.log("Starting map render with EMBEDDED tileset logic...");
 
-    // const mapUrl = new URL(mapData.url, window.location.href); // No longer needed for this pathing strategy
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        // BILO_FIX: Reverted path logic. Now it correctly expects paths in JSON to be relative to index.html's base URL.
-        // So, if JSON has "assets/path/to/image.png", it will resolve correctly from Purgatory/
-        const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), window.location.href).href;
+        // BILO_FIX: CRITICAL CORRECTION: Resolve tileset image paths relative to the mapData.url (the JSON file's location).
+        // This ensures that if the JSON contains just the filename (e.g., "image.png"), it looks for it in the same directory as the JSON.
+        const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), mapData.url).href;
 
         console.log(`Loading tileset image from: ${imageUrl}`);
         
