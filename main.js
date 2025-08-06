@@ -441,3 +441,4 @@ function gameLoop(ticker) {
     
     updateCamera();
     updateUI(gameState.characters.find(c => c.isPlayer)); // Update the UI every frame
+}
