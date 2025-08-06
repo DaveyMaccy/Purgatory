@@ -27,8 +27,8 @@ window.onload = async () => {
         document.getElementById('character-selector-canvas-container').appendChild(selectorApp.view);
         console.log("Character selector canvas initialized.");
 
-        // Pre-load all required assets (map and all character sprites)
-        await preloadAllAssets();
+        // Pre-load all character assets
+        await preloadCharacterAssets();
 
         // Load the Tiled map data and render it
         const mapData = await loadMapData(gameState.map.json);
@@ -53,8 +53,8 @@ window.onload = async () => {
                 <p><strong>Error Message:</strong> ${error.message}</p>
                 <p><strong>Checklist:</strong></p>
                 <ol style="list-style-position: inside;">
-                    <li>Did you re-export your map from Tiled with the <strong>"Embed in map"</strong> option checked for all tilesets?</li>
                     <li>Is the map file path in <strong>mock_backend.js</strong> correct? (e.g., 'assets/maps/purgatorygamemap.json')</li>
+                    <li>Are the image paths inside your <strong>purgatorygamemap.json</strong> correct relative to your project folder?</li>
                     <li>Are all character sprite sheet paths in <strong>mock_backend.js</strong> correct?</li>
                 </ol>
                 <p>Open the browser's developer console (F12) for more details.</p>
@@ -63,17 +63,13 @@ window.onload = async () => {
 };
 
 // --- Asset Pre-loading ---
-async function preloadAllAssets() {
-    console.log("Pre-loading all assets...");
-    // Create a list of all character sprite URLs to load
-    const characterAssetUrls = PREMADE_CHARACTER_SPRITES;
-    
-    // Load all character assets in parallel
-    for (const url of characterAssetUrls) {
+async function preloadCharacterAssets() {
+    console.log("Pre-loading character assets...");
+    for (const url of PREMADE_CHARACTER_SPRITES) {
         await PIXI.Assets.load(url);
-        // BILO_FIX: This placeholder is still here because the spritesheet data IS hardcoded.
-        // This is a fragile design choice specified in the original code. For a production
-        // system, this data should be loaded from a JSON atlas file.
+        // BILO_PLACEHOLDER: This spritesheet definition is an EXAMPLE.
+        // You MUST change the coordinates (x, y) and dimensions (w, h) to match your assets.
+        // For a production system, this data should be loaded from a JSON atlas file.
         const baseTexture = PIXI.BaseTexture.from(url);
         const sheet = new PIXI.Spritesheet(baseTexture, {
             frames: {
@@ -92,47 +88,40 @@ async function preloadAllAssets() {
             meta: { scale: '1' }
         });
         await sheet.parse();
-        allCharacterSheets[url] = sheet; // Cache the parsed sheet
+        allCharacterSheets[url] = sheet;
     }
     console.log("All character assets pre-loaded and parsed.");
 }
 
-
 // --- Tiled Map Rendering ---
-/**
- * Loads the Tiled JSON file.
- * @param {string} url - Path to the Tiled JSON file.
- * @returns {object} - The parsed map data.
- */
 async function loadMapData(url) {
     console.log(`Attempting to load map data from: ${url}`);
     const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}, failed to fetch ${url}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}, failed to fetch ${url}`);
     const mapJson = await response.json();
     mapJson.url = url;
     console.log("Map data loaded successfully.");
     return mapJson;
 }
 
-
 /**
- * Renders the Tiled map using embedded tileset data.
+ * Renders the Tiled map using EMBEDDED tileset data.
  * @param {object} mapData - The loaded Tiled map data.
  */
 async function renderMap(mapData) {
-    console.log("Starting map render with embedded tileset logic...");
+    console.log("Starting map render with EMBEDDED tileset logic...");
 
     const mapUrl = new URL(mapData.url, window.location.href);
-    const mapDirectory = mapUrl.href.substring(0, mapUrl.href.lastIndexOf('/') + 1);
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        const imageUrl = `${mapDirectory}${tilesetDef.image}`;
-        console.log(`Pre-loading tileset image from: ${imageUrl}`);
+        // Correctly resolve the image path relative to the map file's location.
+        const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), mapUrl.href).href;
+        console.log(`Loading tileset image from: ${imageUrl}`);
+        
         await PIXI.Assets.load(imageUrl);
-        console.log(`Successfully pre-loaded image: ${imageUrl}`);
+        console.log(`Successfully loaded image: ${imageUrl}`);
+
         tilesets[tilesetDef.firstgid] = {
             texture: PIXI.BaseTexture.from(imageUrl),
             columns: tilesetDef.columns,
@@ -151,18 +140,13 @@ async function renderMap(mapData) {
     console.log("Map render complete.");
 }
 
-/**
- * Renders a single tile layer from the Tiled map data.
- */
 function renderTileLayer(layer, mapData, tilesets) {
     const isCollisionLayer = layer.properties?.some(p => p.name === 'collides' && p.value === true);
     if (isCollisionLayer) {
         console.log(`Skipping rendering of collision layer: ${layer.name}`);
         return;
     }
-    
-    // BILO_FIX: Using PIXI.Container for tile layers instead of individual sprites
-    // is a major performance improvement.
+
     const layerContainer = new PIXI.Container();
     mainApp.stage.addChild(layerContainer);
 
@@ -193,16 +177,12 @@ function renderTileLayer(layer, mapData, tilesets) {
     }
 }
 
-/**
- * Renders objects (like furniture) from an object layer.
- */
 function renderObjectLayer(layer, mapData, tilesets) {
     for (const obj of layer.objects) {
         if (!obj.visible || !obj.gid) continue;
 
         const gid = obj.gid;
         const tileId = gid & 0x1FFFFFFF;
-
         const tilesetDef = findTilesetForGid(mapData.tilesets, tileId);
         if (!tilesetDef) continue;
 
@@ -211,7 +191,7 @@ function renderObjectLayer(layer, mapData, tilesets) {
         const tileX = (localTileId % tileset.columns) * tileset.tileSize;
         const tileY = Math.floor(localTileId / tileset.columns) * tileset.tileSize;
 
-        const tileRect = new PIXI.Rectangle(tileX, tileY, tileset.tileSize, tileset.tileSize);
+        const tileRect = new PIXI.Rectangle(tileX, tileY, obj.width, obj.height);
         const texture = new PIXI.Texture(tileset.texture, tileRect);
         const sprite = new PIXI.Sprite(texture);
 
@@ -222,9 +202,6 @@ function renderObjectLayer(layer, mapData, tilesets) {
     }
 }
 
-/**
- * Finds the correct tileset definition for a given global tile ID (gid).
- */
 function findTilesetForGid(tilesets, gid) {
     let correctTileset = null;
     for (const tileset of tilesets) {
@@ -237,13 +214,12 @@ function findTilesetForGid(tilesets, gid) {
     return correctTileset;
 }
 
-
 // --- Character Selector Logic ---
 let currentCharacterIndex = 0;
 let selectorSprite;
 
 async function setupCharacterSelector() {
-    await changeCharacter(0); // Initialize with the first character
+    await changeCharacter(0);
     document.getElementById('next-char-btn').addEventListener('click', () => changeCharacter(1));
     document.getElementById('prev-char-btn').addEventListener('click', () => changeCharacter(-1));
 }
@@ -259,11 +235,9 @@ async function changeCharacter(direction) {
     const newSpritePath = PREMADE_CHARACTER_SPRITES[currentCharacterIndex];
     player.spriteSheet = newSpritePath;
 
-    // Remove old sprites if they exist
     if (player.pixiSprite) mainApp.stage.removeChild(player.pixiSprite);
     if (selectorSprite) selectorApp.stage.removeChild(selectorSprite);
     
-    // Get the pre-parsed sheet from the cache
     const sheet = allCharacterSheets[newSpritePath];
     if (!sheet) {
         console.error(`Spritesheet not found in cache for: ${newSpritePath}`);
@@ -271,7 +245,7 @@ async function changeCharacter(direction) {
     }
 
     player.pixiSprite = createAnimatedSprite(sheet, 'idle_down');
-    selectorSprite = createAnimatedSprite(sheet, 'walk_down'); // Show walking animation in selector
+    selectorSprite = createAnimatedSprite(sheet, 'walk_down');
 
     mainApp.stage.addChild(player.pixiSprite);
     selectorApp.stage.addChild(selectorSprite);
@@ -284,7 +258,6 @@ async function changeCharacter(direction) {
 function updateCharacterName() {
     document.getElementById('char-name-display').textContent = `Character ${currentCharacterIndex + 1}`;
 }
-
 
 // --- Sprite Sheet and Animation Logic ---
 function createAnimatedSprite(sheet, initialAnimation) {
@@ -326,13 +299,10 @@ function gameLoop(ticker) {
 
     for (const character of gameState.characters) {
         if (character.pixiSprite) {
-            // Sync position from backend
             character.pixiSprite.x = character.position.x;
             character.pixiSprite.y = character.position.y;
-            character.pixiSprite.zIndex = character.position.y; // For correct depth sorting
+            character.pixiSprite.zIndex = character.position.y;
 
-            // BILO_FIX: More robust animation update logic
-            // Only change animation if the new state is different and valid
             const newAnimation = character.actionState;
             const currentAnimation = character.pixiSprite.currentAnimationName;
             const sheet = allCharacterSheets[character.spriteSheet];
@@ -345,7 +315,6 @@ function gameLoop(ticker) {
         }
     }
     
-    // Ensure character container is sorted by y-index for proper overlap
     mainApp.stage.sortChildren();
     
     updateCamera();
