@@ -1,6 +1,6 @@
 // This file simulates the game's backend for the test harness.
 
-// **FIX:** Re-added the TILE_SIZE constant to make this file self-contained and remove the fragile dependency on main.js's load order.
+// This is the single source of truth for the tile size.
 const TILE_SIZE = 48;
 
 // BILO_FIX: Corrected the base path for character sprites to reflect the lowercase 'assets' folder
@@ -478,11 +478,3 @@ const backend = {
                     }
                 }
             } else {
-                // If no path, ensure character is idle
-                if (character.actionState.startsWith('walk_')) {
-                    character.actionState = character.actionState.replace('walk_', 'idle_');
-                }
-            }
-        }
-    }
-};
