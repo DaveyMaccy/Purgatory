@@ -300,10 +300,10 @@ function findTilesetForGid(tilesets, gid) {
 
 // --- Character Selector Logic ---
 let currentCharacterIndex = 0;
-let selectorSprite;
+let selectorSprite; // Declared globally
 
 async function setupCharacterSelector() {
-    await changeCharacter(0);
+    await changeCharacter(0); // Initial load of character
     document.getElementById('next-char-btn').addEventListener('click', () => changeCharacter(1));
     document.getElementById('prev-char-btn').addEventListener('click', () => changeCharacter(-1));
 }
@@ -319,16 +319,25 @@ async function changeCharacter(direction) {
     const newSpritePath = PREMADE_CHARACTER_SPRITES[currentCharacterIndex];
     player.spriteSheet = newSpritePath;
 
-    if (player.pixiSprite) mainApp.stage.removeChild(player.pixiSprite);
-    if (selectorSprite) selectorApp.stage.removeChild(selectorSprite);
-    
     const sheet = allCharacterSheets[newSpritePath];
     if (!sheet) {
         console.error(`Spritesheet not found in cache for: ${newSpritePath}`);
         return;
     }
 
+    // BILO_FIX: Ensure selectorSprite is created/updated BEFORE it's added to stage.
+    // Also, remove old sprites only if they exist.
+    if (player.pixiSprite) {
+        mainApp.stage.removeChild(player.pixiSprite);
+    }
+    if (selectorSprite) {
+        selectorApp.stage.removeChild(selectorSprite);
+    }
+
     player.pixiSprite = createAnimatedSprite(sheet, 'idle_down');
+    mainApp.stage.addChild(player.pixiSprite); // Add player sprite to main app
+
+    selectorSprite = createAnimatedSprite(sheet, 'walk_down'); // Create selector sprite
     selectorApp.stage.addChild(selectorSprite); // Add selector sprite to its app
     selectorSprite.x = selectorApp.screen.width / 2;
     selectorSprite.y = selectorApp.screen.height / 2;
