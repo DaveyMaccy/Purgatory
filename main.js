@@ -2,25 +2,22 @@
 
 // --- Global Variables ---
 let sheet; // Will hold the parsed spritesheet data for the current character
+let mainApp; // The main PIXI application for the game world
+let selectorApp; // The PIXI application for the character selector preview
 const TILE_SIZE = 48; // The size of your tiles in the Tiled map
-
-// BILO_FIX: The PIXI.Application constructor is now used for initialization.
-// The old .init() method was incorrect for the version of PixiJS we are using.
-const mainApp = new PIXI.Application();
-const selectorApp = new PIXI.Application();
 
 // --- Main Initialization Function ---
 window.onload = async () => {
     try {
-        // Initialize the main game canvas
-        await mainApp.init({
+        // BILO_FIX: The PIXI.Application is now created using the correct async static `init` method.
+        // This was the cause of the "mainApp.init is not a function" error.
+        mainApp = await PIXI.Application.init({
             resizeTo: document.getElementById('world-canvas-container'),
             background: '#000000',
         });
         document.getElementById('world-canvas-container').appendChild(mainApp.view);
 
-        // Initialize the character selector canvas
-        await selectorApp.init({
+        selectorApp = await PIXI.Application.init({
             resizeTo: document.getElementById('character-selector-canvas-container'),
             background: '#1a202c',
         });
@@ -72,7 +69,6 @@ async function renderMap(mapData) {
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        // BILO_FIX: Correctly handle both .tsx and .json tileset source files.
         const tilesetSourceUrl = new URL(tilesetDef.source, mapUrl).href;
         const tilesetResponse = await fetch(tilesetSourceUrl);
         const tilesetData = await tilesetResponse.json();
