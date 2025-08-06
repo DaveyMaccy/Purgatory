@@ -79,12 +79,12 @@ async function preloadCharacterAssets() {
     console.log("Pre-loading character assets...");
     for (const url of PREMADE_CHARACTER_SPRITES) {
         
-        // **FIX:** Use the modern PixiJS workflow.
-        // 1. Await the asset load and store the resulting texture.
+        // **FIX:** Use the modern PixiJS workflow correctly.
+        // 1. Await the asset load to get a PIXI.Texture object.
         const texture = await PIXI.Assets.load(url);
         
-        // 2. Remove the redundant and problematic older API call.
-        // const baseTexture = PIXI.BaseTexture.from(url); 
+        // 2. Get the PIXI.BaseTexture from the loaded texture. This is what the Spritesheet requires.
+        const baseTexture = texture.baseTexture;
 
         const frames = {};
         const animations = {};
@@ -192,8 +192,8 @@ async function preloadCharacterAssets() {
         animations['hurt'] = [`${charPrefix}hurt_0`, `${charPrefix}hurt_1`, `${charPrefix}hurt_2`, `${charPrefix}hurt_1`];
 
 
-        // **FIX:** Create the spritesheet using the fully loaded texture object.
-        const sheet = new PIXI.Spritesheet(texture, {
+        // Create the spritesheet using the fully loaded baseTexture.
+        const sheet = new PIXI.Spritesheet(baseTexture, {
             frames: frames,
             animations: animations,
             meta: { scale: '1' }
