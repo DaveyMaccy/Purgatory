@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Office Purgatory - Alpha Test</title>
+    <!-- These script tags load the engines from the internet -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
+    <!-- Tailwind CSS for styling the UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Basic styles to make the canvas fill its container */
+        #world-canvas-container, #character-selector-canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 text-white flex flex-col lg:flex-row h-screen p-4 gap-4">
+
+    <!-- Left Column: World View & Interaction Log -->
+    <div class="flex-grow flex flex-col gap-4">
+        <!-- World View -->
+        <div id="world-canvas-container" class="flex-grow bg-black rounded-lg shadow-lg cursor-pointer">
+            <!-- The main game PixiJS canvas will be injected here -->
+        </div>
+
+        <!-- Interaction Log & Input -->
+        <div class="bg-gray-700 rounded-lg shadow-lg p-4 flex flex-col">
+            <div id="chat-log" class="h-32 overflow-y-auto mb-2 border border-gray-600 rounded p-2">
+                <p>Welcome to the Office Purgatory test harness.</p>
+            </div>
+            <div class="flex items-center">
+                <select id="input-mode-selector" class="bg-gray-800 border border-gray-600 rounded-l-md p-2 hover:bg-gray-900 focus:outline-none">
+                    <option value="action">Action</option>
+                    <option value="talk">Talk</option>
+                </select>
+                <input type="text" id="player-input" class="flex-grow bg-gray-800 border-t border-b border-gray-600 p-2 outline-none" placeholder="Type commands here...">
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Status Panel & Character Selector -->
+    <div class="w-full lg:w-80 bg-gray-700 rounded-lg shadow-lg p-4 flex flex-col gap-4">
+        <!-- Character Selector -->
+        <div class="text-center bg-gray-900/50 rounded-lg p-2">
+            <h2 class="text-lg font-bold mb-2">Select Character</h2>
+            <div class="flex items-center justify-center gap-4">
+                <button id="prev-char-btn" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">&lt;</button>
+                <div id="character-selector-canvas-container" class="w-24 h-24 bg-black rounded border-2 border-gray-500">
+                    <!-- The character preview PixiJS canvas goes here -->
+                </div>
+                <button id="next-char-btn" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">&gt;</button>
+            </div>
+            <p id="char-name-display" class="mt-2 text-sm text-gray-400">Character 1</p>
+        </div>
+
+        <!-- Status Panel -->
+        <div>
+            <div class="flex border-b border-gray-600">
+                <button class="flex-1 p-2 text-center bg-gray-600">Inventory</button>
+                <button class="flex-1 p-2 text-center">Tasks</button>
+                <button class="flex-1 p-2 text-center">Relationships</button>
+            </div>
+            <div id="tab-content" class="p-2 h-64 overflow-y-auto">
+                <!-- BILO_PLACEHOLDER: This UI is functional but not data-bound. -->
+                <!-- The content here is static for this test harness. -->
+                <p>Inventory, Tasks, and Relationships will be populated by the full game backend.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the MOCK backend first, then the main front-end script -->
+    <script src="mock_backend.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
