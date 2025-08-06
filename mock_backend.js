@@ -1,14 +1,16 @@
 // This file simulates the game's backend for the test harness.
 
-// This list defines all the available pre-made character sprite sheets.
-// The front-end will use this list to populate the character selector.
-const PREMADE_CHARACTER_SPRITES = [
-    'assets/characters/Premade_Character_48x48_1.png',
-    'assets/characters/Premade_Character_48x48_2.png',
-    'assets/characters/Premade_Character_48x48_3.png',
-    // BILO_PLACEHOLDER: Add the rest of your 20 character file paths here.
-    // Make sure the file names exactly match the files in your assets/characters folder.
-];
+// BILO_FIX: This code now programmatically generates the correct filenames
+// with leading zeros (e.g., _01, _02) to match your asset files.
+const PREMADE_CHARACTER_SPRITES = [];
+for (let i = 1; i <= 20; i++) {
+    // String(i).padStart(2, '0') ensures that numbers 1-9 get a leading zero.
+    const number = String(i).padStart(2, '0');
+    PREMADE_CHARACTER_SPRITES.push(`assets/characters/Premade_Character_48x48_${number}.png`);
+}
+
+// BILO_PLACEHOLDER: If you add more than 20 characters, you will need to
+// change the "20" in the loop above to match the total number of characters.
 
 const gameState = {
     characters: [
