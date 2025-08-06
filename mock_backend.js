@@ -24,49 +24,49 @@ const gameState = {
 
             // --- Core Attributes ---
             physicalAttributes: { age: 28, height: 175, weight: 70, build: 'Average', looks: 7 },
-            skills: { competence: 7, laziness: 2, charisma: 6, leadership: 4 }, // Scored 1-10
+            [cite_start]skills: { competence: 7, laziness: 2, charisma: 6, leadership: 4 }, // Scored 1-10 [cite: 62]
 
             // --- Tag System ---
-            personalityTags: ['Creative', 'Introverted', 'Witty', 'Flirty'],
-            experienceTags: ['5+ Years Experience', 'Startup Background'],
+            [cite_start]personalityTags: ['Creative', 'Introverted', 'Witty', 'Flirty'], [cite: 64]
+            [cite_start]experienceTags: ['5+ Years Experience', 'Startup Background'], [cite: 65]
 
             // --- Dynamic State ---
-            needs: { energy: 8, hunger: 9, social: 6, comfort: 10, stress: 1 }, // Scored 1-10
-            mood: 'Neutral', // 'Happy', 'Sad', 'Angry', 'Stressed', 'Tired'
+            [cite_start]needs: { energy: 8, hunger: 9, social: 6, comfort: 10, stress: 1 }, // Scored 1-10 [cite: 67]
+            [cite_start]mood: 'Neutral', // 'Happy', 'Sad', 'Angry', 'Stressed', 'Tired' [cite: 68]
 
             // --- Action & Interaction State ---
-            actionState: 'idle_down', // 'DEFAULT', 'HoldingItem', 'InConversation'
-            facingAngle: 90, // Current direction in degrees (0-359). Default is 90 (facing down).
-            maxSightRange: 250, // Maximum sight distance in pixels.
-            isBusy: false, // Flag to prevent contradictory prompts
-            currentAction: null, // e.g., { type: 'USE_COMPUTER', duration: 300, elapsedTime: 0 }
-            currentActionTranscript: [], // A log of the sub-steps of a complex action
-            pendingIntent: null, // A full action object queued after a prerequisite action is complete.
-            heldItem: null, // e.g., { id: 'coffee_mug_1', type: 'coffee_mug' }
-            conversationId: null, // ID of the conversation they are in
+            [cite_start]actionState: 'idle_down', // 'DEFAULT', 'HoldingItem', 'InConversation' [cite: 70]
+            facingAngle: 90, // Current direction in degrees (0-359). [cite_start]Default is 90 (facing down). [cite: 71]
+            [cite_start]maxSightRange: 250, // Maximum sight distance in pixels. [cite: 72]
+            [cite_start]isBusy: false, // Flag to prevent contradictory prompts [cite: 73]
+            [cite_start]currentAction: null, // e.g., { type: 'USE_COMPUTER', duration: 300, elapsedTime: 0 } [cite: 74]
+            [cite_start]currentActionTranscript: [], // A log of the sub-steps of a complex action [cite: 75]
+            [cite_start]pendingIntent: null, // A full action object queued after a prerequisite action is complete. [cite: 76]
+            [cite_start]heldItem: null, // e.g., { id: 'coffee_mug_1', type: 'coffee_mug' } [cite: 77]
+            [cite_start]conversationId: null, // ID of the conversation they are in [cite: 78]
 
             // --- Memory & Goals ---
-            shortTermMemory: [], // A rolling log of the last 20 fully completed actions by any character in the vicinity.
-            longTermMemory: [], // A curated list of up to 100 significant events, summarized by the AI itself.
-            longTermGoal: { type: 'promotion', target: 'Senior Position', progress: 0.0 }, // The AI's current primary ambition.
-            assignedTask: { displayName: 'Review Q4 Reports', requiredLocation: 'desk_1' }, // The "bullshit busy work" task
+            [cite_start]shortTermMemory: [], // A rolling log of the last 20 fully completed actions by any character in the vicinity. [cite: 80]
+            [cite_start]longTermMemory: [], // A curated list of up to 100 significant events, summarized by the AI itself. [cite: 81]
+            [cite_start]longTermGoal: { type: 'promotion', target: 'Senior Position', progress: 0.0 }, // The AI's current primary ambition. [cite: 82]
+            [cite_start]assignedTask: { displayName: 'Review Q4 Reports', requiredLocation: 'desk_1' }, // The "bullshit busy work" task [cite: 83]
 
             // --- Backend & Visuals ---
-            inventory: [{ id: 'smartphone_1', type: 'smartphone', name: 'Smartphone' }], // Items that are pocketed, not held.
-            deskItems: [{ id: 'novelty_mug_1', type: 'novelty_mug', name: 'Novelty Mug' }], // Items placed on or under the character's desk at game start.
-            relationships: { 'char_1': 55, 'char_2': 32 }, // Social standing, 0-100. Initial value is 50.
-            api: { key: '...', provider: 'gemma-3-27b' }, // User-provided API key and a provider  selected from a dropdown.
-            promptCount: 0,
-            deskId: 'desk_1', // Character's "home base"
-            path: [], // Temporary array of coordinates for movement.
-            position: { x: -366.667, y: -189.333 }, // Real-time coordinate on the canvas. Updated to spawn_point_1
-            portrait: '', // base64 string for the UI portrait. BILO_PLACEHOLDER: This is currently an empty string.
-            spriteColors: { skin: '#EAC086', hair: '#2C1E10', shirt: '#4A5568', pants: '#2D3748', shoes: '#1A202C' }, // BILO_PLACEHOLDER: Still using spriteColors instead of appearance object.
+            [cite_start]inventory: [{ id: 'smartphone_1', type: 'smartphone', name: 'Smartphone' }], // Items that are pocketed, not held. [cite: 85]
+            [cite_start]deskItems: [{ id: 'novelty_mug_1', type: 'novelty_mug', name: 'Novelty Mug' }], // Items placed on or under the character's desk at game start. [cite: 86]
+            relationships: { 'char_1': 55, 'char_2': 32 }, // Social standing, 0-100. [cite_start]Initial value is 50. [cite: 87]
+            [cite_start]api: { key: '...', provider: 'gemma-3-27b' }, // User-provided API key and a provider  selected from a dropdown. [cite: 88]
+            [cite_start]promptCount: 0, [cite: 89]
+            [cite_start]deskId: 'desk_1', // Character's "home base" [cite: 90]
+            [cite_start]path: [], // Temporary array of coordinates for movement. [cite: 91]
+            position: { x: -366.667, y: -189.333 }, // Real-time coordinate on the canvas. [cite_start]Updated to spawn_point_1 [cite: 92]
+            portrait: '', // base64 string for the UI portrait. [cite_start]BILO_PLACEHOLDER: This is currently an empty string. [cite: 93]
+            [cite_start]spriteColors: { skin: '#EAC086', hair: '#2C1E10', shirt: '#4A5568', pants: '#2D3748', shoes: '#1A202C' }, // BILO_PLACEHOLDER: Still using spriteColors instead of appearance object. [cite: 94]
             pixiSprite: null // BILO_PLACEHOLDER: Still using pixiSprite for pre-made character sprites (Phase 1).
         }
     ],
     map: {
-        // This tells the front-end which Tiled map file to load.
+        [cite_start]// This tells the front-end which Tiled map file to load. [cite: 5]
         json: 'assets/maps/purgatorygamemap.json',
         data: null // To store the parsed map data
     },
@@ -187,7 +187,7 @@ function generateNavGrid(mapData) {
     // Iterate through layers to find collision data
     for (const layer of mapData.layers) {
         // Check for collision layer property
-        const isCollisionLayer = layer.properties?.some(p => p.name === 'collides' && p.value === true);
+        [cite_start]const isCollisionLayer = layer.properties?.some(p => p.name === 'collides' && p.value === true); [cite: 518, 520, 650]
 
         if (layer.type === 'tilelayer' && isCollisionLayer) {
             for (const chunk of layer.chunks) {
@@ -201,7 +201,7 @@ function generateNavGrid(mapData) {
                     const gridY = chunk.y + Math.floor(i / chunk.width);
 
                     if (gridY >= 0 && gridY < gridHeight && gridX >= 0 && gridX < gridWidth) {
-                        navGrid[gridY][gridX] = 1; // 1 represents an impassable wall
+                        navGrid[gridY][gridX] = 1; [cite_start]// 1 represents an impassable wall [cite: 554]
                     }
                 }
             }
@@ -259,8 +259,8 @@ function generateNavGrid(mapData) {
     }
 
 
-    gameState.navGrid = navGrid;
-    console.log("Navigation grid generated from map data.");
+    [cite_start]gameState.navGrid = navGrid; [cite: 560]
+    [cite_start]console.log("Navigation grid generated from map data."); [cite: 561]
     // console.log(navGrid); // Log the grid for verification
 }
 
@@ -358,7 +358,7 @@ function createWorldObject(type, position, tags = []) {
     return newObject;
 }
 
-const ITEM_SPAWN_LOGIC = {
+[cite_start]const ITEM_SPAWN_LOGIC = { [cite: 573]
     'coffee_mug': { locations: ['break_room', 'desk', 'main_office'], maxCount: 5 }, // Added main_office
     'snack': { locations: ['break_room'], maxCount: 3 },
     'notebook': { locations: ['desk', 'main_office'], maxCount: 4 }, // Added main_office
@@ -366,7 +366,7 @@ const ITEM_SPAWN_LOGIC = {
     'photo_frame': { locations: ['desk', 'main_office'], maxCount: 3 } // Example additional item
 };
 
-function populateWorldWithObjects(characters) {
+[cite_start]function populateWorldWithObjects(characters) { [cite: 578]
     // BILO_FIX: Reference TILE_SIZE from the global scope (defined in main.js)
     const TILE_SIZE_LOCAL = typeof TILE_SIZE !== 'undefined' ? TILE_SIZE : 48; // Fallback for safety
 
@@ -388,19 +388,19 @@ function populateWorldWithObjects(characters) {
     // 2. Place procedurally generated items
     for (const itemType in ITEM_SPAWN_LOGIC) {
         const logic = ITEM_SPAWN_LOGIC[itemType];
-        const count = Math.floor(Math.random() * (logic.maxCount + 1));
+        [cite_start]const count = Math.floor(Math.random() * (logic.maxCount + 1)); [cite: 594]
 
         for (let i = 0; i < count; i++) {
-            const spawnZone = findRandomSpawnZone(logic.locations); // This needs to return a zone bounding box
+            const spawnZone = findRandomSpawnZone(logic.locations); [cite_start]// This needs to return a zone bounding box [cite: 596]
             if (spawnZone) {
-                const position = findRandomWalkableTileInZone(spawnZone);
+                [cite_start]const position = findRandomWalkableTileInZone(spawnZone); [cite: 598]
                 if (position) {
-                    createWorldObject(itemType, position);
+                    [cite_start]createWorldObject(itemType, position); [cite: 600]
                 }
             }
         }
     }
-    console.log("World objects populated:", gameState.worldObjects);
+    [cite_start]console.log("World objects populated:", gameState.worldObjects); [cite: 604]
 }
 
 
@@ -490,4 +490,15 @@ const backend = {
                     if (Math.abs(dx) > Math.abs(dy)) {
                         character.actionState = dx > 0 ? 'walk_right' : 'walk_left';
                     } else {
-                        character.actionState = dy > 0 ? 'walk
+                        character.actionState = dy > 0 ? 'walk_down' : 'walk_up';
+                    }
+                }
+            } else {
+                // If no path, ensure character is idle
+                if (character.actionState.startsWith('walk_')) {
+                    character.actionState = character.actionState.replace('walk_', 'idle_');
+                }
+            }
+        }
+    }
+};
