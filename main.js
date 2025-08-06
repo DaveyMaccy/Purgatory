@@ -4,7 +4,7 @@
 let mainApp; // The main PIXI application for the game world
 let selectorApp; // The PIXI application for the character selector preview
 let characterContainer; // A dedicated container for characters to manage z-sorting
-const TILE_SIZE = 48; // The size of your tiles in the Tiled map
+// **FIX:** Removed redundant declaration. 'TILE_SIZE' is now declared in mock_backend.js, which loads first.
 const allCharacterSheets = {}; // Cache for all loaded character spritesheet data
 
 // --- Main Initialization Function ---
@@ -79,17 +79,12 @@ async function preloadCharacterAssets() {
     console.log("Pre-loading character assets...");
     for (const url of PREMADE_CHARACTER_SPRITES) {
         
-        // **FIX:** Use the modern PixiJS workflow correctly.
-        // 1. Await the asset load to get a PIXI.Texture object.
         const texture = await PIXI.Assets.load(url);
-        
-        // 2. Get the PIXI.BaseTexture from the loaded texture. This is what the Spritesheet requires.
         const baseTexture = texture.baseTexture;
 
         const frames = {};
         const animations = {};
 
-        // Extract character number for unique IDs (e.g., "01", "02")
         const charNumberMatch = url.match(/_(\d{2})\.png$/);
         const charPrefix = charNumberMatch ? `char_${charNumberMatch[1]}_` : '';
 
