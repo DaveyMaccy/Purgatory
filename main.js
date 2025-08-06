@@ -32,7 +32,7 @@ window.onload = async () => {
         // Set up the character selector and load the initial character
         await setupCharacterSelector();
         
-        // Set up player interaction (clicking)
+        // Set up player interaction (clicking and keyboard)
         setupPlayerInteraction();
 
         // Start the main game loop
@@ -57,7 +57,6 @@ async function loadMapData(url) {
         throw new Error(`Failed to load map data: ${response.statusText} (${url})`);
     }
     const mapJson = await response.json();
-    // Store the URL on the object so we can resolve relative paths later
     mapJson.url = url; 
     return mapJson;
 }
@@ -69,27 +68,24 @@ async function loadMapData(url) {
  */
 async function renderMap(mapData) {
     const mapUrl = new URL(mapData.url, window.location.href);
-    
-    // Create a map to hold all loaded tileset textures
     const tilesets = {};
 
-    // Pre-load all tileset images
     for (const tilesetDef of mapData.tilesets) {
-        const tilesetUrl = new URL(tilesetDef.source, mapUrl).href;
-        // The key will be the firstgid, the value will be the loaded texture
+        const tilesetUrl = new URL(tilesetDef.source, mapUrl).href.replace('.tsx', '.png');
         await PIXI.Assets.load(tilesetUrl);
-        tilesets[tilesetDef.firstgid] = PIXI.BaseTexture.from(tilesetUrl);
+        tilesets[tilesetDef.firstgid] = {
+            texture: PIXI.BaseTexture.from(tilesetUrl),
+            columns: tilesetDef.columns,
+            tileSize: tilesetDef.tilewidth // Assuming square tiles
+        };
         console.log(`Loaded tileset with first GID ${tilesetDef.firstgid} from ${tilesetUrl}`);
     }
 
-    // Render layers in the order they appear in Tiled
     for (const layer of mapData.layers) {
         if (!layer.visible) continue;
-
         if (layer.type === 'tilelayer') {
             renderTileLayer(layer, mapData, tilesets);
         } else if (layer.type === 'objectgroup') {
-            // FIX: Added function call to render object layers (furniture, etc.)
             renderObjectLayer(layer, mapData, tilesets);
         }
     }
@@ -108,24 +104,24 @@ function renderTileLayer(layer, mapData, tilesets) {
     for (const chunk of layer.chunks) {
         for (let i = 0; i < chunk.data.length; i++) {
             const gid = chunk.data[i];
-            const tileId = gid & 0x1FFFFFFF; // Mask out flip flags
+            const tileId = gid & 0x1FFFFFFF;
             if (tileId === 0) continue;
 
             const tilesetDef = findTilesetForGid(mapData.tilesets, tileId);
             if (!tilesetDef) continue;
 
-            const baseTexture = tilesets[tilesetDef.firstgid];
+            const tileset = tilesets[tilesetDef.firstgid];
             const x = (i % chunk.width) + chunk.x;
             const y = Math.floor(i / chunk.width) + chunk.y;
 
-            const tileX = ((tileId - tilesetDef.firstgid) % tilesetDef.columns) * TILE_SIZE;
-            const tileY = Math.floor((tileId - tilesetDef.firstgid) / tilesetDef.columns) * TILE_SIZE;
+            const tileX = ((tileId - tilesetDef.firstgid) % tileset.columns) * tileset.tileSize;
+            const tileY = Math.floor((tileId - tilesetDef.firstgid) / tileset.columns) * tileset.tileSize;
 
-            const tileRect = new PIXI.Rectangle(tileX, tileY, TILE_SIZE, TILE_SIZE);
-            const texture = new PIXI.Texture(baseTexture, tileRect);
+            const tileRect = new PIXI.Rectangle(tileX, tileY, tileset.tileSize, tileset.tileSize);
+            const texture = new PIXI.Texture(tileset.texture, tileRect);
             const sprite = new PIXI.Sprite(texture);
-            sprite.x = x * TILE_SIZE;
-            sprite.y = y * TILE_SIZE;
+            sprite.x = x * tileset.tileSize;
+            sprite.y = y * tileset.tileSize;
             mainApp.stage.addChild(sprite);
         }
     }
@@ -136,23 +132,22 @@ function renderTileLayer(layer, mapData, tilesets) {
  */
 function renderObjectLayer(layer, mapData, tilesets) {
     for (const obj of layer.objects) {
-        if (!obj.visible || !obj.gid) continue; // Skip invisible objects or objects without a tile
+        if (!obj.visible || !obj.gid) continue;
 
         const gid = obj.gid;
-        const tileId = gid & 0x1FFFFFFF; // Mask out flip flags
+        const tileId = gid & 0x1FFFFFFF;
 
         const tilesetDef = findTilesetForGid(mapData.tilesets, tileId);
         if (!tilesetDef) continue;
 
-        const baseTexture = tilesets[tilesetDef.firstgid];
-        const tileX = ((tileId - tilesetDef.firstgid) % tilesetDef.columns) * TILE_SIZE;
-        const tileY = Math.floor((tileId - tilesetDef.firstgid) / tilesetDef.columns) * TILE_SIZE;
+        const tileset = tilesets[tilesetDef.firstgid];
+        const tileX = ((tileId - tilesetDef.firstgid) % tileset.columns) * tileset.tileSize;
+        const tileY = Math.floor((tileId - tilesetDef.firstgid) / tileset.columns) * tileset.tileSize;
 
-        const tileRect = new PIXI.Rectangle(tileX, tileY, TILE_SIZE, TILE_SIZE);
-        const texture = new PIXI.Texture(baseTexture, tileRect);
+        const tileRect = new PIXI.Rectangle(tileX, tileY, tileset.tileSize, tileset.tileSize);
+        const texture = new PIXI.Texture(tileset.texture, tileRect);
         const sprite = new PIXI.Sprite(texture);
 
-        // Tiled object coordinates have the origin at the bottom-left, so we adjust
         sprite.anchor.set(0, 1); 
         sprite.x = obj.x;
         sprite.y = obj.y;
@@ -180,19 +175,12 @@ function findTilesetForGid(tilesets, gid) {
 let currentCharacterIndex = 0;
 let selectorSprite;
 
-/**
- * Sets up the character selector UI and initial character.
- */
 async function setupCharacterSelector() {
-    await changeCharacter(0); // Load the first character
-
+    await changeCharacter(0);
     document.getElementById('next-char-btn').addEventListener('click', () => changeCharacter(1));
     document.getElementById('prev-char-btn').addEventListener('click', () => changeCharacter(-1));
 }
 
-/**
- * Handles changing the selected character.
- */
 async function changeCharacter(direction) {
     if (direction !== 0) {
         currentCharacterIndex += direction;
@@ -224,17 +212,13 @@ function updateCharacterName() {
 
 
 // --- Sprite Sheet and Animation Logic ---
-/**
- * Loads a new character sprite sheet and defines its animations.
- */
 async function loadCharacterSheet(url) {
     console.log(`Loading character sheet: ${url}`);
     await PIXI.Assets.load(url);
     const baseTexture = PIXI.BaseTexture.from(url);
 
     // BILO_PLACEHOLDER: This sprite sheet definition is an EXAMPLE.
-    // You MUST change the coordinates (x, y) and dimensions (w, h) to match your
-    // specific character sprite sheet assets.
+    // You MUST change the coordinates (x, y) and dimensions (w, h) to match your assets.
     sheet = new PIXI.Spritesheet(baseTexture, {
         frames: {
             'walk_down_0': { frame: { x: 0, y: 0, w: 48, h: 48 } }, 'walk_down_1': { frame: { x: 48, y: 0, w: 48, h: 48 } }, 'walk_down_2': { frame: { x: 96, y: 0, w: 48, h: 48 } },
@@ -254,9 +238,6 @@ async function loadCharacterSheet(url) {
     await sheet.parse();
 }
 
-/**
- * Creates a new animated sprite from the currently loaded sheet.
- */
 function createAnimatedSprite(currentSheet) {
     const sprite = new PIXI.AnimatedSprite(currentSheet.animations.idle_down);
     sprite.animationSpeed = 0.15;
@@ -265,17 +246,30 @@ function createAnimatedSprite(currentSheet) {
     return sprite;
 }
 
-// --- Player Interaction ---
+// --- Player Interaction & Camera ---
+const keys = {};
+
 function setupPlayerInteraction() {
+    // Keyboard listeners for camera panning
+    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    // Mouse listener for character movement
     mainApp.stage.interactive = true;
     mainApp.stage.hitArea = mainApp.screen;
     mainApp.stage.on('pointerdown', (event) => {
         const player = gameState.characters.find(c => c.isPlayer);
-        // FIX: Correctly translate the click from screen coordinates to world coordinates.
-        // This is essential for click-to-move to work when the camera is panned.
         const worldPos = mainApp.stage.toLocal(event.global);
         backend.findPathFor(player, worldPos);
     });
+}
+
+function updateCamera() {
+    const panSpeed = 5;
+    if (keys['ArrowUp']) mainApp.stage.y += panSpeed;
+    if (keys['ArrowDown']) mainApp.stage.y -= panSpeed;
+    if (keys['ArrowLeft']) mainApp.stage.x += panSpeed;
+    if (keys['ArrowRight']) mainApp.stage.x -= panSpeed;
 }
 
 // --- Game Loop ---
@@ -297,7 +291,8 @@ function gameLoop(ticker) {
         }
     }
     
-    // Also update the selector sprite's animation to keep it lively
+    updateCamera();
+
     if(selectorSprite && selectorSprite.currentAnimationName !== 'walk_down') {
         selectorSprite.textures = sheet.animations['walk_down'];
         selectorSprite.play();
