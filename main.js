@@ -303,7 +303,25 @@ let currentCharacterIndex = 0;
 let selectorSprite; // Declared globally
 
 async function setupCharacterSelector() {
-    await changeCharacter(0); // Initial load of character
+    // BILO_FIX: Ensure selectorSprite is initialized on the first call.
+    // This will be called once on window.onload.
+    const player = gameState.characters.find(c => c.isPlayer);
+    const initialSpritePath = PREMADE_CHARACTER_SPRITES[currentCharacterIndex];
+    const sheet = allCharacterSheets[initialSpritePath];
+
+    if (!sheet) {
+        console.error(`Initial spritesheet for selector not found: ${initialSpritePath}`);
+        return;
+    }
+
+    selectorSprite = createAnimatedSprite(sheet, 'walk_down'); // Create it for the first time
+    selectorApp.stage.addChild(selectorSprite);
+    selectorSprite.x = selectorApp.screen.width / 2;
+    selectorSprite.y = selectorApp.screen.height / 2;
+    
+    // Now call changeCharacter to handle initial player sprite and subsequent changes
+    await changeCharacter(0); 
+
     document.getElementById('next-char-btn').addEventListener('click', () => changeCharacter(1));
     document.getElementById('prev-char-btn').addEventListener('click', () => changeCharacter(-1));
 }
@@ -325,22 +343,20 @@ async function changeCharacter(direction) {
         return;
     }
 
-    // BILO_FIX: Ensure selectorSprite is created/updated BEFORE it's added to stage.
-    // Also, remove old sprites only if they exist.
+    // BILO_FIX: Remove old player sprite from main stage if it exists
     if (player.pixiSprite) {
         mainApp.stage.removeChild(player.pixiSprite);
     }
+    // BILO_FIX: Update selectorSprite's textures, no need to remove/add from stage again after initial setup
     if (selectorSprite) {
-        selectorApp.stage.removeChild(selectorSprite);
+        selectorSprite.textures = sheet.animations['walk_down'];
+        selectorSprite.play();
+        selectorSprite.currentAnimationName = 'walk_down';
     }
 
-    player.pixiSprite = createAnimatedSprite(sheet, 'idle_down');
-    mainApp.stage.addChild(player.pixiSprite); // Add player sprite to main app
 
-    selectorSprite = createAnimatedSprite(sheet, 'walk_down'); // Create selector sprite
-    selectorApp.stage.addChild(selectorSprite); // Add selector sprite to its app
-    selectorSprite.x = selectorApp.screen.width / 2;
-    selectorSprite.y = selectorApp.screen.height / 2;
+    player.pixiSprite = createAnimatedSprite(sheet, 'idle_down'); // Create new player sprite
+    mainApp.stage.addChild(player.pixiSprite); // Add new player sprite to main app
 
     updateCharacterName(); // BILO_FIX: Call this here to update character name on change
 }
