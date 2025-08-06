@@ -9,22 +9,24 @@ const TILE_SIZE = 48; // The size of your tiles in the Tiled map
 // --- Main Initialization Function ---
 window.onload = async () => {
     try {
+        console.log("Starting initialization...");
+
         // BILO_FIX: The PIXI.Application is now created with the correct syntax for PixiJS v7.
-        // First, create a new instance, THEN call the async init method on that instance.
-        // This was the cause of the "mainApp.init is not a function" error.
-        mainApp = new PIXI.Application();
-        await mainApp.init({
+        // Options are passed directly into the constructor. The .init() method was incorrect.
+        // This was the definitive cause of the "mainApp.init is not a function" error.
+        mainApp = new PIXI.Application({
             resizeTo: document.getElementById('world-canvas-container'),
             background: '#000000',
         });
         document.getElementById('world-canvas-container').appendChild(mainApp.view);
+        console.log("Main game canvas initialized.");
 
-        selectorApp = new PIXI.Application();
-        await selectorApp.init({
+        selectorApp = new PIXI.Application({
             resizeTo: document.getElementById('character-selector-canvas-container'),
             background: '#1a202c',
         });
         document.getElementById('character-selector-canvas-container').appendChild(selectorApp.view);
+        console.log("Character selector canvas initialized.");
 
         // Load the Tiled map data and render it
         const mapData = await loadMapData(gameState.map.json);
@@ -38,10 +40,25 @@ window.onload = async () => {
 
         // Start the main game loop
         mainApp.ticker.add(gameLoop);
+        console.log("Initialization complete. Starting game loop.");
 
     } catch (error) {
-        console.error("Initialization failed:", error);
-        document.body.innerHTML = `<div style="color: red; padding: 20px;">Error during setup. Check console for details. Most likely a file path is incorrect or a file is missing.</div>`;
+        // BILO_FIX: Enhanced error reporting. This will now display a detailed
+        // error message on the screen and in the console to help debug file path issues.
+        console.error("CRITICAL ERROR DURING INITIALIZATION:", error);
+        document.body.innerHTML = `
+            <div style="color: red; background: #111; padding: 20px; font-family: monospace;">
+                <h1>Initialization Failed</h1>
+                <p>The test harness could not start. This is almost always a file path error.</p>
+                <p><strong>Error Message:</strong> ${error.message}</p>
+                <p><strong>Checklist:</strong></p>
+                <ol style="list-style-position: inside;">
+                    <li>Is the map file path in <strong>mock_backend.js</strong> correct? (e.g., 'assets/maps/purgatorygamemap.json')</li>
+                    <li>Is the tileset path inside your <strong>.json map file</strong> correct? (Tiled saves a relative path).</li>
+                    <li>Are all character sprite sheet paths in <strong>mock_backend.js</strong> correct?</li>
+                </ol>
+                <p>Open the browser's developer console (F12) for more details.</p>
+            </div>`;
     }
 };
 
@@ -52,13 +69,14 @@ window.onload = async () => {
  * @returns {object} - The parsed map data.
  */
 async function loadMapData(url) {
-    console.log(`Loading map data from: ${url}`);
+    console.log(`Attempting to load map data from: ${url}`);
     const response = await fetch(url);
     if (!response.ok) {
-        throw new Error(`Failed to load map data: ${response.statusText} (${url})`);
+        throw new Error(`HTTP error! status: ${response.status}, failed to fetch ${url}`);
     }
     const mapJson = await response.json();
     mapJson.url = url; 
+    console.log("Map data loaded successfully.");
     return mapJson;
 }
 
@@ -68,22 +86,27 @@ async function loadMapData(url) {
  * @param {object} mapData - The loaded Tiled map data.
  */
 async function renderMap(mapData) {
+    console.log("Starting map render...");
     const mapUrl = new URL(mapData.url, window.location.href);
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
         const tilesetSourceUrl = new URL(tilesetDef.source, mapUrl).href;
+        console.log(`Loading tileset definition from: ${tilesetSourceUrl}`);
         const tilesetResponse = await fetch(tilesetSourceUrl);
+         if (!tilesetResponse.ok) throw new Error(`Failed to load tileset definition: ${tilesetSourceUrl}`);
         const tilesetData = await tilesetResponse.json();
+        
         const imageUrl = new URL(tilesetData.image, tilesetSourceUrl).href;
-
+        console.log(`Loading tileset image from: ${imageUrl}`);
         await PIXI.Assets.load(imageUrl);
+
         tilesets[tilesetDef.firstgid] = {
             texture: PIXI.BaseTexture.from(imageUrl),
             columns: tilesetData.columns,
             tileSize: tilesetData.tilewidth
         };
-        console.log(`Loaded tileset with first GID ${tilesetDef.firstgid} from ${imageUrl}`);
+        console.log(`Loaded tileset GID ${tilesetDef.firstgid}`);
     }
 
     for (const layer of mapData.layers) {
@@ -94,6 +117,7 @@ async function renderMap(mapData) {
             renderObjectLayer(layer, mapData, tilesets);
         }
     }
+    console.log("Map render complete.");
 }
 
 /**
