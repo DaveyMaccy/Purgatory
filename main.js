@@ -30,6 +30,9 @@ window.onload = async () => {
 
     // Set up the character selector
     setupCharacterSelector();
+    
+    // Set up keyboard controls for camera panning
+    setupKeyboardControls();
 
     // Start the main game loop
     mainApp.ticker.add(gameLoop);
@@ -43,8 +46,12 @@ window.onload = async () => {
  */
 async function loadMapData(url) {
     const response = await fetch(url);
-    return await response.json();
+    const mapJson = await response.json();
+    // Store the URL on the object so we can resolve relative paths later
+    mapJson.url = url; 
+    return mapJson;
 }
+
 
 /**
  * Renders the Tiled map onto the main canvas.
@@ -60,9 +67,13 @@ async function renderMap(mapData) {
 
     for (const layer of mapData.layers) {
         if (layer.type === 'tilelayer') {
+            // Skip layers with the custom property 'collides' set to true
+            if (layer.properties && layer.properties.some(p => p.name === 'collides' && p.value === true)) {
+                continue;
+            }
             for (const chunk of layer.chunks) {
                 for (let i = 0; i < chunk.data.length; i++) {
-                    const tileId = chunk.data[i];
+                    const tileId = chunk.data[i] & 0x1FFFFFFF; // Mask out flip flags
                     if (tileId === 0) continue; // Skip empty tiles
 
                     const x = (i % chunk.width) + chunk.x;
@@ -207,18 +218,56 @@ function createAnimatedSprite(currentSheet) {
     return sprite;
 }
 
-// --- Player Interaction ---
+// --- Player Interaction & Camera Controls ---
+const keys = {}; // Object to hold the state of keyboard keys
+
+/**
+ * Sets up keyboard event listeners for camera panning.
+ */
+function setupKeyboardControls() {
+    window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+    });
+}
+
+/**
+ * Updates the camera position based on which arrow keys are pressed.
+ */
+function updateCamera() {
+    const panSpeed = 5; // Pixels per frame
+    if (keys['ArrowUp']) {
+        mainApp.stage.y += panSpeed;
+    }
+    if (keys['ArrowDown']) {
+        mainApp.stage.y -= panSpeed;
+    }
+    if (keys['ArrowLeft']) {
+        mainApp.stage.x += panSpeed;
+    }
+    if (keys['ArrowRight']) {
+        mainApp.stage.x -= panSpeed;
+    }
+}
+
+// Setup click-to-move interaction
 mainApp.stage.interactive = true;
 mainApp.stage.hitArea = mainApp.screen;
 mainApp.stage.on('pointerdown', (event) => {
     const player = gameState.characters.find(c => c.isPlayer);
-    backend.findPathFor(player, event.global);
+    // Convert the screen click coordinates to world coordinates
+    const worldPos = mainApp.stage.toLocal(event.global);
+    backend.findPathFor(player, worldPos);
 });
 
 // --- Game Loop ---
 function gameLoop(ticker) {
+    // 1. Update the backend logic (which handles character movement)
     backend.update(ticker.deltaTime);
 
+    // 2. Sync the front-end visuals with the backend data
     for (const character of gameState.characters) {
         if (character.pixiSprite) {
             character.pixiSprite.x = character.position.x;
@@ -233,7 +282,11 @@ function gameLoop(ticker) {
             }
         }
     }
-    // Also update the selector sprite's animation
+    
+    // 3. Update the camera based on keyboard input
+    updateCamera();
+
+    // 4. Also update the selector sprite's animation to keep it lively
     if(selectorSprite && selectorSprite.currentAnimationName !== 'walk_down') {
         selectorSprite.textures = sheet.animations['walk_down'];
         selectorSprite.play();
