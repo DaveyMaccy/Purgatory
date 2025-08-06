@@ -30,18 +30,20 @@ window.onload = async () => {
         selectorApp.resize();
         console.log("Character selector canvas initialized.");
         
-        // Create a container for characters to ensure they render above the map.
+        // Create a container for characters. It will be added to the stage AFTER the map is rendered.
         characterContainer = new PIXI.Container();
         characterContainer.sortableChildren = true; // Enable z-index sorting within this container
-        mainApp.stage.addChild(characterContainer);
-
 
         // Pre-load all character assets
         await preloadCharacterAssets();
 
-        // Load the Tiled map data and render it
+        // Load and render the Tiled map data first, so it's on the bottom layer.
         const mapData = await loadMapData(gameState.map.json);
         await renderMap(mapData);
+
+        // **FIX:** Add the character container to the stage AFTER the map is rendered.
+        // This ensures characters will always be drawn on top of the map.
+        mainApp.stage.addChild(characterContainer);
 
         // Initialize the backend with map data to generate the nav grid and populate objects.
         backend.initialize(mapData);
@@ -168,4 +170,384 @@ async function preloadCharacterAssets() {
 
         // Row 11: Hit (3 frames)
         frames[`${charPrefix}hit_0`] = { frame: { x: 0, y: 528, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}hit_1`] = { frame: { x: 48, y: 528, w: frameWidth, h: frameHeight }
+        frames[`${charPrefix}hit_1`] = { frame: { x: 48, y: 528, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}hit_2`] = { frame: { x: 96, y: 528, w: frameWidth, h: frameHeight } };
+        animations['hit'] = [`${charPrefix}hit_0`, `${charPrefix}hit_1`, `${charPrefix}hit_2`, `${charPrefix}hit_1`];
+
+        // Row 12: Punch (3 frames)
+        frames[`${charPrefix}punch_0`] = { frame: { x: 0, y: 576, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}punch_1`] = { frame: { x: 48, y: 576, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}punch_2`] = { frame: { x: 96, y: 576, w: frameWidth, h: frameHeight } };
+        animations['punch'] = [`${charPrefix}punch_0`, `${charPrefix}punch_1`, `${charPrefix}punch_2`, `${charPrefix}punch_1`];
+
+        // Row 13: Shoot (3 frames)
+        frames[`${charPrefix}shoot_0`] = { frame: { x: 0, y: 624, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}shoot_1`] = { frame: { x: 48, y: 624, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}shoot_2`] = { frame: { x: 96, y: 624, w: frameWidth, h: frameHeight } };
+        animations['shoot'] = [`${charPrefix}shoot_0`, `${charPrefix}shoot_1`, `${charPrefix}shoot_2`, `${charPrefix}shoot_1`];
+
+        // Row 14: Hurt (3 frames)
+        frames[`${charPrefix}hurt_0`] = { frame: { x: 0, y: 672, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}hurt_1`] = { frame: { x: 48, y: 672, w: frameWidth, h: frameHeight } };
+        frames[`${charPrefix}hurt_2`] = { frame: { x: 96, y: 672, w: frameWidth, h: frameHeight } };
+        animations['hurt'] = [`${charPrefix}hurt_0`, `${charPrefix}hurt_1`, `${charPrefix}hurt_2`, `${charPrefix}hurt_1`];
+
+
+        // Create the spritesheet using the fully loaded baseTexture.
+        const sheet = new PIXI.Spritesheet(baseTexture, {
+            frames: frames,
+            animations: animations,
+            meta: { scale: '1' }
+        });
+        await sheet.parse();
+        allCharacterSheets[url] = sheet;
+    }
+    console.log("All character assets pre-loaded and parsed.");
+}
+
+// --- Tiled Map Rendering ---
+async function loadMapData(url) {
+    console.log(`Attempting to load map data from: ${url}`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}, failed to fetch ${url}`);
+    const mapJson = await response.json();
+    mapJson.url = url; 
+    mapJson.absoluteUrl = new URL(url, window.location.href).href; 
+    console.log("Map data loaded successfully.");
+    return mapJson;
+}
+
+/**
+ * Renders the Tiled map using EMBEDDED tileset data.
+ * @param {object} mapData - The loaded Tiled map data.
+ */
+async function renderMap(mapData) {
+    console.log("Starting map render with EMBEDDED tileset logic...");
+
+    const tilesets = {};
+
+    for (const tilesetDef of mapData.tilesets) {
+        const mapDirectoryAbsoluteUrl = mapData.absoluteUrl.substring(0, mapData.absoluteUrl.lastIndexOf('/') + 1); 
+        const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), mapDirectoryAbsoluteUrl).href;
+
+        console.log(`Loading tileset image from: ${imageUrl}`);
+        
+        await PIXI.Assets.load(imageUrl);
+        console.log(`Successfully loaded image: ${imageUrl}`);
+
+        tilesets[tilesetDef.firstgid] = {
+            texture: PIXI.BaseTexture.from(imageUrl),
+            columns: tilesetDef.columns,
+            tileSize: tilesetDef.tilewidth
+        };
+    }
+
+    for (const layer of mapData.layers) {
+        if (!layer.visible) continue;
+        if (layer.type === 'tilelayer') {
+            renderTileLayer(layer, mapData, tilesets);
+        } else if (layer.type === 'objectgroup') {
+            renderObjectLayer(layer, mapData, tilesets);
+        }
+    }
+    console.log("Map render complete.");
+}
+
+function renderTileLayer(layer, mapData, tilesets) {
+    const isCollisionLayer = layer.properties?.some(p => p.name === 'collides' && p.value === true);
+    if (isCollisionLayer) {
+        console.log(`Skipping rendering of collision layer: ${layer.name}`);
+        return;
+    }
+
+    const layerContainer = new PIXI.Container();
+    mainApp.stage.addChild(layerContainer);
+
+    for (const chunk of layer.chunks) {
+        for (let i = 0; i < chunk.data.length; i++) {
+            const gid = chunk.data[i];
+            const tileId = gid & 0x1FFFFFFF;
+            if (tileId === 0) continue;
+
+            const tilesetDef = findTilesetForGid(mapData.tilesets, tileId);
+            if (!tilesetDef) continue;
+
+            const tileset = tilesets[tilesetDef.firstgid];
+            const x = (i % chunk.width) + chunk.x;
+            const y = Math.floor(i / chunk.width) + chunk.y;
+
+            const localTileId = tileId - tilesetDef.firstgid;
+            const tileX = (localTileId % tileset.columns) * tileset.tileSize;
+            const tileY = Math.floor(localTileId / tileset.columns) * tileset.tileSize;
+
+            const tileRect = new PIXI.Rectangle(tileX, tileY, tileset.tileSize, tileset.tileSize);
+            const texture = new PIXI.Texture(tileset.texture, tileRect);
+            const sprite = new PIXI.Sprite(texture);
+            sprite.x = x * tileset.tileSize;
+            sprite.y = y * tileset.tileSize;
+            layerContainer.addChild(sprite);
+        }
+    }
+}
+
+function renderObjectLayer(layer, mapData, tilesets) {
+    for (const obj of layer.objects) {
+        if (!obj.visible || !obj.gid) {
+            if (obj.type === 'room' || obj.type === 'action_point' || obj.type === 'spawn_point') {
+                // console.log(`Skipping non-visual object: ${obj.name} (type: ${obj.type})`);
+            } else {
+                console.warn(`Skipping object without GID: ${obj.name} (type: ${obj.type})`);
+            }
+            continue;
+        }
+
+        const gid = obj.gid;
+        const tileId = gid & 0x1FFFFFFF;
+        const tilesetDef = findTilesetForGid(mapData.tilesets, tileId);
+        if (!tilesetDef) continue;
+
+        const tileset = tilesets[tilesetDef.firstgid];
+        const localTileId = tileId - tilesetDef.firstgid;
+        const tileX = (localTileId % tileset.columns) * tileset.tileSize;
+        const tileY = Math.floor(localTileId / tileset.columns) * tileset.tileSize;
+
+        const renderWidth = obj.width > 0 ? obj.width : tileset.tileSize;
+        const renderHeight = obj.height > 0 ? obj.height : tileset.tileSize;
+
+        const tileRect = new PIXI.Rectangle(tileX, tileY, renderWidth, renderHeight); 
+        const texture = new PIXI.Texture(tileset.texture, tileRect);
+        const sprite = new PIXI.Sprite(texture);
+
+        sprite.anchor.set(0, 1);
+        sprite.x = obj.x;
+        sprite.y = obj.y;
+        mainApp.stage.addChild(sprite);
+    }
+}
+
+function findTilesetForGid(tilesets, gid) {
+    let correctTileset = null;
+    for (const tileset of tilesets) {
+        if (gid >= tileset.firstgid) {
+            correctTileset = tileset;
+        } else {
+            break;
+        }
+    }
+    return correctTileset;
+}
+
+// --- Character Selector Logic ---
+let currentCharacterIndex = 0;
+let selectorSprite; // Declared globally
+
+async function setupCharacterSelector() {
+    const player = gameState.characters.find(c => c.isPlayer);
+    const initialSpritePath = PREMADE_CHARACTER_SPRITES[currentCharacterIndex];
+    const sheet = allCharacterSheets[initialSpritePath];
+
+    if (!sheet) {
+        console.error(`Initial spritesheet for selector not found: ${initialSpritePath}`);
+        return;
+    }
+
+    selectorSprite = createAnimatedSprite(sheet, 'walk_down');
+    selectorApp.stage.addChild(selectorSprite);
+    selectorSprite.x = selectorApp.screen.width / 2;
+    selectorSprite.y = selectorApp.screen.height / 2;
+    
+    await changeCharacter(0); 
+
+    document.getElementById('next-char-btn').addEventListener('click', () => changeCharacter(1));
+    document.getElementById('prev-char-btn').addEventListener('click', () => changeCharacter(-1));
+}
+
+async function changeCharacter(direction) {
+    if (direction !== 0) {
+        currentCharacterIndex += direction;
+        if (currentCharacterIndex >= PREMADE_CHARACTER_SPRITES.length) currentCharacterIndex = 0;
+        if (currentCharacterIndex < 0) currentCharacterIndex = PREMADE_CHARACTER_SPRITES.length - 1;
+    }
+
+    const player = gameState.characters.find(c => c.isPlayer);
+    const newSpritePath = PREMADE_CHARACTER_SPRITES[currentCharacterIndex];
+    player.spriteSheet = newSpritePath;
+
+    const sheet = allCharacterSheets[newSpritePath];
+    if (!sheet) {
+        console.error(`Spritesheet not found in cache for: ${newSpritePath}`);
+        return;
+    }
+
+    if (player.pixiSprite) {
+        characterContainer.removeChild(player.pixiSprite);
+    }
+    
+    if (selectorSprite) {
+        selectorSprite.textures = sheet.animations['walk_down'];
+        selectorSprite.play();
+        selectorSprite.currentAnimationName = 'walk_down';
+    }
+
+
+    player.pixiSprite = createAnimatedSprite(sheet, 'idle_down'); 
+    characterContainer.addChild(player.pixiSprite); 
+
+    updateCharacterName(); 
+}
+
+function updateCharacterName() {
+    const player = gameState.characters.find(c => c.isPlayer);
+    document.getElementById('char-name-display').textContent = `${player.name} (Char ${currentCharacterIndex + 1})`;
+}
+
+// --- Sprite Sheet and Animation Logic ---
+function createAnimatedSprite(sheet, initialAnimation) {
+    const sprite = new PIXI.AnimatedSprite(sheet.animations[initialAnimation]);
+    sprite.animationSpeed = 0.15;
+    sprite.anchor.set(0.5);
+    sprite.play();
+    sprite.currentAnimationName = initialAnimation;
+    return sprite;
+}
+
+// --- Player Interaction & Camera ---
+const keys = {};
+
+function setupPlayerInteraction() {
+    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    mainApp.stage.interactive = true;
+    mainApp.stage.hitArea = mainApp.screen;
+    mainApp.stage.on('pointerdown', (event) => {
+        const player = gameState.characters.find(c => c.isPlayer);
+        const worldPos = mainApp.stage.toLocal(event.global);
+        backend.findPathFor(player, worldPos);
+    });
+
+    document.getElementById('player-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const inputMode = document.getElementById('input-mode-selector').value;
+            const message = document.getElementById('player-input').value;
+            document.getElementById('player-input').value = '';
+
+            if (message.trim() === '') return;
+
+            const chatLog = document.getElementById('chat-log');
+            const p = document.createElement('p');
+            p.className = 'text-gray-300 text-sm';
+            p.innerHTML = `<span class="font-bold text-blue-300">Player (${inputMode}):</span> ${message}`;
+            chatLog.appendChild(p);
+            chatLog.scrollTop = chatLog.scrollHeight; 
+
+            console.log(`Player Input Mode: ${inputMode}, Message: ${message}`);
+        }
+    });
+}
+
+function updateCamera() {
+    const panSpeed = 5;
+    if (keys['ArrowUp']) mainApp.stage.y += panSpeed;
+    if (keys['ArrowDown']) mainApp.stage.y -= panSpeed;
+    if (keys['ArrowLeft']) mainApp.stage.x += panSpeed;
+    if (keys['ArrowRight']) mainApp.stage.x -= panSpeed;
+}
+
+function updateUI(character) {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('current-time-display').textContent = `${hours}:${minutes}`;
+
+    document.getElementById('char-name-display').textContent = character.name;
+
+    const portraitImg = document.getElementById('player-portrait');
+    if (portraitImg && character.portrait) { 
+        portraitImg.src = character.portrait;
+    } else if (portraitImg) {
+        portraitImg.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+    }
+    
+    const inventoryList = document.getElementById('inventory-content');
+    if (inventoryList) {
+        inventoryList.innerHTML = ''; 
+        if (character.inventory && character.inventory.length > 0) {
+            character.inventory.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.name;
+                inventoryList.appendChild(li);
+            });
+        } else {
+            const p = document.createElement('p');
+            p.textContent = 'Inventory is empty.';
+            inventoryList.appendChild(p);
+        }
+    }
+
+    const taskDisplay = document.getElementById('tasks-content');
+    if (taskDisplay) {
+        if (character.assignedTask) {
+            taskDisplay.innerHTML = `<p class="font-semibold">Current Task:</p><p>${character.assignedTask.displayName}</p>`;
+        } else {
+            taskDisplay.innerHTML = '<p>No task assigned.</p>';
+        }
+    }
+
+    const relationshipsList = document.getElementById('relationships-content');
+    if (relationshipsList) {
+        relationshipsList.innerHTML = '';
+        const relationshipsHeader = document.createElement('p');
+        relationshipsHeader.className = 'font-semibold mb-1';
+        relationshipsHeader.textContent = 'Relationships:';
+        relationshipsList.appendChild(relationshipsHeader);
+
+        let hasRelationships = false;
+        for (const otherCharId in character.relationships) {
+            if (character.relationships.hasOwnProperty(otherCharId)) {
+                const otherChar = gameState.characters.find(c => c.id === otherCharId);
+                if (otherChar && otherChar.id !== character.id) {
+                    hasRelationships = true;
+                    const score = character.relationships[otherCharId];
+                    const li = document.createElement('li');
+                    li.textContent = `${otherChar.name}: ${score}/100`;
+                    relationshipsList.appendChild(li);
+                }
+            }
+        }
+        if (!hasRelationships) {
+            const p = document.createElement('p');
+            p.textContent = 'No active relationships.';
+            relationshipsList.appendChild(p);
+        }
+    }
+}
+
+
+// --- Game Loop ---
+function gameLoop(ticker) {
+    backend.update(ticker.deltaTime);
+
+    for (const character of gameState.characters) {
+        if (character.pixiSprite) {
+            character.pixiSprite.x = character.position.x;
+            character.pixiSprite.y = character.position.y;
+            character.pixiSprite.zIndex = character.position.y; 
+
+            const newAnimation = character.actionState;
+            const currentAnimation = character.pixiSprite.currentAnimationName;
+            const sheet = allCharacterSheets[character.spriteSheet];
+
+            if (newAnimation && newAnimation !== currentAnimation && sheet.animations[newAnimation]) {
+                character.pixiSprite.textures = sheet.animations[newAnimation];
+                character.pixiSprite.play();
+                character.pixiSprite.currentAnimationName = newAnimation;
+            }
+        }
+    }
+    
+    characterContainer.sortChildren(); 
+    
+    updateCamera();
+    updateUI(gameState.characters.find(c => c.isPlayer)); 
+}
