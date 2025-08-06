@@ -1,14 +1,14 @@
 // This file simulates the game's backend for the test harness.
 
-// BILO_FIX: This code now programmatically generates the correct filenames
-// with leading zeros (e.g., _01, _02) to match your asset files.
+// BILO_FIX: Corrected the base path for character sprites to reflect project root.
 const PREMADE_CHARACTER_SPRITES = [];
 // BILO_PLACEHOLDER: You must change the number "20" to match the exact
-// number of character sprite sheets you have in the assets/characters folder.
+// number of character sprite sheets you have in the Assets/characters folder.
 for (let i = 1; i <= 20; i++) {
     // String(i).padStart(2, '0') ensures that numbers 1-9 get a leading zero.
     const number = String(i).padStart(2, '0');
-    PREMADE_CHARACTER_SPRITES.push(`assets/characters/Premade_Character_48x48_${number}.png`);
+    // Assuming 'Assets' folder is at the project root, like 'assets' folder
+    PREMADE_CHARACTER_SPRITES.push(`Assets/characters/Premade_Character_48x48_${number}.png`);
 }
 
 // REMOVED: const TILE_SIZE = 48; // This line caused the redeclaration error as it's already in main.js
