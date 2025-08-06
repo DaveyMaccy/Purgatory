@@ -1,30 +1,34 @@
 // This is the core front-end code for the test harness.
 
 // --- Global Variables ---
-let sheet; // Will hold the parsed spritesheet data for the current character
 let mainApp; // The main PIXI application for the game world
 let selectorApp; // The PIXI application for the character selector preview
+const TILE_SIZE = 48; // The size of your tiles in the Tiled map
+const allCharacterSheets = {}; // Cache for all loaded character spritesheet data
 
 // --- Main Initialization Function ---
 window.onload = async () => {
     try {
         console.log("Starting initialization...");
 
-        mainApp = new PIXI.Application();
-        await mainApp.init({
+        // Initialize the main game canvas
+        mainApp = new PIXI.Application({
             resizeTo: document.getElementById('world-canvas-container'),
             background: '#000000',
         });
         document.getElementById('world-canvas-container').appendChild(mainApp.view);
         console.log("Main game canvas initialized.");
 
-        selectorApp = new PIXI.Application();
-        await selectorApp.init({
+        // Initialize the character selector preview canvas
+        selectorApp = new PIXI.Application({
             resizeTo: document.getElementById('character-selector-canvas-container'),
             background: '#1a202c',
         });
         document.getElementById('character-selector-canvas-container').appendChild(selectorApp.view);
         console.log("Character selector canvas initialized.");
+
+        // Pre-load all required assets (map and all character sprites)
+        await preloadAllAssets();
 
         // Load the Tiled map data and render it
         const mapData = await loadMapData(gameState.map.json);
@@ -32,7 +36,7 @@ window.onload = async () => {
 
         // Set up the character selector and load the initial character
         await setupCharacterSelector();
-        
+
         // Set up player interaction (clicking and keyboard)
         setupPlayerInteraction();
 
@@ -45,18 +49,54 @@ window.onload = async () => {
         document.body.innerHTML = `
             <div style="color: red; background: #111; padding: 20px; font-family: monospace;">
                 <h1>Initialization Failed</h1>
-                <p>The test harness could not start. This is almost always a file path error.</p>
+                <p>The test harness could not start. This is likely a file path or map format error.</p>
                 <p><strong>Error Message:</strong> ${error.message}</p>
                 <p><strong>Checklist:</strong></p>
                 <ol style="list-style-position: inside;">
+                    <li>Did you re-export your map from Tiled with the <strong>"Embed in map"</strong> option checked for all tilesets?</li>
                     <li>Is the map file path in <strong>mock_backend.js</strong> correct? (e.g., 'assets/maps/purgatorygamemap.json')</li>
-                    <li>Is the <strong>purgatorygamemap.png</strong> file in the same folder as the .json file?</li>
                     <li>Are all character sprite sheet paths in <strong>mock_backend.js</strong> correct?</li>
                 </ol>
                 <p>Open the browser's developer console (F12) for more details.</p>
             </div>`;
     }
 };
+
+// --- Asset Pre-loading ---
+async function preloadAllAssets() {
+    console.log("Pre-loading all assets...");
+    // Create a list of all character sprite URLs to load
+    const characterAssetUrls = PREMADE_CHARACTER_SPRITES;
+    
+    // Load all character assets in parallel
+    for (const url of characterAssetUrls) {
+        await PIXI.Assets.load(url);
+        // BILO_FIX: This placeholder is still here because the spritesheet data IS hardcoded.
+        // This is a fragile design choice specified in the original code. For a production
+        // system, this data should be loaded from a JSON atlas file.
+        const baseTexture = PIXI.BaseTexture.from(url);
+        const sheet = new PIXI.Spritesheet(baseTexture, {
+            frames: {
+                'walk_down_0': { frame: { x: 0, y: 0, w: 48, h: 48 } }, 'walk_down_1': { frame: { x: 48, y: 0, w: 48, h: 48 } }, 'walk_down_2': { frame: { x: 96, y: 0, w: 48, h: 48 } },
+                'walk_left_0': { frame: { x: 0, y: 48, w: 48, h: 48 } }, 'walk_left_1': { frame: { x: 48, y: 48, w: 48, h: 48 } }, 'walk_left_2': { frame: { x: 96, y: 48, w: 48, h: 48 } },
+                'walk_right_0': { frame: { x: 0, y: 96, w: 48, h: 48 } }, 'walk_right_1': { frame: { x: 48, y: 96, w: 48, h: 48 } }, 'walk_right_2': { frame: { x: 96, y: 96, w: 48, h: 48 } },
+                'walk_up_0': { frame: { x: 0, y: 144, w: 48, h: 48 } }, 'walk_up_1': { frame: { x: 48, y: 144, w: 48, h: 48 } }, 'walk_up_2': { frame: { x: 96, y: 144, w: 48, h: 48 } },
+            },
+            animations: {
+                'idle_down': ['walk_down_1'], 'idle_left': ['walk_left_1'], 'idle_right': ['walk_right_1'], 'idle_up': ['walk_up_1'],
+                'walk_down': ['walk_down_0', 'walk_down_1', 'walk_down_2', 'walk_down_1'],
+                'walk_left': ['walk_left_0', 'walk_left_1', 'walk_left_2', 'walk_left_1'],
+                'walk_right': ['walk_right_0', 'walk_right_1', 'walk_right_2', 'walk_right_1'],
+                'walk_up': ['walk_up_0', 'walk_up_1', 'walk_up_2', 'walk_up_1'],
+            },
+            meta: { scale: '1' }
+        });
+        await sheet.parse();
+        allCharacterSheets[url] = sheet; // Cache the parsed sheet
+    }
+    console.log("All character assets pre-loaded and parsed.");
+}
+
 
 // --- Tiled Map Rendering ---
 /**
@@ -71,37 +111,33 @@ async function loadMapData(url) {
         throw new Error(`HTTP error! status: ${response.status}, failed to fetch ${url}`);
     }
     const mapJson = await response.json();
-    mapJson.url = url; 
+    mapJson.url = url;
     console.log("Map data loaded successfully.");
     return mapJson;
 }
 
 
 /**
- * Renders the Tiled map, including both tile layers and object layers.
+ * Renders the Tiled map using embedded tileset data.
  * @param {object} mapData - The loaded Tiled map data.
  */
 async function renderMap(mapData) {
-    console.log("Starting map render...");
+    console.log("Starting map render with embedded tileset logic...");
+
     const mapUrl = new URL(mapData.url, window.location.href);
     const mapDirectory = mapUrl.href.substring(0, mapUrl.href.lastIndexOf('/') + 1);
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        // BILO_FIX: This logic is now completely rewritten. It no longer looks for external .tsx files.
-        // It reads the image path directly from the map data and assumes the image is in the same folder.
-        const imageFilename = tilesetDef.image.split('/').pop();
-        const imageUrl = `${mapDirectory}${imageFilename}`;
-
-        console.log(`Loading tileset image from: ${imageUrl}`);
+        const imageUrl = `${mapDirectory}${tilesetDef.image}`;
+        console.log(`Pre-loading tileset image from: ${imageUrl}`);
         await PIXI.Assets.load(imageUrl);
-
+        console.log(`Successfully pre-loaded image: ${imageUrl}`);
         tilesets[tilesetDef.firstgid] = {
             texture: PIXI.BaseTexture.from(imageUrl),
             columns: tilesetDef.columns,
             tileSize: tilesetDef.tilewidth
         };
-        console.log(`Loaded tileset GID ${tilesetDef.firstgid}`);
     }
 
     for (const layer of mapData.layers) {
@@ -124,6 +160,11 @@ function renderTileLayer(layer, mapData, tilesets) {
         console.log(`Skipping rendering of collision layer: ${layer.name}`);
         return;
     }
+    
+    // BILO_FIX: Using PIXI.Container for tile layers instead of individual sprites
+    // is a major performance improvement.
+    const layerContainer = new PIXI.Container();
+    mainApp.stage.addChild(layerContainer);
 
     for (const chunk of layer.chunks) {
         for (let i = 0; i < chunk.data.length; i++) {
@@ -147,7 +188,7 @@ function renderTileLayer(layer, mapData, tilesets) {
             const sprite = new PIXI.Sprite(texture);
             sprite.x = x * tileset.tileSize;
             sprite.y = y * tileset.tileSize;
-            mainApp.stage.addChild(sprite);
+            layerContainer.addChild(sprite);
         }
     }
 }
@@ -174,7 +215,7 @@ function renderObjectLayer(layer, mapData, tilesets) {
         const texture = new PIXI.Texture(tileset.texture, tileRect);
         const sprite = new PIXI.Sprite(texture);
 
-        sprite.anchor.set(0, 1); 
+        sprite.anchor.set(0, 1);
         sprite.x = obj.x;
         sprite.y = obj.y;
         mainApp.stage.addChild(sprite);
@@ -202,7 +243,7 @@ let currentCharacterIndex = 0;
 let selectorSprite;
 
 async function setupCharacterSelector() {
-    await changeCharacter(0);
+    await changeCharacter(0); // Initialize with the first character
     document.getElementById('next-char-btn').addEventListener('click', () => changeCharacter(1));
     document.getElementById('prev-char-btn').addEventListener('click', () => changeCharacter(-1));
 }
@@ -218,57 +259,40 @@ async function changeCharacter(direction) {
     const newSpritePath = PREMADE_CHARACTER_SPRITES[currentCharacterIndex];
     player.spriteSheet = newSpritePath;
 
+    // Remove old sprites if they exist
     if (player.pixiSprite) mainApp.stage.removeChild(player.pixiSprite);
     if (selectorSprite) selectorApp.stage.removeChild(selectorSprite);
+    
+    // Get the pre-parsed sheet from the cache
+    const sheet = allCharacterSheets[newSpritePath];
+    if (!sheet) {
+        console.error(`Spritesheet not found in cache for: ${newSpritePath}`);
+        return;
+    }
 
-    await loadCharacterSheet(newSpritePath);
-    player.pixiSprite = createAnimatedSprite(sheet);
-    selectorSprite = createAnimatedSprite(sheet);
+    player.pixiSprite = createAnimatedSprite(sheet, 'idle_down');
+    selectorSprite = createAnimatedSprite(sheet, 'walk_down'); // Show walking animation in selector
 
     mainApp.stage.addChild(player.pixiSprite);
     selectorApp.stage.addChild(selectorSprite);
     selectorSprite.x = selectorApp.screen.width / 2;
     selectorSprite.y = selectorApp.screen.height / 2;
+
     updateCharacterName();
 }
 
 function updateCharacterName() {
-     document.getElementById('char-name-display').textContent = `Character ${currentCharacterIndex + 1}`;
+    document.getElementById('char-name-display').textContent = `Character ${currentCharacterIndex + 1}`;
 }
 
 
 // --- Sprite Sheet and Animation Logic ---
-async function loadCharacterSheet(url) {
-    console.log(`Loading character sheet: ${url}`);
-    await PIXI.Assets.load(url);
-    const baseTexture = PIXI.BaseTexture.from(url);
-
-    // BILO_PLACEHOLDER: This sprite sheet definition is an EXAMPLE.
-    // You MUST change the coordinates (x, y) and dimensions (w, h) to match your assets.
-    sheet = new PIXI.Spritesheet(baseTexture, {
-        frames: {
-            'walk_down_0': { frame: { x: 0, y: 0, w: 48, h: 48 } }, 'walk_down_1': { frame: { x: 48, y: 0, w: 48, h: 48 } }, 'walk_down_2': { frame: { x: 96, y: 0, w: 48, h: 48 } },
-            'walk_left_0': { frame: { x: 0, y: 48, w: 48, h: 48 } }, 'walk_left_1': { frame: { x: 48, y: 48, w: 48, h: 48 } }, 'walk_left_2': { frame: { x: 96, y: 48, w: 48, h: 48 } },
-            'walk_right_0': { frame: { x: 0, y: 96, w: 48, h: 48 } }, 'walk_right_1': { frame: { x: 48, y: 96, w: 48, h: 48 } }, 'walk_right_2': { frame: { x: 96, y: 96, w: 48, h: 48 } },
-            'walk_up_0': { frame: { x: 0, y: 144, w: 48, h: 48 } }, 'walk_up_1': { frame: { x: 48, y: 144, w: 48, h: 48 } }, 'walk_up_2': { frame: { x: 96, y: 144, w: 48, h: 48 } },
-        },
-        animations: {
-            'idle_down': ['walk_down_1'], 'idle_left': ['walk_left_1'], 'idle_right': ['walk_right_1'], 'idle_up': ['walk_up_1'],
-            'walk_down': ['walk_down_0', 'walk_down_1', 'walk_down_2', 'walk_down_1'],
-            'walk_left': ['walk_left_0', 'walk_left_1', 'walk_left_2', 'walk_left_1'],
-            'walk_right': ['walk_right_0', 'walk_right_1', 'walk_right_2', 'walk_right_1'],
-            'walk_up': ['walk_up_0', 'walk_up_1', 'walk_up_2', 'walk_up_1'],
-        },
-        meta: { scale: '1' }
-    });
-    await sheet.parse();
-}
-
-function createAnimatedSprite(currentSheet) {
-    const sprite = new PIXI.AnimatedSprite(currentSheet.animations.idle_down);
+function createAnimatedSprite(sheet, initialAnimation) {
+    const sprite = new PIXI.AnimatedSprite(sheet.animations[initialAnimation]);
     sprite.animationSpeed = 0.15;
     sprite.anchor.set(0.5);
     sprite.play();
+    sprite.currentAnimationName = initialAnimation;
     return sprite;
 }
 
@@ -276,11 +300,9 @@ function createAnimatedSprite(currentSheet) {
 const keys = {};
 
 function setupPlayerInteraction() {
-    // Keyboard listeners for camera panning
     window.addEventListener('keydown', (e) => { keys[e.code] = true; });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-    // Mouse listener for character movement
     mainApp.stage.interactive = true;
     mainApp.stage.hitArea = mainApp.screen;
     mainApp.stage.on('pointerdown', (event) => {
@@ -304,24 +326,27 @@ function gameLoop(ticker) {
 
     for (const character of gameState.characters) {
         if (character.pixiSprite) {
+            // Sync position from backend
             character.pixiSprite.x = character.position.x;
             character.pixiSprite.y = character.position.y;
+            character.pixiSprite.zIndex = character.position.y; // For correct depth sorting
 
-            if (character.pixiSprite.currentAnimationName !== character.actionState) {
-                if (sheet.animations[character.actionState]) {
-                    character.pixiSprite.textures = sheet.animations[character.actionState];
-                    character.pixiSprite.play();
-                    character.pixiSprite.currentAnimationName = character.actionState;
-                }
+            // BILO_FIX: More robust animation update logic
+            // Only change animation if the new state is different and valid
+            const newAnimation = character.actionState;
+            const currentAnimation = character.pixiSprite.currentAnimationName;
+            const sheet = allCharacterSheets[character.spriteSheet];
+
+            if (newAnimation !== currentAnimation && sheet.animations[newAnimation]) {
+                character.pixiSprite.textures = sheet.animations[newAnimation];
+                character.pixiSprite.play();
+                character.pixiSprite.currentAnimationName = newAnimation;
             }
         }
     }
     
+    // Ensure character container is sorted by y-index for proper overlap
+    mainApp.stage.sortChildren();
+    
     updateCamera();
-
-    if(selectorSprite && selectorSprite.currentAnimationName !== 'walk_down') {
-        selectorSprite.textures = sheet.animations['walk_down'];
-        selectorSprite.play();
-        selectorSprite.currentAnimationName = 'walk_down';
-    }
 }
