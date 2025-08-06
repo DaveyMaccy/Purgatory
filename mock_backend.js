@@ -1,14 +1,14 @@
 // This file simulates the game's backend for the test harness.
 
-// BILO_FIX: Corrected the base path for character sprites to reflect project root.
+// BILO_FIX: Corrected the base path for character sprites to reflect the lowercase 'assets' folder.
 const PREMADE_CHARACTER_SPRITES = [];
 // BILO_PLACEHOLDER: You must change the number "20" to match the exact
-// number of character sprite sheets you have in the Assets/characters folder.
+// number of character sprite sheets you have in the assets/characters folder.
 for (let i = 1; i <= 20; i++) {
     // String(i).padStart(2, '0') ensures that numbers 1-9 get a leading zero.
     const number = String(i).padStart(2, '0');
-    // Assuming 'Assets' folder is at the project root, like 'assets' folder
-    PREMADE_CHARACTER_SPRITES.push(`Assets/characters/Premade_Character_48x48_${number}.png`);
+    // Assuming 'mock_backend.js' is in 'assets/' folder, and 'characters' is directly inside 'assets/'.
+    PREMADE_CHARACTER_SPRITES.push(`assets/characters/Premade_Character_48x48_${number}.png`);
 }
 
 // REMOVED: const TILE_SIZE = 48; // This line caused the redeclaration error as it's already in main.js
@@ -32,10 +32,6 @@ const gameState = {
             experienceTags: ['5+ Years Experience', 'Startup Background'],
 
             // --- Dynamic State ---
-            needs: { energy: 8, hunger: 9, social: 6, comfort: 10, stress: 1 }, // Scored 1-10
-            mood: 'Neutral', // 'Happy', 'Sad', 'Angry', 'Stressed', 'Tired'
-
-            // --- Action & Interaction State ---
             actionState: 'idle_down', // 'DEFAULT', 'HoldingItem', 'InConversation'
             facingAngle: 90, // Current direction in degrees (0-359). Default is 90 (facing down).
             maxSightRange: 250, // Maximum sight distance in pixels.
