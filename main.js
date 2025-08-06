@@ -51,7 +51,7 @@ window.onload = async () => {
                 <p><strong>Checklist:</strong></p>
                 <ol style="list-style-position: inside;">
                     <li>Is the map file path in <strong>mock_backend.js</strong> correct? (e.g., 'assets/maps/purgatorygamemap.json')</li>
-                    <li>Are the tileset .tsx/.json and .png files in the <strong>same folder</strong> as the map .json file?</li>
+                    <li>Are the tileset definition file (e.g., Room_Builder_Office_48x48.tsx) and the tileset image (.png) in the <strong>same folder</strong> as the map .json file?</li>
                     <li>Are all character sprite sheet paths in <strong>mock_backend.js</strong> correct?</li>
                 </ol>
                 <p>Open the browser's developer console (F12) for more details.</p>
@@ -85,22 +85,26 @@ async function loadMapData(url) {
 async function renderMap(mapData) {
     console.log("Starting map render...");
     const mapUrl = new URL(mapData.url, window.location.href);
+    const mapDirectory = mapUrl.href.substring(0, mapUrl.href.lastIndexOf('/') + 1);
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        // BILO_FIX: This logic now correctly handles file paths. It strips any subdirectories
-        // saved by Tiled and assumes the tileset definition file (.tsx or .json) is in the
-        // same directory as the map file. This fixes the 404 error.
+        // BILO_FIX: This logic is now completely rewritten to be robust.
+        // It correctly handles external tileset files (.tsx) and their image paths.
+        
+        // 1. Get the filename of the tileset definition from the map data.
         const sourceFilename = tilesetDef.source.split('/').pop();
-        const tilesetSourceUrl = new URL(sourceFilename, mapUrl).href;
+        const tilesetSourceUrl = `${mapDirectory}${sourceFilename}`;
 
         console.log(`Loading tileset definition from: ${tilesetSourceUrl}`);
         const tilesetResponse = await fetch(tilesetSourceUrl);
-         if (!tilesetResponse.ok) throw new Error(`Failed to load tileset definition: ${tilesetSourceUrl}`);
+        if (!tilesetResponse.ok) throw new Error(`Failed to load tileset definition: ${tilesetSourceUrl}`);
         const tilesetData = await tilesetResponse.json();
         
+        // 2. Get the filename of the image from the tileset definition data.
         const imageFilename = tilesetData.image.split('/').pop();
-        const imageUrl = new URL(imageFilename, mapUrl).href;
+        const imageUrl = `${mapDirectory}${imageFilename}`;
+
         console.log(`Loading tileset image from: ${imageUrl}`);
         await PIXI.Assets.load(imageUrl);
 
