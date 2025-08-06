@@ -3,6 +3,7 @@
 // --- Global Variables ---
 let mainApp; // The main PIXI application for the game world
 let selectorApp; // The PIXI application for the character selector preview
+let characterContainer; // A dedicated container for characters to manage z-sorting
 const TILE_SIZE = 48; // The size of your tiles in the Tiled map
 const allCharacterSheets = {}; // Cache for all loaded character spritesheet data
 
@@ -28,6 +29,12 @@ window.onload = async () => {
         document.getElementById('character-selector-canvas-container').appendChild(selectorApp.view);
         selectorApp.resize(); // BILO_FIX: Manually trigger a resize for selector canvas
         console.log("Character selector canvas initialized.");
+        
+        // **FIX:** Create a container for characters to ensure they render above the map.
+        characterContainer = new PIXI.Container();
+        characterContainer.sortableChildren = true; // Enable z-index sorting within this container
+        mainApp.stage.addChild(characterContainer);
+
 
         // Pre-load all character assets
         await preloadCharacterAssets();
@@ -378,9 +385,9 @@ async function changeCharacter(direction) {
         return;
     }
 
-    // BILO_FIX: Remove old player sprite from main stage if it exists
+    // **FIX:** Remove old player sprite from its specific container
     if (player.pixiSprite) {
-        mainApp.stage.removeChild(player.pixiSprite);
+        characterContainer.removeChild(player.pixiSprite);
     }
     // BILO_FIX: Update selectorSprite's textures, no need to remove/add from stage again after initial setup
     if (selectorSprite) {
@@ -391,7 +398,8 @@ async function changeCharacter(direction) {
 
 
     player.pixiSprite = createAnimatedSprite(sheet, 'idle_down'); // Create new player sprite
-    mainApp.stage.addChild(player.pixiSprite); // Add new player sprite to main app
+    // **FIX:** Add new player sprite to its specific container
+    characterContainer.addChild(player.pixiSprite); 
 
     updateCharacterName(); // BILO_FIX: Call this here to update character name on change
 }
@@ -546,7 +554,9 @@ function gameLoop(ticker) {
         if (character.pixiSprite) {
             character.pixiSprite.x = character.position.x;
             character.pixiSprite.y = character.position.y;
-            character.pixiSprite.zIndex = character.position.y; // For correct depth sorting
+            // **FIX:** The zIndex is now relative to the character container, not the whole stage.
+            // This ensures characters sort correctly among themselves without hiding behind the map.
+            character.pixiSprite.zIndex = character.position.y; 
 
             const newAnimation = character.actionState;
             const currentAnimation = character.pixiSprite.currentAnimationName;
@@ -562,7 +572,8 @@ function gameLoop(ticker) {
         }
     }
     
-    mainApp.stage.sortChildren(); // Apply depth sorting
+    // **FIX:** Sort only the character container
+    characterContainer.sortChildren(); 
     
     updateCamera();
     updateUI(gameState.characters.find(c => c.isPlayer)); // Update the UI every frame
