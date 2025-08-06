@@ -3,14 +3,13 @@
 // BILO_FIX: This code now programmatically generates the correct filenames
 // with leading zeros (e.g., _01, _02) to match your asset files.
 const PREMADE_CHARACTER_SPRITES = [];
+// BILO_PLACEHOLDER: You must change the number "20" to match the exact
+// number of character sprite sheets you have in the assets/characters folder.
 for (let i = 1; i <= 20; i++) {
     // String(i).padStart(2, '0') ensures that numbers 1-9 get a leading zero.
     const number = String(i).padStart(2, '0');
     PREMADE_CHARACTER_SPRITES.push(`assets/characters/Premade_Character_48x48_${number}.png`);
 }
-
-// BILO_PLACEHOLDER: If you add more than 20 characters, you will need to
-// change the "20" in the loop above to match the total number of characters.
 
 const gameState = {
     characters: [
