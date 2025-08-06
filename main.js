@@ -102,7 +102,8 @@ async function loadMapData(url) {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}, failed to fetch ${url}`);
     const mapJson = await response.json();
-    mapJson.url = url; // Store the URL from which the map data was loaded
+    mapJson.url = url; // Store the URL from which the map data was loaded (e.g., "assets/maps/purgatorygamemap.json")
+    mapJson.absoluteUrl = new URL(url, window.location.href).href; // Store the absolute URL (e.g., "https://.../Purgatory/assets/maps/purgatorygamemap.json")
     console.log("Map data loaded successfully.");
     return mapJson;
 }
@@ -117,9 +118,11 @@ async function renderMap(mapData) {
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        // BILO_FIX: CRITICAL CORRECTION: Resolve tileset image paths relative to the mapData.url (the JSON file's location).
-        // This ensures that if the JSON contains just the filename (e.g., "image.png"), it looks for it in the same directory as the JSON.
-        const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), mapData.url).href;
+        // BILO_FIX: CRITICAL CORRECTION: Construct the absolute URL for the map's directory first,
+        // then resolve the tileset image filename against that absolute directory.
+        // mapData.absoluteUrl is e.g., "https://.../Purgatory/assets/maps/purgatorygamemap.json"
+        const mapDirectoryAbsoluteUrl = mapData.absoluteUrl.substring(0, mapData.absoluteUrl.lastIndexOf('/') + 1); // Get directory part: "https://.../Purgatory/assets/maps/"
+        const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), mapDirectoryAbsoluteUrl).href; // Resolve filename against directory
 
         console.log(`Loading tileset image from: ${imageUrl}`);
         
