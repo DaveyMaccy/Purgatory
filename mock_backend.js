@@ -3,8 +3,6 @@
 // This is the single source of truth for the tile size.
 const TILE_SIZE = 48;
 
-// BILO_FIX: Corrected the base path for character sprites to reflect the lowercase 'assets' folder
-// and the new definitive file structure.
 const PREMADE_CHARACTER_SPRITES = [];
 // BILO_PLACEHOLDER: You must change the number "20" to match the exact
 // number of character sprite sheets you have in the assets/characters folder.
@@ -69,7 +67,7 @@ const gameState = {
     ],
     map: {
         // This tells the front-end which Tiled map file to load.
-        json: 'assets/maps/purgatorygamemap.json', // This path is correct relative to index (5).html
+        json: 'assets/maps/purgatorygamemap.json', 
         data: null // To store the parsed map data
     },
     navGrid: null, // To store the generated navigation grid
@@ -77,7 +75,6 @@ const gameState = {
 };
 
 // BILO_PLACEHOLDER: This is a simplified A* implementation.
-// For a production game, consider a dedicated pathfinding library for robustness and performance.
 function findPath(grid, start, end) {
     const cols = grid[0].length;
     const rows = grid.length;
@@ -105,7 +102,6 @@ function findPath(grid, start, end) {
     openList.push(startNode);
 
     while (openList.length > 0) {
-        // Find the node with the lowest f value
         let lowIdx = 0;
         for (let i = 0; i < openList.length; i++) {
             if (openList[i].f < openList[lowIdx].f) {
@@ -114,7 +110,6 @@ function findPath(grid, start, end) {
         }
         const currentNode = openList[lowIdx];
 
-        // Found the path!
         if (currentNode.x === end.x && currentNode.y === end.y) {
             let curr = currentNode;
             const path = [];
@@ -122,10 +117,9 @@ function findPath(grid, start, end) {
                 path.push({ x: curr.x, y: curr.y });
                 curr = curr.parent;
             }
-            return path.reverse(); // Return path from start to end
+            return path.reverse();
         }
 
-        // Normal loop
         openList.splice(lowIdx, 1);
         closedList.push(currentNode);
 
@@ -133,23 +127,21 @@ function findPath(grid, start, end) {
         const x = currentNode.x;
         const y = currentNode.y;
 
-        // Check neighbors (4-directional movement)
-        if (x < cols - 1) neighbors.push(new Node(x + 1, y)); // Right
-        if (x > 0) neighbors.push(new Node(x - 1, y));     // Left
-        if (y < rows - 1) neighbors.push(new Node(x, y + 1)); // Down
-        if (y > 0) neighbors.push(new Node(x, y - 1));     // Up
+        if (x < cols - 1) neighbors.push(new Node(x + 1, y));
+        if (x > 0) neighbors.push(new Node(x - 1, y));
+        if (y < rows - 1) neighbors.push(new Node(x, y + 1));
+        if (y > 0) neighbors.push(new Node(x, y - 1));
 
         for (let i = 0; i < neighbors.length; i++) {
             const neighbor = neighbors[i];
 
-            // If neighbor is an obstacle or already in closed list, skip
             if (neighbor.x < 0 || neighbor.x >= cols || neighbor.y < 0 || neighbor.y >= rows ||
                 grid[neighbor.y][neighbor.x] === 1 ||
                 closedList.find(node => node.x === neighbor.x && node.y === neighbor.y)) {
                 continue;
             }
 
-            const gScore = currentNode.g + 1; // Cost to move to neighbor
+            const gScore = currentNode.g + 1;
 
             let isNewPath = false;
             const existingNode = openList.find(node => node.x === neighbor.x && node.y === neighbor.y);
@@ -177,22 +169,18 @@ function findPath(grid, start, end) {
 
 
 function generateNavGrid(mapData) {
-    const gridWidth = Math.ceil(mapData.width * TILE_SIZE / TILE_SIZE); // Map width in tiles
-    const gridHeight = Math.ceil(mapData.height * TILE_SIZE / TILE_SIZE); // Map height in tiles
+    const gridWidth = Math.ceil(mapData.width * TILE_SIZE / TILE_SIZE);
+    const gridHeight = Math.ceil(mapData.height * TILE_SIZE / TILE_SIZE);
 
-    // 1. Initialize grid with all walkable (0)
     let navGrid = Array(gridHeight).fill(null).map(() => Array(gridWidth).fill(0));
 
-    // Iterate through layers to find collision data
     for (const layer of mapData.layers) {
-        // Check for collision layer property
         const isCollisionLayer = layer.properties?.some(p => p.name === 'collides' && p.value === true);
 
         if (layer.type === 'tilelayer' && isCollisionLayer) {
             for (const chunk of layer.chunks) {
                 for (let i = 0; i < chunk.data.length; i++) {
                     const gid = chunk.data[i];
-                    // Tiled GIDs are 1-based, 0 means empty. Also, check for flip flags.
                     const tileId = gid & 0x1FFFFFFF;
                     if (tileId === 0) continue;
 
@@ -200,16 +188,14 @@ function generateNavGrid(mapData) {
                     const gridY = chunk.y + Math.floor(i / chunk.width);
 
                     if (gridY >= 0 && gridY < gridHeight && gridX >= 0 && gridX < gridWidth) {
-                        navGrid[gridY][gridX] = 1; // 1 represents an impassable wall
+                        navGrid[gridY][gridX] = 1;
                     }
                 }
             }
         } else if (layer.type === 'objectgroup') {
-            // Mark object obstacles in nav grid
             for (const obj of layer.objects) {
-                // Consider objects with 'collides' property or default types as obstacles
                 const isObstacle = obj.properties?.some(p => p.name === 'collides' && p.value === true) ||
-                                   ['desk', 'chair', 'misc', 'food_and_drink', 'storage', 'office_equipment', 'room'].includes(obj.type); // Added 'room'
+                                   ['desk', 'chair', 'misc', 'food_and_drink', 'storage', 'office_equipment', 'room'].includes(obj.type);
                 if (isObstacle) {
                     const startGridX = Math.floor(obj.x / TILE_SIZE);
                     const startGridY = Math.floor(obj.y / TILE_SIZE);
@@ -219,14 +205,12 @@ function generateNavGrid(mapData) {
                     for (let y = startGridY; y < endGridY; y++) {
                         for (let x = startGridX; x < endGridX; x++) {
                             if (y >= 0 && y < gridHeight && x >= 0 && x < gridWidth) {
-                                navGrid[y][x] = 1; // Mark as impassable
+                                navGrid[y][x] = 1;
                             }
                         }
                     }
                 }
-                // Store interactive objects in gameState.worldObjects for later use
-                // BILO_FIX: Only add if it's an interactive type and has a name
-                if (obj.type && !['room', 'spawn_point', ''].includes(obj.type) && obj.name) { // Exclude 'room', 'spawn_point', and empty type
+                if (obj.type && !['room', 'spawn_point', ''].includes(obj.type) && obj.name) {
                      gameState.worldObjects.push({
                         id: obj.id,
                         name: obj.name,
@@ -235,7 +219,6 @@ function generateNavGrid(mapData) {
                         y: obj.y,
                         width: obj.width,
                         height: obj.height,
-                        // BILO_PLACEHOLDER: Add actual tags based on SSOT for items
                         tags: []
                     });
                 }
@@ -243,49 +226,39 @@ function generateNavGrid(mapData) {
         }
     }
 
-    // Mark character initial positions as temporarily walkable if they are on an obstacle for now.
-    // This is a temporary fix to ensure characters can start on desks/chairs.
-    // A more robust solution involves specific spawn points on walkable tiles.
     for (const char of gameState.characters) {
         const charGridX = Math.floor(char.position.x / TILE_SIZE);
         const charGridY = Math.floor(char.position.y / TILE_SIZE);
         if (charGridY >= 0 && charGridY < gridHeight && charGridX >= 0 && charGridX < gridWidth) {
             if (navGrid[charGridY][charGridX] === 1) {
-                navGrid[charGridY][charGridX] = 0; // Temporarily make it walkable
+                navGrid[charGridY][charGridX] = 0;
                 console.warn(`Character ${char.name} spawned on an obstacle. Temporarily made tile walkable.`);
             }
         }
     }
 
-
     gameState.navGrid = navGrid;
     console.log("Navigation grid generated from map data.");
-    // console.log(navGrid); // Log the grid for verification
 }
 
-// BILO_PLACEHOLDER: Simplified findDeskById, findRandomWalkableTileNear, findRandomSpawnZone, findRandomWalkableTileInZone.
-// These would typically be more robust, pulling from map metadata or a defined list of points.
 function findDeskById(deskId) {
-    // For now, hardcode a desk position for the player's desk
     if (deskId === 'desk_1') {
-        // Coordinates for the first desk in the main office area from purgatorygamemap.json (approximate center)
         return { x: -382.667 + 129.333 / 2, y: 168 + 54.667 / 2, width: 0, height: 0 };
     }
-    return { x: 0, y: 0, width: 0, height: 0 }; // Default if not found
+    return { x: 0, y: 0, width: 0, height: 0 };
 }
 
 function findRandomWalkableTileNear(location) {
     const gridX = Math.floor(location.x / TILE_SIZE);
     const gridY = Math.floor(location.y / TILE_SIZE);
 
-    // Search a small area around the location
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             const checkX = gridX + dx;
             const checkY = gridY + dy;
             if (checkY >= 0 && checkY < gameState.navGrid.length &&
                 checkX >= 0 && checkX < gameState.navGrid[0].length &&
-                gameState.navGrid[checkY][checkX] === 0) { // If walkable
+                gameState.navGrid[checkY][checkX] === 0) {
                 return { x: checkX * TILE_SIZE + TILE_SIZE / 2, y: checkY * TILE_SIZE + TILE_SIZE / 2 };
             }
         }
@@ -295,17 +268,14 @@ function findRandomWalkableTileNear(location) {
 }
 
 function findRandomSpawnZone(locations) {
-    // BILO_PLACEHOLDER: This needs actual map data for zones.
-    // For now, just return a dummy "break_room" zone.
     if (locations.includes('break_room')) {
-        return { name: 'break_room', x: 111, y: 482, width: 447, height: 272 }; // Approximate break room bounds
+        return { name: 'break_room', x: 111, y: 482, width: 447, height: 272 };
     }
     if (locations.includes('desk')) {
-        return { name: 'desk', x: -382.667, y: 168, width: 129.333, height: 54.667 }; // Approx desk 1
+        return { name: 'desk', x: -382.667, y: 168, width: 129.333, height: 54.667 };
     }
-    // BILO_FIX: Added a default office spawn zone for items not specifically tied to other areas.
     if (locations.includes('main_office')) {
-        return { name: 'main_office', x: -466.667, y: 0, width: 1051.52, height: 460.606 }; // Main office bounds
+        return { name: 'main_office', x: -466.667, y: 0, width: 1051.52, height: 460.606 };
     }
     return null;
 }
@@ -322,7 +292,7 @@ function findRandomWalkableTileInZone(zone) {
         for (let x = startGridX; x < endGridX; x++) {
             if (y >= 0 && y < gameState.navGrid.length &&
                 x >= 0 && x < gameState.navGrid[0].length &&
-                gameState.navGrid[y][x] === 0) { // If walkable
+                gameState.navGrid[y][x] === 0) {
                 walkableTiles.push({ x: x * TILE_SIZE + TILE_SIZE / 2, y: y * TILE_SIZE + TILE_SIZE / 2 });
             }
         }
@@ -335,16 +305,13 @@ function findRandomWalkableTileInZone(zone) {
 }
 
 function createWorldObject(type, position, tags = []) {
-    // BILO_PLACEHOLDER: Generate a unique ID for the object
     const id = `${type}_${Math.random().toString(36).substr(2, 9)}`;
     const newObject = {
         id: id,
         type: type,
-        name: type.replace(/_/g, ' '), // Simple name, replace underscores
+        name: type.replace(/_/g, ' '),
         position: position,
         tags: tags,
-        // BILO_PLACEHOLDER: Add visual properties for the object here, or link to a rendering system
-        // For now, this just updates the backend state.
     };
     gameState.worldObjects.push(newObject);
     console.log("Created world object:", newObject);
@@ -352,18 +319,17 @@ function createWorldObject(type, position, tags = []) {
 }
 
 const ITEM_SPAWN_LOGIC = {
-    'coffee_mug': { locations: ['break_room', 'desk', 'main_office'], maxCount: 5 }, // Added main_office
+    'coffee_mug': { locations: ['break_room', 'desk', 'main_office'], maxCount: 5 },
     'snack': { locations: ['break_room'], maxCount: 3 },
-    'notebook': { locations: ['desk', 'main_office'], maxCount: 4 }, // Added main_office
-    'stapler': { locations: ['desk', 'main_office'], maxCount: 2 }, // Example additional item
-    'photo_frame': { locations: ['desk', 'main_office'], maxCount: 3 } // Example additional item
+    'notebook': { locations: ['desk', 'main_office'], maxCount: 4 },
+    'stapler': { locations: ['desk', 'main_office'], maxCount: 2 },
+    'photo_frame': { locations: ['desk', 'main_office'], maxCount: 3 }
 };
 
 function populateWorldWithObjects(characters) {
-    // 1. Place player-selected desk items first
     characters.forEach(character => {
         if (character.deskItems && character.deskId) {
-            const deskLocation = findDeskById(character.deskId); // This needs to return a world position for the desk
+            const deskLocation = findDeskById(character.deskId);
             if (deskLocation) {
                 character.deskItems.forEach(itemToPlace => {
                     const position = findRandomWalkableTileNear(deskLocation);
@@ -375,13 +341,12 @@ function populateWorldWithObjects(characters) {
         }
     });
 
-    // 2. Place procedurally generated items
     for (const itemType in ITEM_SPAWN_LOGIC) {
         const logic = ITEM_SPAWN_LOGIC[itemType];
         const count = Math.floor(Math.random() * (logic.maxCount + 1));
 
         for (let i = 0; i < count; i++) {
-            const spawnZone = findRandomSpawnZone(logic.locations); // This needs to return a zone bounding box
+            const spawnZone = findRandomSpawnZone(logic.locations);
             if (spawnZone) {
                 const position = findRandomWalkableTileInZone(spawnZone);
                 if (position) {
@@ -395,21 +360,13 @@ function populateWorldWithObjects(characters) {
 
 
 const backend = {
-    /**
-     * Initializes the backend with map data and generates the navigation grid.
-     * This should be called once the map data is loaded by the frontend.
-     */
     initialize: (mapData) => {
         gameState.map.data = mapData;
         generateNavGrid(mapData);
-        populateWorldWithObjects(gameState.characters); // Populate items after grid is ready
+        populateWorldWithObjects(gameState.characters);
         console.log("Backend initialized with map data, nav grid, and world objects.");
     },
 
-    /**
-     * Called when the player clicks on the map.
-     * Sets a target destination for the character to move towards.
-     */
     findPathFor: (character, targetWorldPos) => {
         const startGridPos = {
             x: Math.floor(character.position.x / TILE_SIZE),
@@ -422,7 +379,7 @@ const backend = {
 
         if (!gameState.navGrid[endGridPos.y] || gameState.navGrid[endGridPos.y][endGridPos.x] === undefined || gameState.navGrid[endGridPos.y][endGridPos.x] === 1) {
             console.warn("Target position is impassable or outside grid. Cannot find path.");
-            character.path = []; // Clear path if target is invalid
+            character.path = [];
             return;
         }
 
@@ -431,7 +388,7 @@ const backend = {
 
         if (path) {
             character.path = path.map(p => ({
-                x: p.x * TILE_SIZE + TILE_SIZE / 2, // Convert grid back to world coordinates (center of tile)
+                x: p.x * TILE_SIZE + TILE_SIZE / 2,
                 y: p.y * TILE_SIZE + TILE_SIZE / 2
             }));
             console.log("Path found:", character.path);
@@ -441,14 +398,10 @@ const backend = {
         }
     },
 
-    /**
-     * This function is called on every frame by the front-end's game loop.
-     * It contains the simplified logic for moving the character along a path.
-     */
     update: (deltaTime) => {
         for (const character of gameState.characters) {
             if (character.path && character.path.length > 0) {
-                const speed = 2.5; // Movement speed in pixels per frame
+                const speed = 2.5;
                 const nextPoint = character.path[0];
 
                 const dx = nextPoint.x - character.position.x;
@@ -458,10 +411,9 @@ const backend = {
                 if (dist < speed) {
                     character.position.x = nextPoint.x;
                     character.position.y = nextPoint.y;
-                    character.path.shift(); // Move to the next point in the path
+                    character.path.shift();
 
                     if (character.path.length === 0) {
-                        // Path complete, set to idle
                         if (character.actionState.startsWith('walk_')) {
                             character.actionState = character.actionState.replace('walk_', 'idle_');
                         }
@@ -470,7 +422,6 @@ const backend = {
                     character.position.x += (dx / dist) * speed;
                     character.position.y += (dy / dist) * speed;
 
-                    // Determine animation based on direction
                     if (Math.abs(dx) > Math.abs(dy)) {
                         character.actionState = dx > 0 ? 'walk_right' : 'walk_left';
                     } else {
@@ -478,3 +429,10 @@ const backend = {
                     }
                 }
             } else {
+                if (character.actionState.startsWith('walk_')) {
+                    character.actionState = character.actionState.replace('walk_', 'idle_');
+                }
+            }
+        }
+    }
+};
