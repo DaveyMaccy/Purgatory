@@ -11,17 +11,16 @@ window.onload = async () => {
     try {
         console.log("Starting initialization...");
 
-        // BILO_FIX: The PIXI.Application is now created with the correct syntax for PixiJS v7.
-        // Options are passed directly into the constructor. The .init() method was incorrect.
-        // This was the definitive cause of the "mainApp.init is not a function" error.
-        mainApp = new PIXI.Application({
+        mainApp = new PIXI.Application();
+        await mainApp.init({
             resizeTo: document.getElementById('world-canvas-container'),
             background: '#000000',
         });
         document.getElementById('world-canvas-container').appendChild(mainApp.view);
         console.log("Main game canvas initialized.");
 
-        selectorApp = new PIXI.Application({
+        selectorApp = new PIXI.Application();
+        await selectorApp.init({
             resizeTo: document.getElementById('character-selector-canvas-container'),
             background: '#1a202c',
         });
@@ -43,8 +42,6 @@ window.onload = async () => {
         console.log("Initialization complete. Starting game loop.");
 
     } catch (error) {
-        // BILO_FIX: Enhanced error reporting. This will now display a detailed
-        // error message on the screen and in the console to help debug file path issues.
         console.error("CRITICAL ERROR DURING INITIALIZATION:", error);
         document.body.innerHTML = `
             <div style="color: red; background: #111; padding: 20px; font-family: monospace;">
@@ -54,7 +51,7 @@ window.onload = async () => {
                 <p><strong>Checklist:</strong></p>
                 <ol style="list-style-position: inside;">
                     <li>Is the map file path in <strong>mock_backend.js</strong> correct? (e.g., 'assets/maps/purgatorygamemap.json')</li>
-                    <li>Is the tileset path inside your <strong>.json map file</strong> correct? (Tiled saves a relative path).</li>
+                    <li>Are the tileset .tsx/.json and .png files in the <strong>same folder</strong> as the map .json file?</li>
                     <li>Are all character sprite sheet paths in <strong>mock_backend.js</strong> correct?</li>
                 </ol>
                 <p>Open the browser's developer console (F12) for more details.</p>
@@ -91,13 +88,19 @@ async function renderMap(mapData) {
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        const tilesetSourceUrl = new URL(tilesetDef.source, mapUrl).href;
+        // BILO_FIX: This logic now correctly handles file paths. It strips any subdirectories
+        // saved by Tiled and assumes the tileset definition file (.tsx or .json) is in the
+        // same directory as the map file. This fixes the 404 error.
+        const sourceFilename = tilesetDef.source.split('/').pop();
+        const tilesetSourceUrl = new URL(sourceFilename, mapUrl).href;
+
         console.log(`Loading tileset definition from: ${tilesetSourceUrl}`);
         const tilesetResponse = await fetch(tilesetSourceUrl);
          if (!tilesetResponse.ok) throw new Error(`Failed to load tileset definition: ${tilesetSourceUrl}`);
         const tilesetData = await tilesetResponse.json();
         
-        const imageUrl = new URL(tilesetData.image, tilesetSourceUrl).href;
+        const imageFilename = tilesetData.image.split('/').pop();
+        const imageUrl = new URL(imageFilename, mapUrl).href;
         console.log(`Loading tileset image from: ${imageUrl}`);
         await PIXI.Assets.load(imageUrl);
 
