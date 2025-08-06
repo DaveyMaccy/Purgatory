@@ -4,7 +4,6 @@
 let sheet; // Will hold the parsed spritesheet data for the current character
 let mainApp; // The main PIXI application for the game world
 let selectorApp; // The PIXI application for the character selector preview
-const TILE_SIZE = 48; // The size of your tiles in the Tiled map
 
 // --- Main Initialization Function ---
 window.onload = async () => {
@@ -51,7 +50,7 @@ window.onload = async () => {
                 <p><strong>Checklist:</strong></p>
                 <ol style="list-style-position: inside;">
                     <li>Is the map file path in <strong>mock_backend.js</strong> correct? (e.g., 'assets/maps/purgatorygamemap.json')</li>
-                    <li>Are the tileset definition file (e.g., Room_Builder_Office_48x48.tsx) and the tileset image (.png) in the <strong>same folder</strong> as the map .json file?</li>
+                    <li>Is the <strong>purgatorygamemap.png</strong> file in the same folder as the .json file?</li>
                     <li>Are all character sprite sheet paths in <strong>mock_backend.js</strong> correct?</li>
                 </ol>
                 <p>Open the browser's developer console (F12) for more details.</p>
@@ -89,20 +88,9 @@ async function renderMap(mapData) {
     const tilesets = {};
 
     for (const tilesetDef of mapData.tilesets) {
-        // BILO_FIX: This logic is now completely rewritten to be robust.
-        // It correctly handles external tileset files (.tsx) and their image paths.
-        
-        // 1. Get the filename of the tileset definition from the map data.
-        const sourceFilename = tilesetDef.source.split('/').pop();
-        const tilesetSourceUrl = `${mapDirectory}${sourceFilename}`;
-
-        console.log(`Loading tileset definition from: ${tilesetSourceUrl}`);
-        const tilesetResponse = await fetch(tilesetSourceUrl);
-        if (!tilesetResponse.ok) throw new Error(`Failed to load tileset definition: ${tilesetSourceUrl}`);
-        const tilesetData = await tilesetResponse.json();
-        
-        // 2. Get the filename of the image from the tileset definition data.
-        const imageFilename = tilesetData.image.split('/').pop();
+        // BILO_FIX: This logic is now completely rewritten. It no longer looks for external .tsx files.
+        // It reads the image path directly from the map data and assumes the image is in the same folder.
+        const imageFilename = tilesetDef.image.split('/').pop();
         const imageUrl = `${mapDirectory}${imageFilename}`;
 
         console.log(`Loading tileset image from: ${imageUrl}`);
@@ -110,8 +98,8 @@ async function renderMap(mapData) {
 
         tilesets[tilesetDef.firstgid] = {
             texture: PIXI.BaseTexture.from(imageUrl),
-            columns: tilesetData.columns,
-            tileSize: tilesetData.tilewidth
+            columns: tilesetDef.columns,
+            tileSize: tilesetDef.tilewidth
         };
         console.log(`Loaded tileset GID ${tilesetDef.firstgid}`);
     }
