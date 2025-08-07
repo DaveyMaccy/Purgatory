@@ -20,10 +20,15 @@ window.onload = async () => {
         document.getElementById('world-canvas-container').appendChild(mainApp.view);
         mainApp.resize();
         
-        // Set initial camera position to spawn point
+        // Set initial camera position to spawn point with debug logging
         const spawnPoint = gameState.characters.find(c => c.isPlayer).position;
+        console.log("Setting camera to spawn point:", spawnPoint);
+        console.log("Screen dimensions:", mainApp.screen.width, mainApp.screen.height);
+        
         mainApp.stage.x = -spawnPoint.x + mainApp.screen.width / 2;
         mainApp.stage.y = -spawnPoint.y + mainApp.screen.height / 2;
+        
+        console.log("Camera position set to:", mainApp.stage.x, mainApp.stage.y);
         
         console.log("Main game canvas initialized.");
 
@@ -40,20 +45,30 @@ window.onload = async () => {
         await preloadCharacterAssets();
 
         // Load and render the Tiled map data first, so it's on the bottom layer.
+        console.log("Loading map data from:", gameState.map.json);
         const mapData = await loadMapData(gameState.map.json);
+        console.log("Map data loaded successfully:", mapData);
+        
         await renderMap(mapData);
+        console.log("Map rendering completed");
         
         // Create a container for characters and add it to the stage AFTER the map.
         // This ensures characters will always be drawn on top of the map floor.
+        console.log("Creating character container");
         characterContainer = new PIXI.Container();
         characterContainer.sortableChildren = true;
         mainApp.stage.addChild(characterContainer);
+        console.log("Character container created and added to stage");
 
         // Initialize the backend with map data to generate the nav grid and populate objects.
+        console.log("Initializing backend with map data");
         backend.initialize(mapData);
+        console.log("Backend initialized");
 
         // Set up the character selector and load the initial character
+        console.log("Setting up character selector");
         await setupCharacterSelector();
+        console.log("Character selector setup complete");
 
         // Set up player interaction (clicking and keyboard)
         setupPlayerInteraction();
