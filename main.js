@@ -101,6 +101,16 @@ window.onload = async () => {
 async function preloadCharacterAssets() {
     console.log("Pre-loading character assets...");
 
+    // First verify all files exist
+    for (const url of PREMADE_CHARACTER_SPRITES) {
+        try {
+            await fetch(url, { method: 'HEAD' });
+        } catch (e) {
+            console.error(`Failed to load character sprite: ${url}`);
+            throw e;
+        }
+    }
+
     const frameWidth = 48;
     const frameHeight = 48;
 
@@ -171,9 +181,23 @@ async function renderMap(mapData) {
     for (const tilesetDef of mapData.tilesets) {
         const mapDirectoryAbsoluteUrl = mapData.absoluteUrl.substring(0, mapData.absoluteUrl.lastIndexOf('/') + 1); 
         const imageUrl = new URL(tilesetDef.image.replace(/\\/g, '/'), mapDirectoryAbsoluteUrl).href;
-        await PIXI.Assets.load(imageUrl);
+        
+        // Verify tileset exists first
+        try {
+            await fetch(imageUrl, { method: 'HEAD' });
+        } catch (e) {
+            console.error(`Failed to load tileset image: ${imageUrl}`);
+            throw e;
+        }
+
+        // Load with error handling
+        const texture = await PIXI.Assets.load(imageUrl).catch(e => {
+            console.error(`Failed to load texture: ${imageUrl}`, e);
+            throw e;
+        });
+
         tilesets[tilesetDef.firstgid] = {
-            texture: PIXI.BaseTexture.from(imageUrl),
+            texture: texture.baseTexture,
             columns: tilesetDef.columns,
             tileSize: tilesetDef.tilewidth
         };
@@ -282,12 +306,27 @@ async function setupCharacterSelector() {
         return;
     }
 
-    selectorSprite = createAnimatedSprite(sheet, 'walk_down');
-    selectorApp.stage.addChild(selectorSprite);
-    selectorSprite.x = selectorApp.screen.width / 2;
-    selectorSprite.y = selectorApp.screen.height / 2;
+    // Create a container for the selector sprite with proper scaling
+    const selectorContainer = new PIXI.Container();
+    selectorApp.stage.addChild(selectorContainer);
     
-    await changeCharacter(0); 
+    selectorSprite = createAnimatedSprite(sheet, 'walk_down');
+    selectorSprite.scale.set(2); // Make selector preview larger
+    selectorSprite.anchor.set(0.5, 0.5); // Center anchor
+    selectorContainer.addChild(selectorSprite);
+    
+    selectorContainer.x = selectorApp.screen.width / 2;
+    selectorContainer.y = selectorApp.screen.height / 2;
+    
+    // Add background rectangle
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0x1a202c);
+    bg.drawRect(-selectorApp.screen.width/2, -selectorApp.screen.height/2, 
+                selectorApp.screen.width, selectorApp.screen.height);
+    bg.endFill();
+    selectorContainer.addChildAt(bg, 0);
+    
+    await changeCharacter(0);
 
     document.getElementById('next-char-btn').addEventListener('click', () => changeCharacter(1));
     document.getElementById('prev-char-btn').addEventListener('click', () => changeCharacter(-1));
@@ -347,9 +386,65 @@ function createAnimatedSprite(sheet, initialAnimation) {
 const keys = {};
 
 function setupPlayerInteraction() {
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
-    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+    // Keyboard input handling
+    window.addEventListener('keydown', (e) => { 
+        keys[e.code] = true;
+        
+        // Handle WASD/Arrow key movement
+        const player = gameState.characters.find(c => c.isPlayer);
+        if (!player) return;
+        
+        const moveSpeed = 3;
+        let dx = 0, dy = 0;
+        
+        if (keys['ArrowUp'] || keys['KeyW']) dy -= moveSpeed;
+        if (keys['ArrowDown'] || keys['KeyS']) dy += moveSpeed;
+        if (keys['ArrowLeft'] || keys['KeyA']) dx -= moveSpeed;
+        if (keys['ArrowRight'] || keys['KeyD']) dx += moveSpeed;
+        
+        if (dx !== 0 || dy !== 0) {
+            // Clear any existing path
+            player.path = [];
+            player.position.x += dx;
+            player.position.y += dy;
+            
+            // Update animation based on direction
+            let anim = 'idle_down';
+            if (Math.abs(dx) > Math.abs(dy)) {
+                anim = dx > 0 ? 'walk_right' : 'walk_left';
+            } else if (dy !== 0) {
+                anim = dy > 0 ? 'walk_down' : 'walk_up';
+            }
+            
+            const sheet = allCharacterSheets[player.spriteSheet];
+            if (sheet && sheet.animations[anim]) {
+                player.pixiSprite.textures = sheet.animations[anim];
+                player.pixiSprite.play();
+                player.pixiSprite.currentAnimationName = anim;
+            }
+        }
+    });
+    
+    window.addEventListener('keyup', (e) => { 
+        keys[e.code] = false;
+        
+        // Return to idle animation when keys released
+        const player = gameState.characters.find(c => c.isPlayer);
+        if (player && player.pixiSprite) {
+            const currentAnim = player.pixiSprite.currentAnimationName;
+            if (currentAnim.startsWith('walk_')) {
+                const idleAnim = currentAnim.replace('walk_', 'idle_');
+                const sheet = allCharacterSheets[player.spriteSheet];
+                if (sheet && sheet.animations[idleAnim]) {
+                    player.pixiSprite.textures = sheet.animations[idleAnim];
+                    player.pixiSprite.play();
+                    player.pixiSprite.currentAnimationName = idleAnim;
+                }
+            }
+        }
+    });
 
+    // Click-to-move handling
     mainApp.stage.interactive = true;
     mainApp.stage.hitArea = mainApp.screen;
     mainApp.stage.on('pointerdown', (event) => {
@@ -380,21 +475,25 @@ function setupPlayerInteraction() {
 
 function updateCamera() {
     const player = gameState.characters.find(c => c.isPlayer);
-    if (player) {
-        // Center camera on player with some smoothing
-        const targetX = -player.position.x + mainApp.screen.width / 2;
-        const targetY = -player.position.y + mainApp.screen.height / 2;
-        
-        mainApp.stage.x += (targetX - mainApp.stage.x) * 0.1;
-        mainApp.stage.y += (targetY - mainApp.stage.y) * 0.1;
-    }
+    if (!player) return;
+
+    // Calculate camera bounds based on map size
+    const mapWidth = gameState.map.width * TILE_SIZE;
+    const mapHeight = gameState.map.height * TILE_SIZE;
     
-    // Still allow manual panning
-    const panSpeed = 5;
-    if (keys['ArrowUp']) mainApp.stage.y += panSpeed;
-    if (keys['ArrowDown']) mainApp.stage.y -= panSpeed;
-    if (keys['ArrowLeft']) mainApp.stage.x += panSpeed;
-    if (keys['ArrowRight']) mainApp.stage.x -= panSpeed;
+    // Center camera on player with bounds checking
+    const targetX = Math.min(Math.max(-player.position.x + mainApp.screen.width / 2, -mapWidth + mainApp.screen.width), 0);
+    const targetY = Math.min(Math.max(-player.position.y + mainApp.screen.height / 2, -mapHeight + mainApp.screen.height), 0);
+    
+    // Smooth camera movement
+    mainApp.stage.x += (targetX - mainApp.stage.x) * 0.2;
+    mainApp.stage.y += (targetY - mainApp.stage.y) * 0.2;
+    
+    // Debug camera info
+    if (DEBUG_MODE) {
+        console.log(`Camera: X=${mainApp.stage.x.toFixed(1)}, Y=${mainApp.stage.y.toFixed(1)}`);
+        console.log(`Player: X=${player.position.x.toFixed(1)}, Y=${player.position.y.toFixed(1)}`);
+    }
 }
 
 function updateUI(character) {
