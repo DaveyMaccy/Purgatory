@@ -219,8 +219,9 @@ function renderTileLayerChunk(layerContainer, layer, mapData, tilesets) {
             const tileRect = new PIXI.Rectangle(tileX, tileY, tileset.tileSize, tileset.tileSize);
             const texture = new PIXI.Texture(tileset.texture, tileRect);
             const sprite = new PIXI.Sprite(texture);
-            sprite.x = x * tileset.tileSize;
-            sprite.y = y * tileset.tileSize;
+            sprite.anchor.set(0.5, 0.5); // Center anchor for proper positioning
+            sprite.x = x * tileset.tileSize + tileset.tileSize/2;
+            sprite.y = y * tileset.tileSize + tileset.tileSize/2;
             layerContainer.addChild(sprite);
         }
     }
@@ -246,10 +247,11 @@ function renderObjectLayer(layerContainer, layer, mapData, tilesets) {
         const tileRect = new PIXI.Rectangle(tileX, tileY, renderWidth, renderHeight); 
         const texture = new PIXI.Texture(tileset.texture, tileRect);
         const sprite = new PIXI.Sprite(texture);
-
-        sprite.anchor.set(0, 1);
-        sprite.x = obj.x;
-        sprite.y = obj.y;
+        
+        // Adjust anchor and position for Tiled object coordinates
+        sprite.anchor.set(0.5, 0.5);
+        sprite.x = obj.x + obj.width/2;
+        sprite.y = obj.y - obj.height/2;
         layerContainer.addChild(sprite);
     }
 }
@@ -318,10 +320,12 @@ async function changeCharacter(direction) {
         selectorSprite.currentAnimationName = 'walk_down';
     }
 
-    player.pixiSprite = createAnimatedSprite(sheet, 'idle_down'); 
-    characterContainer.addChild(player.pixiSprite); 
+    player.pixiSprite = createAnimatedSprite(sheet, 'idle_down');
+    player.pixiSprite.anchor.set(0.5, 1); // Anchor to bottom center
+    player.pixiSprite.y += TILE_SIZE / 2; // Adjust for anchor point
+    characterContainer.addChild(player.pixiSprite);
 
-    updateCharacterName(); 
+    updateCharacterName();
 }
 
 function updateCharacterName() {
@@ -333,7 +337,7 @@ function updateCharacterName() {
 function createAnimatedSprite(sheet, initialAnimation) {
     const sprite = new PIXI.AnimatedSprite(sheet.animations[initialAnimation]);
     sprite.animationSpeed = 0.15;
-    sprite.anchor.set(0.5);
+    sprite.anchor.set(0.5, 1); // Anchor to bottom center for proper positioning
     sprite.play();
     sprite.currentAnimationName = initialAnimation;
     return sprite;
