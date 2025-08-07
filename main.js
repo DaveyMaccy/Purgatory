@@ -75,115 +75,61 @@ window.onload = async () => {
 };
 
 // --- Asset Pre-loading ---
+// **FIX:** This function has been completely rewritten to manually build textures,
+// bypassing the problematic PIXI.Spritesheet class for a more robust result.
 async function preloadCharacterAssets() {
     console.log("Pre-loading character assets...");
+
+    const frameWidth = 48;
+    const frameHeight = 48;
+
+    // Define the structure of our animations just once.
+    const animationBlueprints = {
+        'walk_down':  [{x:0, y:0}, {x:1, y:0}, {x:2, y:0}, {x:1, y:0}],
+        'idle_down':  [{x:1, y:0}],
+        'walk_left':  [{x:0, y:1}, {x:1, y:1}, {x:2, y:1}, {x:1, y:1}],
+        'idle_left':  [{x:1, y:1}],
+        'walk_right': [{x:0, y:2}, {x:1, y:2}, {x:2, y:2}, {x:1, y:2}],
+        'idle_right': [{x:1, y:2}],
+        'walk_up':    [{x:0, y:3}, {x:1, y:3}, {x:2, y:3}, {x:1, y:3}],
+        'idle_up':    [{x:1, y:3}],
+        'sleep':      [{x:0, y:4}, {x:1, y:4}, {x:2, y:4}, {x:1, y:4}],
+        'sit':        [{x:0, y:5}, {x:1, y:5}, {x:2, y:5}, {x:1, y:5}],
+        'phase':      [{x:0, y:6}, {x:1, y:6}, {x:2, y:6}, {x:1, y:6}],
+        'push':       [{x:0, y:7}, {x:1, y:7}, {x:2, y:7}, {x:1, y:7}],
+        'pick_up':    [{x:0, y:8}, {x:1, y:8}, {x:2, y:8}, {x:1, y:8}],
+        'lift':       [{x:0, y:9}, {x:1, y:9}, {x:2, y:9}, {x:1, y:9}],
+        'throw':      [{x:0, y:10}, {x:1, y:10}, {x:2, y:10}, {x:1, y:10}],
+        'hit':        [{x:0, y:11}, {x:1, y:11}, {x:2, y:11}, {x:1, y:11}],
+        'punch':      [{x:0, y:12}, {x:1, y:12}, {x:2, y:12}, {x:1, y:12}],
+        'shoot':      [{x:0, y:13}, {x:1, y:13}, {x:2, y:13}, {x:1, y:13}],
+        'hurt':       [{x:0, y:14}, {x:1, y:14}, {x:2, y:14}, {x:1, y:14}],
+    };
+
     for (const url of PREMADE_CHARACTER_SPRITES) {
-        
-        // **FIX:** Reverted to the asset loading method that is proven to work in renderMap().
-        // First, load the asset into the cache.
         await PIXI.Assets.load(url);
-        // Then, create the BaseTexture from the (now cached) URL.
         const baseTexture = PIXI.BaseTexture.from(url);
+        
+        const sheet = { animations: {} };
 
-        const frames = {};
-        const animations = {};
-
-        const charNumberMatch = url.match(/_(\d{2})\.png$/);
-        const charPrefix = charNumberMatch ? `char_${charNumberMatch[1]}_` : '';
-
-        const frameWidth = 48;
-        const frameHeight = 48;
-
-        // --- Define ALL Frames based on Spritesheet_animations_GUIDE.png (48x48 grid) ---
-        frames[`${charPrefix}walk_down_0`] = { frame: { x: 0, y: 0, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}walk_down_1`] = { frame: { x: 48, y: 0, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}walk_down_2`] = { frame: { x: 96, y: 0, w: frameWidth, h: frameHeight } };
-        animations['walk_down'] = [`${charPrefix}walk_down_0`, `${charPrefix}walk_down_1`, `${charPrefix}walk_down_2`, `${charPrefix}walk_down_1`];
-        animations['idle_down'] = [`${charPrefix}walk_down_1`];
-
-        frames[`${charPrefix}walk_left_0`] = { frame: { x: 0, y: 48, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}walk_left_1`] = { frame: { x: 48, y: 48, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}walk_left_2`] = { frame: { x: 96, y: 48, w: frameWidth, h: frameHeight } };
-        animations['walk_left'] = [`${charPrefix}walk_left_0`, `${charPrefix}walk_left_1`, `${charPrefix}walk_left_2`, `${charPrefix}walk_left_1`];
-        animations['idle_left'] = [`${charPrefix}walk_left_1`];
-
-        frames[`${charPrefix}walk_right_0`] = { frame: { x: 0, y: 96, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}walk_right_1`] = { frame: { x: 48, y: 96, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}walk_right_2`] = { frame: { x: 96, y: 96, w: frameWidth, h: frameHeight } };
-        animations['walk_right'] = [`${charPrefix}walk_right_0`, `${charPrefix}walk_right_1`, `${charPrefix}walk_right_2`, `${charPrefix}walk_right_1`];
-        animations['idle_right'] = [`${charPrefix}walk_right_1`];
-
-        frames[`${charPrefix}walk_up_0`] = { frame: { x: 0, y: 144, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}walk_up_1`] = { frame: { x: 48, y: 144, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}walk_up_2`] = { frame: { x: 96, y: 144, w: frameWidth, h: frameHeight } };
-        animations['walk_up'] = [`${charPrefix}walk_up_0`, `${charPrefix}walk_up_1`, `${charPrefix}walk_up_2`, `${charPrefix}walk_up_1`];
-        animations['idle_up'] = [`${charPrefix}walk_up_1`];
-
-        frames[`${charPrefix}sleep_0`] = { frame: { x: 0, y: 192, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}sleep_1`] = { frame: { x: 48, y: 192, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}sleep_2`] = { frame: { x: 96, y: 192, w: frameWidth, h: frameHeight } };
-        animations['sleep'] = [`${charPrefix}sleep_0`, `${charPrefix}sleep_1`, `${charPrefix}sleep_2`, `${charPrefix}sleep_1`];
-
-        frames[`${charPrefix}sit_0`] = { frame: { x: 0, y: 240, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}sit_1`] = { frame: { x: 48, y: 240, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}sit_2`] = { frame: { x: 96, y: 240, w: frameWidth, h: frameHeight } };
-        animations['sit'] = [`${charPrefix}sit_0`, `${charPrefix}sit_1`, `${charPrefix}sit_2`, `${charPrefix}sit_1`];
-
-        frames[`${charPrefix}phase_0`] = { frame: { x: 0, y: 288, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}phase_1`] = { frame: { x: 48, y: 288, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}phase_2`] = { frame: { x: 96, y: 288, w: frameWidth, h: frameHeight } };
-        animations['phase'] = [`${charPrefix}phase_0`, `${charPrefix}phase_1`, `${charPrefix}phase_2`, `${charPrefix}phase_1`];
-
-        frames[`${charPrefix}push_0`] = { frame: { x: 0, y: 336, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}push_1`] = { frame: { x: 48, y: 336, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}push_2`] = { frame: { x: 96, y: 336, w: frameWidth, h: frameHeight } };
-        animations['push'] = [`${charPrefix}push_0`, `${charPrefix}push_1`, `${charPrefix}push_2`, `${charPrefix}push_1`];
-
-        frames[`${charPrefix}pick_up_0`] = { frame: { x: 0, y: 384, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}pick_up_1`] = { frame: { x: 48, y: 384, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}pick_up_2`] = { frame: { x: 96, y: 384, w: frameWidth, h: frameHeight } };
-        animations['pick_up'] = [`${charPrefix}pick_up_0`, `${charPrefix}pick_up_1`, `${charPrefix}pick_up_2`, `${charPrefix}pick_up_1`];
-
-        frames[`${charPrefix}lift_0`] = { frame: { x: 0, y: 432, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}lift_1`] = { frame: { x: 48, y: 432, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}lift_2`] = { frame: { x: 96, y: 432, w: frameWidth, h: frameHeight } };
-        animations['lift'] = [`${charPrefix}lift_0`, `${charPrefix}lift_1`, `${charPrefix}lift_2`, `${charPrefix}lift_1`];
-
-        frames[`${charPrefix}throw_0`] = { frame: { x: 0, y: 480, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}throw_1`] = { frame: { x: 48, y: 480, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}throw_2`] = { frame: { x: 96, y: 480, w: frameWidth, h: frameHeight } };
-        animations['throw'] = [`${charPrefix}throw_0`, `${charPrefix}throw_1`, `${charPrefix}throw_2`, `${charPrefix}throw_1`];
-
-        frames[`${charPrefix}hit_0`] = { frame: { x: 0, y: 528, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}hit_1`] = { frame: { x: 48, y: 528, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}hit_2`] = { frame: { x: 96, y: 528, w: frameWidth, h: frameHeight } };
-        animations['hit'] = [`${charPrefix}hit_0`, `${charPrefix}hit_1`, `${charPrefix}hit_2`, `${charPrefix}hit_1`];
-
-        frames[`${charPrefix}punch_0`] = { frame: { x: 0, y: 576, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}punch_1`] = { frame: { x: 48, y: 576, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}punch_2`] = { frame: { x: 96, y: 576, w: frameWidth, h: frameHeight } };
-        animations['punch'] = [`${charPrefix}punch_0`, `${charPrefix}punch_1`, `${charPrefix}punch_2`, `${charPrefix}punch_1`];
-
-        frames[`${charPrefix}shoot_0`] = { frame: { x: 0, y: 624, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}shoot_1`] = { frame: { x: 48, y: 624, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}shoot_2`] = { frame: { x: 96, y: 624, w: frameWidth, h: frameHeight } };
-        animations['shoot'] = [`${charPrefix}shoot_0`, `${charPrefix}shoot_1`, `${charPrefix}shoot_2`, `${charPrefix}shoot_1`];
-
-        frames[`${charPrefix}hurt_0`] = { frame: { x: 0, y: 672, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}hurt_1`] = { frame: { x: 48, y: 672, w: frameWidth, h: frameHeight } };
-        frames[`${charPrefix}hurt_2`] = { frame: { x: 96, y: 672, w: frameWidth, h: frameHeight } };
-        animations['hurt'] = [`${charPrefix}hurt_0`, `${charPrefix}hurt_1`, `${charPrefix}hurt_2`, `${charPrefix}hurt_1`];
-
-        const sheet = new PIXI.Spritesheet(baseTexture, {
-            frames: frames,
-            animations: animations,
-            meta: { scale: '1' }
-        });
-        await sheet.parse();
+        for (const animName in animationBlueprints) {
+            const frames = [];
+            for (const frameCoords of animationBlueprints[animName]) {
+                const rect = new PIXI.Rectangle(
+                    frameCoords.x * frameWidth,
+                    frameCoords.y * frameHeight,
+                    frameWidth,
+                    frameHeight
+                );
+                frames.push(new PIXI.Texture(baseTexture, rect));
+            }
+            sheet.animations[animName] = frames;
+        }
         allCharacterSheets[url] = sheet;
     }
     console.log("All character assets pre-loaded and parsed.");
 }
+
 
 // --- Tiled Map Rendering ---
 async function loadMapData(url) {
@@ -383,7 +329,7 @@ function setupPlayerInteraction() {
     mainApp.stage.hitArea = mainApp.screen;
     mainApp.stage.on('pointerdown', (event) => {
         const player = gameState.characters.find(c => c.isPlayer);
-        const worldPos = characterContainer.toLocal(event.global);
+        const worldPos = mainApp.stage.toLocal(event.global);
         backend.findPathFor(player, worldPos);
     });
 
