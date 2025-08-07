@@ -1,6 +1,7 @@
 // This is the core front-end code for the test harness.
 
 // --- Global Variables ---
+const DEBUG_MODE = false; // Set to true for debug logging
 let mainApp; // The main PIXI application for the game world
 let selectorApp; // The PIXI application for the character selector preview
 let characterContainer; // A dedicated container for characters to manage z-sorting
@@ -318,13 +319,16 @@ async function setupCharacterSelector() {
     selectorContainer.x = selectorApp.screen.width / 2;
     selectorContainer.y = selectorApp.screen.height / 2;
     
-    // Add background rectangle
+    // Add properly sized background rectangle
     const bg = new PIXI.Graphics();
     bg.beginFill(0x1a202c);
-    bg.drawRect(-selectorApp.screen.width/2, -selectorApp.screen.height/2, 
-                selectorApp.screen.width, selectorApp.screen.height);
+    bg.drawRect(0, 0, selectorApp.screen.width, selectorApp.screen.height);
     bg.endFill();
     selectorContainer.addChildAt(bg, 0);
+    
+    // Center the container
+    selectorContainer.pivot.set(selectorApp.screen.width/2, selectorApp.screen.height/2);
+    selectorContainer.position.set(selectorApp.screen.width/2, selectorApp.screen.height/2);
     
     await changeCharacter(0);
 
@@ -589,7 +593,3 @@ function gameLoop(ticker) {
     }
     
     characterContainer.sortChildren(); 
-    
-    updateCamera();
-    updateUI(gameState.characters.find(c => c.isPlayer)); 
-}
