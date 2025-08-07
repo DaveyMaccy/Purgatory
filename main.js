@@ -19,6 +19,12 @@ window.onload = async () => {
         });
         document.getElementById('world-canvas-container').appendChild(mainApp.view);
         mainApp.resize();
+        
+        // Set initial camera position to spawn point
+        const spawnPoint = gameState.characters.find(c => c.isPlayer).position;
+        mainApp.stage.x = -spawnPoint.x + mainApp.screen.width / 2;
+        mainApp.stage.y = -spawnPoint.y + mainApp.screen.height / 2;
+        
         console.log("Main game canvas initialized.");
 
         // Initialize the character selector preview canvas
@@ -354,6 +360,17 @@ function setupPlayerInteraction() {
 }
 
 function updateCamera() {
+    const player = gameState.characters.find(c => c.isPlayer);
+    if (player) {
+        // Center camera on player with some smoothing
+        const targetX = -player.position.x + mainApp.screen.width / 2;
+        const targetY = -player.position.y + mainApp.screen.height / 2;
+        
+        mainApp.stage.x += (targetX - mainApp.stage.x) * 0.1;
+        mainApp.stage.y += (targetY - mainApp.stage.y) * 0.1;
+    }
+    
+    // Still allow manual panning
     const panSpeed = 5;
     if (keys['ArrowUp']) mainApp.stage.y += panSpeed;
     if (keys['ArrowDown']) mainApp.stage.y -= panSpeed;
