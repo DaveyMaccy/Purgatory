@@ -1,6 +1,6 @@
-import { GameEngine } from './src/core/gameEngine.js';
-import { CharacterManager } from './src/core/characters/characterManager.js';
-import { UIUpdater } from './src/ui/uiUpdater.js';
+import { GameEngine } from './src/core/game-engine.js';
+import { CharacterManager } from './src/core/characters/character-manager.js';
+import { UIUpdater } from './src/ui/ui-updater.js';
 import { loadMapData } from './src/core/world/world.js';
 import { initializeCharacterUI } from './character-creator.js';
 
@@ -46,8 +46,10 @@ window.startGameSimulation = async function(charactersFromCreator) {
         const mapData = await loadMapData();
         console.log('Map data loaded successfully');
         
-        // Initialize character positions
-        characterManager.initializeCharacterPositions(gameEngine.world);
+        // Initialize character positions (when world system is ready)
+        if (gameEngine.world) {
+            characterManager.initializeCharacterPositions(gameEngine.world);
+        }
         
         // Start the game loop
         gameEngine.initialize(mapData);
