@@ -12,8 +12,9 @@ export class MovementSystem {
     /**
      * STAGE 4 NEW: Move character to a specific position
      * This is called by the click handler in main.js
+     * FIXED: Works with canvas coordinates (800x450) instead of world grid conversion
      * @param {Character} character - Character to move
-     * @param {Object} targetPosition - Target position {x, y}
+     * @param {Object} targetPosition - Target position {x, y} in canvas coordinates
      * @param {World} world - Game world instance
      */
     moveCharacterTo(character, targetPosition, world) {
@@ -24,22 +25,37 @@ export class MovementSystem {
 
         console.log(`🚶 Moving ${character.name} to position:`, targetPosition);
 
-        // Check if target position is walkable
-        if (!world.isPositionWalkable(targetPosition.x, targetPosition.y)) {
-            console.warn(`🚫 Target position not walkable:`, targetPosition);
-            return false;
-        }
-
-        // Find path from current position to target
-        const path = world.findPath(character.position, targetPosition);
+        // For now, skip the complex pathfinding and use direct movement
+        // since we're working with canvas coordinates instead of world grid
         
-        if (path.length === 0) {
-            console.warn(`🚫 No path found for ${character.name}`);
+        // Validate target position is within canvas bounds
+        if (targetPosition.x < 50 || targetPosition.x > 750 || 
+            targetPosition.y < 50 || targetPosition.y > 400) {
+            console.warn(`🚫 Target position outside canvas bounds:`, targetPosition);
             return false;
         }
 
-        // Set the character's path (remove first point as it's current position)
-        character.path = path.slice(1);
+        // Create a simple direct path for now
+        const currentPos = character.position;
+        const distance = Math.sqrt(
+            Math.pow(targetPosition.x - currentPos.x, 2) + 
+            Math.pow(targetPosition.y - currentPos.y, 2)
+        );
+
+        // Create waypoints for smooth movement
+        const waypoints = [];
+        const numWaypoints = Math.max(3, Math.floor(distance / 50)); // One waypoint per 50 pixels
+        
+        for (let i = 1; i <= numWaypoints; i++) {
+            const ratio = i / numWaypoints;
+            waypoints.push({
+                x: currentPos.x + (targetPosition.x - currentPos.x) * ratio,
+                y: currentPos.y + (targetPosition.y - currentPos.y) * ratio
+            });
+        }
+
+        // Set the character's path
+        character.path = waypoints;
         
         // Mark character as moving
         this.movingCharacters.add(character.id);
