@@ -1,6 +1,7 @@
 import { GameEngine } from './src/core/game-engine.js';
 import { CharacterManager } from './src/core/characters/character-manager.js';
 import { UIUpdater } from './src/ui/ui-updater.js';
+import { Renderer } from './src/rendering/renderer.js';
 import { loadMapData } from './src/core/world/world.js';
 import { initializeCharacterCreator } from './character-creator.js';
 
@@ -8,12 +9,13 @@ import { initializeCharacterCreator } from './character-creator.js';
 let gameEngine = null;
 let characterManager = null;
 let uiUpdater = null;
+let renderer = null;
 let focusTargetId = null;
 
 // Game initialization function called when simulation starts
 window.startGameSimulation = async function(charactersFromCreator) {
     try {
-        console.log('Starting game simulation with characters:', charactersFromCreator);
+        console.log('🚀 Starting game simulation with characters:', charactersFromCreator);
         
         // Initialize character manager
         characterManager = new CharacterManager();
@@ -25,7 +27,7 @@ window.startGameSimulation = async function(charactersFromCreator) {
         const playerCharacter = characterManager.getPlayerCharacter();
         if (playerCharacter) {
             focusTargetId = playerCharacter.id;
-            console.log(`Focus set to player: ${playerCharacter.name}`);
+            console.log(`🎯 Focus set to player: ${playerCharacter.name}`);
         }
         
         // Initialize UI updater
@@ -34,7 +36,7 @@ window.startGameSimulation = async function(charactersFromCreator) {
         // Subscribe UI updater to all characters for observer pattern
         characterManager.characters.forEach(character => {
             uiUpdater.subscribeToCharacter(character);
-            console.log(`UI updater subscribed to: ${character.name}`);
+            console.log(`🔗 UI updater subscribed to: ${character.name}`);
         });
         
         // Initialize game engine
@@ -44,15 +46,39 @@ window.startGameSimulation = async function(charactersFromCreator) {
         
         // Load map data
         const mapData = await loadMapData();
-        console.log('Map data loaded successfully');
+        console.log('🗺️ Map data loaded successfully');
         
-        // Initialize character positions (when world system is ready)
-        if (gameEngine.world) {
-            characterManager.initializeCharacterPositions(gameEngine.world);
+        // STAGE 2 RESTORE: Initialize renderer
+        const worldContainer = document.getElementById('world-canvas-container');
+        if (worldContainer) {
+            renderer = new Renderer(worldContainer);
+            await renderer.initialize();
+            gameEngine.setRenderer(renderer);
+            console.log('🎨 Renderer initialized');
+            
+            // Render the map
+            renderer.renderMap(mapData);
+            console.log('🏢 Map rendered');
+        } else {
+            console.error('❌ World canvas container not found');
         }
         
-        // Start the game loop
+        // Start the game loop first
         gameEngine.initialize(mapData);
+        
+        // Initialize character positions AFTER world is created
+        if (gameEngine.world) {
+            characterManager.initializeCharacterPositions(gameEngine.world);
+            console.log('📍 Character positions initialized');
+            
+            // STAGE 2 RESTORE: Add characters to renderer
+            if (renderer) {
+                for (const character of characterManager.characters) {
+                    await renderer.addCharacter(character);
+                }
+                console.log('👥 Characters added to renderer');
+            }
+        }
         
         // Hide start screen and character creator
         hideStartScreen();
@@ -69,10 +95,10 @@ window.startGameSimulation = async function(charactersFromCreator) {
             }
         }
         
-        console.log('Game simulation started successfully!');
+        console.log('✅ Game simulation started successfully!');
         
     } catch (error) {
-        console.error('Failed to start game simulation:', error);
+        console.error('❌ Failed to start game simulation:', error);
         alert('Failed to start game. Please check the console for details.');
     }
 };
@@ -93,18 +119,21 @@ function hideCharacterCreator() {
 }
 
 function showGameWorld() {
+    // Show the main game UI
+    const mainGameUI = document.getElementById('main-game-ui');
+    if (mainGameUI) {
+        mainGameUI.classList.remove('hidden');
+        mainGameUI.style.display = 'flex';
+    }
+    
+    // Alternative: if using .game-container class
     const gameContainer = document.querySelector('.game-container');
     if (gameContainer) {
         gameContainer.style.display = 'flex';
         gameContainer.classList.remove('hidden');
     }
     
-    // Also show the main game UI
-    const mainGameUI = document.getElementById('main-game-ui');
-    if (mainGameUI) {
-        mainGameUI.classList.remove('hidden');
-        mainGameUI.style.display = 'flex';
-    }
+    console.log('🎮 Game world shown');
 }
 
 function showCharacterCreator() {
@@ -120,23 +149,35 @@ function showCharacterCreator() {
     
     // Initialize the character creator
     initializeCharacterCreator(null, 'Corporate');
-    console.log('Character creator opened');
+    console.log('🎭 Character creator opened');
 }
 
-// Game loop function for Stage 3 - UI sync
+// STAGE 3: Enhanced game loop function with renderer updates
 function gameLoop(timestamp) {
-    if (!gameEngine || !uiUpdater || !characterManager) {
+    if (!gameEngine || !characterManager) {
         requestAnimationFrame(gameLoop);
         return;
     }
     
-    // Get the current focus character
+    // Update renderer if available
+    if (renderer && renderer.isInitialized) {
+        // Update character positions in renderer
+        characterManager.characters.forEach(character => {
+            if (character.position) {
+                renderer.updateCharacterPosition(character.id, character.position.x, character.position.y);
+            }
+        });
+        
+        renderer.update();
+    }
+    
+    // Get the current focus character for UI updates
     const focusCharacter = focusTargetId ? 
         characterManager.getCharacter(focusTargetId) : 
         characterManager.getPlayerCharacter();
     
-    if (focusCharacter) {
-        // Update UI for the focus character
+    if (focusCharacter && uiUpdater) {
+        // Update UI for the focus character (throttled by observer pattern)
         uiUpdater.updateUI(focusCharacter);
     }
     
@@ -150,8 +191,10 @@ window.switchFocusCharacter = function(characterId) {
         const character = characterManager.getCharacter(characterId);
         if (character) {
             focusTargetId = characterId;
-            uiUpdater.updateUI(character);
-            console.log(`Focus switched to: ${character.name}`);
+            if (uiUpdater) {
+                uiUpdater.updateUI(character);
+            }
+            console.log(`🔄 Focus switched to: ${character.name}`);
         }
     }
 };
@@ -162,8 +205,10 @@ window.getGameState = function() {
         gameEngine,
         characterManager,
         uiUpdater,
+        renderer,
         focusTargetId,
-        characters: characterManager ? characterManager.characters : []
+        characters: characterManager ? characterManager.characters : [],
+        rendererInitialized: renderer ? renderer.isInitialized : false
     };
 };
 
@@ -179,17 +224,17 @@ function setupNewGameButton() {
         // Add the click handler
         newGameButton.addEventListener('click', showCharacterCreator);
         
-        console.log('New Game button enabled and connected');
+        console.log('✅ New Game button enabled and connected');
     } else {
-        console.error('New Game button not found in DOM');
+        console.error('❌ New Game button not found in DOM');
     }
 }
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Main.js loaded - waiting for character creator to start simulation');
+    console.log('🔧 Main.js loaded - waiting for character creator to start simulation');
     
-    // FIXED: Setup the New Game button
+    // Setup the New Game button
     setupNewGameButton();
     
     // Start the UI update loop
@@ -242,6 +287,7 @@ window.testNeedsDecay = function() {
         character.update(5000); // 5 seconds
         console.log(`${character.name} needs after decay:`, character.needs);
     });
+    console.log('🧪 Needs decay test completed');
 };
 
 window.testRelationshipChange = function() {
@@ -251,7 +297,7 @@ window.testRelationshipChange = function() {
     const char2 = characterManager.characters[1];
     
     char1.updateRelationship(char2.id, 10);
-    console.log(`Updated relationship between ${char1.name} and ${char2.name}`);
+    console.log(`💕 Updated relationship between ${char1.name} and ${char2.name}`);
 };
 
 window.testTaskAssignment = function() {
@@ -263,7 +309,7 @@ window.testTaskAssignment = function() {
         displayName: 'Test Assignment',
         progress: 0.3
     });
-    console.log(`Assigned test task to ${character.name}`);
+    console.log(`📋 Assigned test task to ${character.name}`);
 };
 
 window.testInventoryChange = function() {
@@ -275,5 +321,17 @@ window.testInventoryChange = function() {
         name: 'Test Item',
         type: 'test_item'
     });
-    console.log(`Added test item to ${character.name}'s inventory`);
+    console.log(`🎒 Added test item to ${character.name}'s inventory`);
+};
+
+window.testPortraitSystem = function() {
+    if (!characterManager) return;
+    
+    const character = characterManager.characters[0];
+    console.log(`🖼️ ${character.name}'s portrait:`, character.portrait ? 'Custom' : 'Using sprite sheet');
+    
+    if (uiUpdater) {
+        uiUpdater.updateUI(character);
+        console.log('🔄 Forced UI update to test portrait rendering');
+    }
 };
