@@ -119,9 +119,12 @@ function setupGlobalEventHandlers() {
     }
     
     // Start simulation button
-    const startBtn = document.getElementById('start-simulation-btn');
+    const startBtn = document.getElementById('start-simulation-btn') || document.getElementById('start-simulation-button');
     if (startBtn) {
         startBtn.onclick = handleStartSimulation;
+        console.log('✅ Start Simulation button connected');
+    } else {
+        console.warn('⚠️ Start Simulation button not found');
     }
 }
 
