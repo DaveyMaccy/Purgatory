@@ -68,6 +68,7 @@ export class World {
     /**
      * Mark obstacles in the navigation grid
      * This creates walls and furniture as non-walkable areas
+     * UPDATED: Now includes office obstacles (desks, tables) that match renderer
      */
     markObstacles() {
         // Mark border walls as obstacles
@@ -81,22 +82,42 @@ export class World {
             this.markObstacle(this.width - 1, y); // Right wall
         }
         
-        // Add some office furniture as obstacles (simple layout)
-        // Meeting room in top-left
-        for (let x = 2; x <= 4; x++) {
-            for (let y = 2; y <= 4; y++) {
-                this.markObstacle(x, y);
-            }
-        }
+        // Office obstacles that match renderer positions
+        // Convert pixel positions to grid coordinates (48px tile size)
+        const obstacles = [
+            // Top row desks (100,150 -> 140x60)
+            { x: 100, y: 150, width: 140, height: 60, type: 'desk' },
+            { x: 280, y: 150, width: 140, height: 60, type: 'desk' },
+            { x: 460, y: 150, width: 140, height: 60, type: 'desk' },
+            
+            // Bottom row desks (100,300 -> 140x60)
+            { x: 100, y: 300, width: 140, height: 60, type: 'desk' },
+            { x: 280, y: 300, width: 140, height: 60, type: 'desk' },
+            
+            // Meeting table (500,280 -> 120x80)
+            { x: 500, y: 280, width: 120, height: 80, type: 'table' },
+            
+            // Break room counter (650,100 -> 100x50)
+            { x: 650, y: 100, width: 100, height: 50, type: 'counter' }
+        ];
         
-        // Desk area in center
-        for (let x = 7; x <= 9; x++) {
-            for (let y = 5; y <= 7; y++) {
-                this.markObstacle(x, y);
+        // Mark each obstacle area as non-walkable
+        obstacles.forEach(obstacle => {
+            const startGridX = Math.floor(obstacle.x / this.TILE_SIZE);
+            const startGridY = Math.floor(obstacle.y / this.TILE_SIZE);
+            const endGridX = Math.ceil((obstacle.x + obstacle.width) / this.TILE_SIZE);
+            const endGridY = Math.ceil((obstacle.y + obstacle.height) / this.TILE_SIZE);
+            
+            for (let gridY = startGridY; gridY < endGridY && gridY < this.height; gridY++) {
+                for (let gridX = startGridX; gridX < endGridX && gridX < this.width; gridX++) {
+                    if (gridX >= 0 && gridY >= 0) {
+                        this.markObstacle(gridX, gridY);
+                    }
+                }
             }
-        }
+        });
         
-        console.log('🏢 Office layout obstacles marked');
+        console.log('🏢 Office layout obstacles marked in navigation grid');
     }
 
     /**
