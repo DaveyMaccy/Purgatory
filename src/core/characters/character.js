@@ -1,8 +1,10 @@
+// src/core/characters/character.js - Fixed Constructor for Stage 4 Movement
+
 /**
  * Character Class - Represents an NPC or player character
  * Based on the SSOT documentation (Chapter 2: The Character Object)
  * Enhanced with complete observer pattern implementation for Stage 3
- * Updated with standardized naming conventions
+ * STAGE 4: Added movement path property for pathfinding system
  */
 export class Character {
     constructor(config) {
@@ -19,7 +21,8 @@ export class Character {
             height: config.physicalAttributes?.height || 175,
             weight: config.physicalAttributes?.weight || 70,
             build: config.physicalAttributes?.build || 'Average',
-            looks: config.physicalAttributes?.looks || 5
+            looks: config.physicalAttributes?.looks || 5,
+            gender: config.physicalAttributes?.gender || 'Non-binary'
         };
 
         // Skills
@@ -45,7 +48,7 @@ export class Character {
         this.mood = config.mood || 'Neutral';
 
         // Action & Interaction State
-        this.actionState = config.actionState || 'DEFAULT';
+        this.actionState = config.actionState || 'idle';
         this.facingAngle = config.facingAngle || 90;
         this.maxSightRange = config.maxSightRange || 250;
         this.isBusy = config.isBusy || false;
@@ -68,6 +71,15 @@ export class Character {
         this.position = config.position || { x: 0, y: 0 };
         this.portrait = config.portrait || null;
         this.spriteColors = config.spriteColors || null;
+
+        // STAGE 4: Movement system properties
+        this.path = config.path || []; // Array of {x, y} waypoints for pathfinding
+        this.originalPathLength = 0; // For movement progress calculation
+
+        // API Configuration
+        this.apiKey = config.apiKey || '';
+        this.promptCount = config.promptCount || 0;
+        this.deskId = config.deskId || 'desk_1';
 
         // Observer pattern for UI updates
         this.observers = [];
@@ -99,150 +111,46 @@ export class Character {
         this.needs.energy = Math.max(1, this.needs.energy - (decayRate * timeInSeconds));
         
         // Hunger decreases over time
-        this.needs.hunger = Math.max(1, this.needs.hunger - (decayRate * timeInSeconds));
+        this.needs.hunger = Math.max(1, this.needs.hunger - (decayRate * timeInSeconds * 1.2));
         
         // Social decreases over time (slower)
-        this.needs.social = Math.max(1, this.needs.social - (decayRate * 0.5 * timeInSeconds));
+        this.needs.social = Math.max(1, this.needs.social - (decayRate * timeInSeconds * 0.5));
         
-        // Stress increases slightly over time
-        this.needs.stress = Math.min(10, this.needs.stress + (decayRate * 0.3 * timeInSeconds));
-        
-        // Comfort decreases slowly
-        this.needs.comfort = Math.max(1, this.needs.comfort - (decayRate * 0.3 * timeInSeconds));
-        
-        // Notify observers if needs changed significantly
-        if (this.needsChangedSignificantly(oldNeeds, this.needs)) {
-            this.notifyObservers('needs');
-        }
-    }
-
-    /**
-     * Check if needs have changed significantly enough to warrant UI update
-     */
-    needsChangedSignificantly(oldNeeds, newNeeds) {
-        const threshold = 0.1; // 10% of a point
-        
-        for (const need in oldNeeds) {
-            if (Math.abs(oldNeeds[need] - newNeeds[need]) >= threshold) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Update a specific need value
-     * @param {string} needType - The type of need (energy, hunger, social, comfort, stress)
-     * @param {number} change - The change amount (can be positive or negative)
-     */
-    updateNeed(needType, change) {
-        if (!this.needs.hasOwnProperty(needType)) {
-            console.warn(`Unknown need type: ${needType}`);
-            return;
+        // Comfort decreases when tired or hungry
+        if (this.needs.energy < 5 || this.needs.hunger < 5) {
+            this.needs.comfort = Math.max(1, this.needs.comfort - (decayRate * timeInSeconds * 0.8));
         }
         
-        const oldValue = this.needs[needType];
-        
-        if (needType === 'stress') {
-            // Stress is inverse - higher is worse
-            this.needs[needType] = Math.max(1, Math.min(10, this.needs[needType] + change));
+        // Stress increases when other needs are low
+        if (this.needs.energy < 4 || this.needs.hunger < 4 || this.needs.social < 4) {
+            this.needs.stress = Math.min(10, this.needs.stress + (decayRate * timeInSeconds * 2));
         } else {
-            // Other needs - higher is better
-            this.needs[needType] = Math.max(1, Math.min(10, this.needs[needType] + change));
+            // Stress decreases slowly when all needs are met
+            this.needs.stress = Math.max(1, this.needs.stress - (decayRate * timeInSeconds * 0.3));
         }
         
-        // Notify observers if the change was significant
-        if (Math.abs(this.needs[needType] - oldValue) >= 0.1) {
+        // Check if any needs changed significantly (for observer notification)
+        const needsChanged = Object.keys(this.needs).some(need => 
+            Math.abs(this.needs[need] - oldNeeds[need]) > 0.1
+        );
+        
+        if (needsChanged) {
             this.notifyObservers('needs');
         }
     }
 
     /**
-     * Update relationship with another character
-     * @param {string} characterId - The other character's ID
-     * @param {number} change - Relationship change value (-10 to +10)
+     * Initialize character needs system
      */
-    updateRelationship(characterId, change) {
-        if (!this.relationships[characterId]) {
-            this.relationships[characterId] = 50; // Neutral starting point
-        }
+    initializeNeeds() {
+        console.log(`🔧 Initializing needs for ${this.name}`);
         
-        const oldValue = this.relationships[characterId];
-        this.relationships[characterId] = Math.min(100, 
-            Math.max(0, this.relationships[characterId] + change));
+        // Ensure all needs are within valid range
+        Object.keys(this.needs).forEach(need => {
+            this.needs[need] = Math.max(1, Math.min(10, this.needs[need]));
+        });
         
-        // Notify observers if relationship changed significantly
-        if (Math.abs(this.relationships[characterId] - oldValue) >= 5) {
-            this.notifyObservers('relationships');
-        }
-    }
-
-    /**
-     * Add an item to inventory
-     * @param {Object} item - The item to add
-     */
-    addToInventory(item) {
-        this.inventory.push(item);
-        this.notifyObservers('inventory');
-    }
-
-    /**
-     * Remove an item from inventory
-     * @param {string} itemId - The item ID to remove
-     */
-    removeFromInventory(itemId) {
-        const initialLength = this.inventory.length;
-        this.inventory = this.inventory.filter(item => 
-            (typeof item === 'string' ? item : item.id) !== itemId);
-        
-        if (this.inventory.length !== initialLength) {
-            this.notifyObservers('inventory');
-        }
-    }
-
-    /**
-     * Set the character's held item
-     * @param {Object|null} item - The item to hold, or null to drop
-     */
-    setHeldItem(item) {
-        const hadItem = !!this.heldItem;
-        this.heldItem = item;
-        
-        // Update action state based on held item
-        if (item && !hadItem) {
-            this.setActionState('HoldingItem');
-        } else if (!item && hadItem) {
-            this.setActionState('DEFAULT');
-        }
-        
-        this.notifyObservers('heldItem');
-    }
-
-    /**
-     * Set the character's current action
-     * @param {Object|null} action - The action object or null
-     */
-    setCurrentAction(action) {
-        this.currentAction = action;
-        this.notifyObservers('currentAction');
-    }
-
-    /**
-     * Set the character's assigned task
-     * @param {Object|null} task - The task object or null
-     */
-    setAssignedTask(task) {
-        this.assignedTask = task;
-        this.notifyObservers('assignedTask');
-    }
-
-    /**
-     * Set the character's long-term goal
-     * @param {Object|null} goal - The goal object or null
-     */
-    setLongTermGoal(goal) {
-        this.longTermGoal = goal;
-        this.notifyObservers('longTermGoal');
+        this.notifyObservers('needs');
     }
 
     /**
@@ -253,28 +161,24 @@ export class Character {
             this.observers.push(observer);
         }
     }
-    
+
     removeObserver(observer) {
         const index = this.observers.indexOf(observer);
-        if (index !== -1) {
+        if (index > -1) {
             this.observers.splice(index, 1);
         }
     }
-    
-    notifyObservers(property) {
-        for (const observer of this.observers) {
-            if (typeof observer.onCharacterStateChange === 'function') {
-                try {
-                    observer.onCharacterStateChange(this, property);
-                } catch (error) {
-                    console.error(`Error notifying observer about ${property}:`, error);
-                }
+
+    notifyObservers(propertyChanged) {
+        this.observers.forEach(observer => {
+            if (observer.onCharacterStateChange) {
+                observer.onCharacterStateChange(this, propertyChanged);
             }
-        }
+        });
     }
-    
+
     /**
-     * Enhanced wrapper methods for state changes with observer notifications
+     * State management methods with observer notifications
      */
     setActionState(newState) {
         const oldState = this.actionState;
@@ -293,7 +197,7 @@ export class Character {
     }
 
     /**
-     * Set character position and notify observers
+     * STAGE 4: Set character position and notify observers
      * @param {Object} position - {x, y} coordinates
      */
     setPosition(position) {
@@ -308,6 +212,121 @@ export class Character {
     setPortrait(portraitData) {
         this.portrait = portraitData;
         this.notifyObservers('portrait');
+    }
+
+    /**
+     * STAGE 4: Set movement path
+     * @param {Array} newPath - Array of {x, y} waypoints
+     */
+    setPath(newPath) {
+        this.path = [...newPath];
+        this.originalPathLength = newPath.length;
+        this.notifyObservers('path');
+    }
+
+    /**
+     * STAGE 4: Clear movement path
+     */
+    clearPath() {
+        this.path = [];
+        this.originalPathLength = 0;
+        this.notifyObservers('path');
+    }
+
+    /**
+     * Set current action and notify observers
+     * @param {Object} action - Action object
+     */
+    setCurrentAction(action) {
+        this.currentAction = action;
+        this.notifyObservers('currentAction');
+    }
+
+    /**
+     * Set assigned task and notify observers
+     * @param {Object} task - Task object
+     */
+    setAssignedTask(task) {
+        this.assignedTask = task;
+        this.notifyObservers('assignedTask');
+    }
+
+    /**
+     * Update relationship with another character
+     * @param {string} characterId - Other character's ID
+     * @param {number} delta - Change in relationship value
+     */
+    updateRelationship(characterId, delta) {
+        if (!this.relationships[characterId]) {
+            this.relationships[characterId] = 50; // Neutral starting point
+        }
+        
+        this.relationships[characterId] = Math.max(0, Math.min(100, 
+            this.relationships[characterId] + delta
+        ));
+        
+        this.notifyObservers('relationships');
+    }
+
+    /**
+     * Add item to inventory
+     * @param {Object} item - Item object
+     */
+    addToInventory(item) {
+        this.inventory.push(item);
+        this.notifyObservers('inventory');
+    }
+
+    /**
+     * Remove item from inventory
+     * @param {string} itemId - Item ID to remove
+     */
+    removeFromInventory(itemId) {
+        this.inventory = this.inventory.filter(item => item.id !== itemId);
+        this.notifyObservers('inventory');
+    }
+
+    /**
+     * Pick up an item (set as held item)
+     * @param {Object} item - Item to pick up
+     * @returns {boolean} Success status
+     */
+    pickUpItem(item) {
+        if (this.heldItem) {
+            return false; // Already holding something
+        }
+        
+        this.heldItem = item;
+        this.notifyObservers('heldItem');
+        return true;
+    }
+
+    /**
+     * Put down the currently held item
+     * @returns {Object|null} The item that was put down
+     */
+    putDownItem() {
+        const item = this.heldItem;
+        this.heldItem = null;
+        this.notifyObservers('heldItem');
+        return item;
+    }
+
+    /**
+     * Use an item
+     * @param {Object} item - Item to use
+     * @returns {boolean} Success status
+     */
+    useItem(item) {
+        // Implementation depends on item type
+        console.log(`${this.name} used ${item.name}`);
+        
+        // Remove consumable items
+        if (item.consumable) {
+            this.removeFromInventory(item.id);
+        }
+        
+        return true;
     }
 
     /**
@@ -335,57 +354,108 @@ export class Character {
             if (this.currentAction.elapsedTime >= this.currentAction.duration) {
                 // Action completed
                 this.setCurrentAction(null);
-                
-                // Process pending intent if any
-                if (this.pendingIntent) {
-                    this.setCurrentAction(this.pendingIntent);
-                    this.pendingIntent = null;
-                }
-            } else {
-                // Notify observers of action progress
-                this.notifyObservers('currentAction');
             }
         }
     }
 
     /**
-     * Get character data for serialization
-     * @returns {Object} Serializable character data
+     * Get character status for debugging
+     * @returns {Object} Character status information
      */
-    toJSON() {
+    getStatus() {
         return {
             id: this.id,
             name: this.name,
             isPlayer: this.isPlayer,
-            isEnabled: this.isEnabled,
             jobRole: this.jobRole,
-            physicalAttributes: this.physicalAttributes,
-            skills: this.skills,
-            personalityTags: this.personalityTags,
-            experienceTags: this.experienceTags,
-            needs: this.needs,
-            mood: this.mood,
             actionState: this.actionState,
-            facingAngle: this.facingAngle,
-            maxSightRange: this.maxSightRange,
-            isBusy: this.isBusy,
-            currentAction: this.currentAction,
-            currentActionTranscript: this.currentActionTranscript,
-            pendingIntent: this.pendingIntent,
-            heldItem: this.heldItem,
-            conversationId: this.conversationId,
-            shortTermMemory: this.shortTermMemory,
-            longTermMemory: this.longTermMemory,
-            longTermGoal: this.longTermGoal,
-            assignedTask: this.assignedTask,
-            inventory: this.inventory,
-            deskItems: this.deskItems,
-            relationships: this.relationships,
-            position: this.position,
-            portrait: this.portrait,
-            spriteColors: this.spriteColors,
-            appearance: this.appearance,
-            spriteSheet: this.spriteSheet
+            mood: this.mood,
+            needs: { ...this.needs },
+            position: { ...this.position },
+            hasPath: this.path.length > 0,
+            pathLength: this.path.length,
+            heldItem: this.heldItem ? this.heldItem.name : null,
+            inventoryCount: this.inventory.length,
+            relationshipCount: Object.keys(this.relationships).length
         };
+    }
+
+    /**
+     * STAGE 4: Get movement progress (0-1)
+     * @returns {number} Progress from 0 (not started) to 1 (completed)
+     */
+    getMovementProgress() {
+        if (this.originalPathLength === 0) return 1.0;
+        const remainingWaypoints = this.path.length;
+        return Math.max(0, (this.originalPathLength - remainingWaypoints) / this.originalPathLength);
+    }
+
+    /**
+     * STAGE 4: Check if character is currently moving
+     * @returns {boolean} True if character has a path to follow
+     */
+    isMoving() {
+        return this.path.length > 0;
+    }
+
+    /**
+     * Calculate character's current speed based on needs and state
+     * @returns {number} Speed multiplier (0.5 to 1.5)
+     */
+    getSpeedMultiplier() {
+        let speedMultiplier = 1.0;
+        
+        // Low energy makes movement slower
+        if (this.needs.energy < 3) {
+            speedMultiplier *= 0.7;
+        } else if (this.needs.energy > 8) {
+            speedMultiplier *= 1.2;
+        }
+        
+        // High stress makes movement faster (anxious)
+        if (this.needs.stress > 7) {
+            speedMultiplier *= 1.3;
+        }
+        
+        // Carrying items makes movement slightly slower
+        if (this.heldItem) {
+            speedMultiplier *= 0.9;
+        }
+        
+        return Math.max(0.5, Math.min(1.5, speedMultiplier));
+    }
+
+    /**
+     * STAGE 4: Check if character can move (not busy, not in conversation, etc.)
+     * @returns {boolean} True if character can move
+     */
+    canMove() {
+        return !this.isBusy && 
+               this.actionState !== 'InConversation' && 
+               this.actionState !== 'Unconscious';
+    }
+
+    /**
+     * Get character's current facing direction as a string
+     * @returns {string} Direction (north, south, east, west, etc.)
+     */
+    getFacingDirection() {
+        const angle = this.facingAngle;
+        
+        if (angle >= 315 || angle < 45) return 'east';
+        if (angle >= 45 && angle < 135) return 'south';
+        if (angle >= 135 && angle < 225) return 'west';
+        if (angle >= 225 && angle < 315) return 'north';
+        
+        return 'east'; // Default
+    }
+
+    /**
+     * Set character facing direction
+     * @param {number} angle - Angle in degrees (0 = east, 90 = south, etc.)
+     */
+    setFacingAngle(angle) {
+        this.facingAngle = (angle + 360) % 360; // Normalize to 0-359
+        this.notifyObservers('facingAngle');
     }
 }
