@@ -359,3 +359,331 @@ window.startGameSimulation = function(characterTemplates) {
         // Create characters from templates
         if (characterTemplates && characterTemplates.length > 0) {
             gameEngine.characterManager.createCharacters(characterTemplates);
+        } else {
+            console.warn('⚠️ No character templates provided');
+        }
+        
+        // Initialize character positions
+        gameEngine.characterManager.initializeCharacterPositions(gameEngine.world);
+        
+        // Initialize characters
+        gameEngine.characterManager.initializeCharacters();
+        
+        // Create UI updater
+        uiUpdater = new UIUpdater(gameEngine.characterManager);
+        gameEngine.uiUpdater = uiUpdater;
+        
+        // Start the game engine with movement system
+        gameEngine.start();
+        
+        // Switch to game view
+        switchToGameView();
+        
+        // Update movement status
+        updateMovementStatus('Game started - Click to move player character');
+        
+        console.log('✅ Game simulation started with movement system');
+        
+    } catch (error) {
+        console.error('❌ Failed to start game simulation:', error);
+        showErrorMessage('Failed to start game. Please check the console for details.');
+    }
+};
+
+/**
+ * Create test characters for development
+ */
+function startGameWithTestCharacters() {
+    const testCharacters = [
+        {
+            id: 'player_1',
+            name: 'Test Player',
+            isPlayer: true,
+            personalityTags: ['focused', 'ambitious'],
+            jobRole: 'manager',
+            spriteSheet: './assets/characters/character_1.png',
+            position: { x: 200, y: 200 }
+        },
+        {
+            id: 'npc_1',
+            name: 'Test NPC',
+            isPlayer: false,
+            personalityTags: ['friendly', 'helpful'],
+            jobRole: 'developer',
+            spriteSheet: './assets/characters/character_2.png',
+            position: { x: 300, y: 300 }
+        }
+    ];
+    
+    window.startGameSimulation(testCharacters);
+}
+
+/**
+ * Switch to game view
+ */
+function switchToGameView() {
+    // Hide start screen
+    const startScreen = document.getElementById('start-screen');
+    if (startScreen) {
+        startScreen.style.display = 'none';
+    }
+    
+    // Show game screen
+    const gameScreen = document.getElementById('game-screen');
+    if (gameScreen) {
+        gameScreen.style.display = 'flex';
+    }
+    
+    console.log('🎮 Switched to game view');
+}
+
+/**
+ * Enhanced game engine update loop that includes movement system
+ */
+function enhanceGameEngineWithMovement() {
+    if (!gameEngine || !movementSystem) return;
+    
+    // Store original update method
+    const originalUpdate = gameEngine.update.bind(gameEngine);
+    
+    // Override update to include movement system
+    gameEngine.update = function(deltaTime) {
+        // Call original update
+        originalUpdate(deltaTime);
+        
+        // Update movement for all characters
+        this.characterManager.characters.forEach(character => {
+            movementSystem.updateCharacter(character, this.world, deltaTime);
+        });
+        
+        // Update movement status display for player
+        updatePlayerMovementStatus();
+    };
+    
+    console.log('✅ Game engine enhanced with movement system');
+}
+
+/**
+ * Update player movement status in UI
+ */
+function updatePlayerMovementStatus() {
+    if (!gameEngine || !movementSystem) return;
+    
+    const player = gameEngine.characterManager.getPlayerCharacter();
+    if (!player) return;
+    
+    const statusDiv = document.getElementById('movement-status');
+    if (!statusDiv) return;
+    
+    if (movementSystem.isMoving(player)) {
+        const progress = movementSystem.getMovementProgress(player);
+        const percentage = Math.floor(progress * 100);
+        statusDiv.textContent = `Moving... ${percentage}% complete`;
+    } else {
+        statusDiv.textContent = 'Click in the world to move player character';
+    }
+}
+
+/**
+ * Set up status panel tab switching - Enhanced for Stage 4
+ */
+function setupStatusPanelTabs() {
+    console.log('🔧 Setting up status panel tabs...');
+    
+    // Make openTab function available globally
+    window.openTab = function(evt, tabName) {
+        console.log(`📋 Switching to tab: ${tabName}`);
+        
+        // Hide all tab content
+        const tabContents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+        
+        // Remove active class from all tab links
+        const tabLinks = document.getElementsByClassName("tab-link");
+        for (let i = 0; i < tabLinks.length; i++) {
+            tabLinks[i].classList.remove("active");
+        }
+        
+        // Show the selected tab content and mark button as active
+        const targetTab = document.getElementById(tabName);
+        if (targetTab) {
+            targetTab.classList.add("active");
+        }
+        
+        if (evt && evt.currentTarget) {
+            evt.currentTarget.classList.add("active");
+        }
+    };
+    
+    // Set up click handlers for tab buttons
+    const tabButtons = document.querySelectorAll('.tab-link');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabName = button.textContent.toLowerCase();
+            window.openTab(e, tabName);
+        });
+    });
+    
+    console.log('✅ Status panel tabs configured');
+}
+
+/**
+ * Add CSS for proper tab styling
+ */
+function addTabCSS() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #d1d5db;
+            margin-bottom: 0;
+            background-color: #f9fafb;
+            padding: 8px 8px 0 8px;
+            border-radius: 6px 6px 0 0;
+            gap: 2px;
+        }
+        
+        .tab-link {
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            flex: 1;
+            text-align: center;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom: none;
+        }
+        
+        .tab-link:hover {
+            background-color: #e5e7eb;
+            color: #1f2937;
+        }
+        
+        .tab-link.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            border-bottom: 1px solid #3b82f6;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 16px;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            background-color: white;
+            min-height: 200px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .widget {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+        }
+        
+        /* Movement debug panel styling */
+        #movement-debug-panel {
+            border-left: 4px solid #10b981;
+        }
+        
+        #movement-status {
+            background-color: #f0f9ff;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #bae6fd;
+        }
+    `;
+    
+    document.head.appendChild(style);
+}
+
+/**
+ * Show error message to user
+ */
+function showErrorMessage(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.position = 'fixed';
+    errorDiv.style.top = '20px';
+    errorDiv.style.right = '20px';
+    errorDiv.style.backgroundColor = '#fee2e2';
+    errorDiv.style.color = '#dc2626';
+    errorDiv.style.padding = '12px 16px';
+    errorDiv.style.borderRadius = '6px';
+    errorDiv.style.border = '1px solid #fecaca';
+    errorDiv.style.zIndex = '10000';
+    errorDiv.style.maxWidth = '400px';
+    errorDiv.textContent = message;
+    
+    document.body.appendChild(errorDiv);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        if (errorDiv.parentNode) {
+            errorDiv.parentNode.removeChild(errorDiv);
+        }
+    }, 5000);
+}
+
+// Debug functions for Stage 4 testing
+window.testMovement = function() {
+    testRandomMovement();
+};
+
+window.stopPlayerMovement = function() {
+    if (gameEngine && movementSystem) {
+        const player = gameEngine.characterManager.getPlayerCharacter();
+        if (player) {
+            movementSystem.stopCharacter(player);
+        }
+    }
+};
+
+window.debugPlayerPath = function() {
+    if (gameEngine && movementSystem) {
+        const player = gameEngine.characterManager.getPlayerCharacter();
+        if (player) {
+            movementSystem.debugPath(player);
+        }
+    }
+};
+
+window.getMovementSystemStatus = function() {
+    if (!gameEngine || !movementSystem) {
+        return 'Movement system not initialized';
+    }
+    
+    const player = gameEngine.characterManager.getPlayerCharacter();
+    if (!player) {
+        return 'No player character found';
+    }
+    
+    return {
+        isMoving: movementSystem.isMoving(player),
+        progress: movementSystem.getMovementProgress(player),
+        pathLength: player.path ? player.path.length : 0,
+        position: player.position,
+        actionState: player.actionState
+    };
+};
+
+// Initialize movement system integration when game engine starts
+document.addEventListener('gameEngineReady', function() {
+    enhanceGameEngineWithMovement();
+});
