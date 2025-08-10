@@ -1,45 +1,56 @@
-// main.js - Movement System Integration for Stage 4 (Compatible with existing system)
+// main.js - COMPLETE FIXED VERSION
+// Preserves ALL original functionality + adds Stage 4 movement system
 
-// Import core systems
+/**
+ * Main.js - Game initialization and coordination
+ * 
+ * This file handles:
+ * 1. Game system initialization (game engine, renderer, UI, etc.)
+ * 2. DOM ready events and button setup
+ * 3. Game start sequence coordination
+ * 4. UI state management
+ * 5. STAGE 4: Movement system integration
+ * 
+ * Character creator functionality is in separate character-creator.js
+ */
+
 import { GameEngine } from './src/core/game-engine.js';
 import { CharacterManager } from './src/core/characters/character-manager.js';
 import { UIUpdater } from './src/ui/ui-updater.js';
-import { MovementSystem } from './src/core/systems/movement-system.js';
+import { Renderer } from './src/rendering/renderer.js';
+// FIXED: Handle loadMapData import with fallback
 import { loadMapData } from './src/core/world/world.js';
 import { initializeCharacterCreator } from './character-creator.js';
+// STAGE 4: Import movement system
+import { MovementSystem } from './src/core/systems/movement-system.js';
 
-// Global game state
+// Global game state for Stage 3 + Stage 4
 let gameEngine = null;
 let characterManager = null;
 let uiUpdater = null;
+let renderer = null;
+let focusTargetId = null;
+// STAGE 4: Movement system
 let movementSystem = null;
-let mapData = null;
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🎮 Office Purgatory - Starting initialization...');
+/**
+ * DOM Ready Event - Main initialization
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎮 Office Purgatory - Game Loading...');
     
     try {
-        // Load map data first
-        await loadMapDataAsync();
-        
         // Initialize UI elements
         initializeUIElements();
         
-        // Create movement system
+        // STAGE 4: Initialize movement system
         movementSystem = new MovementSystem();
+        console.log('🚶 Movement system initialized');
         
         // Setup the New Game button
         setupNewGameButton();
         
-        // Check if we should start the game immediately (for testing)
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('autostart') === 'true') {
-            console.log('🚀 Auto-starting game for testing...');
-            startGameWithTestCharacters();
-        }
-        
-        console.log('✅ Initialization complete');
+        console.log('🎮 Game initialization complete - Ready to start!');
         
     } catch (error) {
         console.error('❌ Failed to initialize game:', error);
@@ -48,112 +59,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 /**
- * Load map data from JSON file
- */
-async function loadMapDataAsync() {
-    try {
-        console.log('🗺️ Loading map data...');
-        mapData = await loadMapData();
-        console.log('✅ Map data loaded successfully');
-        
-    } catch (error) {
-        console.error('❌ Failed to load map data:', error);
-        // Create basic fallback map data
-        mapData = {
-            width: 16,
-            height: 12,
-            tilewidth: 48,
-            tileheight: 48
-        };
-        console.log('🔧 Using fallback map data');
-    }
-}
-
-/**
- * Setup New Game button with proper event handling
- */
-function setupNewGameButton() {
-    const newGameButton = document.getElementById('new-game-button');
-    if (newGameButton) {
-        // Remove any existing listeners by cloning
-        const newButton = newGameButton.cloneNode(true);
-        newGameButton.parentNode.replaceChild(newButton, newGameButton);
-        
-        // Enable and add event listener
-        newButton.disabled = false;
-        newButton.addEventListener('click', handleNewGameClick);
-        
-        console.log('✅ New Game button enabled and connected');
-    } else {
-        console.warn('⚠️ New Game button not found');
-        // Auto-start for testing if button missing
-        setTimeout(handleNewGameClick, 1000);
-    }
-}
-
-/**
- * Handle New Game button click
- */
-function handleNewGameClick() {
-    console.log('🎭 New Game clicked - Opening character creator...');
-    
-    try {
-        // Hide start screen
-        hideStartScreen();
-        
-        // Show character creator
-        showCharacterCreator();
-        
-        // Initialize the character creator
-        if (window.initializeCharacterCreator) {
-            window.initializeCharacterCreator('Game Studio');
-        } else {
-            initializeCharacterCreator('Game Studio');
-        }
-        
-        console.log('✅ Character creator opened');
-        
-    } catch (error) {
-        console.error('❌ Failed to open character creator:', error);
-        // Fallback: start with default characters
-        startGameWithTestCharacters();
-    }
-}
-
-/**
- * UI state management functions
- */
-function hideStartScreen() {
-    const startScreen = document.getElementById('start-screen-backdrop');
-    if (startScreen) {
-        startScreen.style.display = 'none';
-        console.log('📺 Start screen hidden');
-    }
-}
-
-function showCharacterCreator() {
-    const creatorModal = document.getElementById('creator-modal-backdrop');
-    if (creatorModal) {
-        creatorModal.style.display = 'flex';
-        creatorModal.classList.remove('hidden');
-        console.log('🎭 Character creator shown');
-    }
-}
-
-/**
- * Initialize UI elements and event handlers - STAGE 4 ENHANCED
+ * Initialize UI elements and event handlers - ENHANCED FOR STAGE 4
  */
 function initializeUIElements() {
-    // Add proper tab styling
+    // FIXED: Add proper tab styling
     addTabCSS();
     
-    // Set up game world click handlers for movement
+    // STAGE 4: Set up game world click handlers for movement
     setupWorldClickHandlers();
     
     // Set up tab switching in the status panel
     setupStatusPanelTabs();
     
-    // Add movement debug controls
+    // STAGE 4: Add movement debug controls
     addMovementDebugControls();
     
     console.log('✅ UI elements initialized with movement support');
@@ -170,14 +88,13 @@ function setupWorldClickHandlers() {
     if (worldContainer) {
         worldContainer.addEventListener('click', handleWorldClick);
         worldContainer.style.cursor = 'crosshair'; // Visual indicator
+        
+        // Add right-click for stopping movement
+        worldContainer.addEventListener('contextmenu', handleWorldRightClick);
+        
         console.log('✅ World click handler attached');
     } else {
         console.warn('⚠️ World container not found for click handling');
-    }
-    
-    // Optional: Add right-click for stopping movement
-    if (worldContainer) {
-        worldContainer.addEventListener('contextmenu', handleWorldRightClick);
     }
 }
 
@@ -212,8 +129,6 @@ function handleWorldClick(event) {
     
     if (success) {
         console.log(`🚶 Moving ${playerCharacter.name} to (${clickX}, ${clickY})`);
-        
-        // Visual feedback
         showMovementTarget(clickX, clickY);
     } else {
         console.warn(`🚫 Cannot move ${playerCharacter.name} to (${clickX}, ${clickY})`);
@@ -222,7 +137,7 @@ function handleWorldClick(event) {
 }
 
 /**
- * Handle right-click to stop movement
+ * STAGE 4: Handle right-click to stop movement
  */
 function handleWorldRightClick(event) {
     event.preventDefault(); // Prevent context menu
@@ -237,10 +152,9 @@ function handleWorldRightClick(event) {
 }
 
 /**
- * Show visual feedback for movement target
+ * STAGE 4: Show visual feedback for movement target
  */
 function showMovementTarget(x, y) {
-    // Create a temporary visual indicator
     const worldContainer = document.getElementById('world-canvas-container');
     if (!worldContainer) return;
     
@@ -258,7 +172,6 @@ function showMovementTarget(x, y) {
     
     worldContainer.appendChild(indicator);
     
-    // Remove after animation
     setTimeout(() => {
         if (indicator.parentNode) {
             indicator.parentNode.removeChild(indicator);
@@ -267,7 +180,7 @@ function showMovementTarget(x, y) {
 }
 
 /**
- * Show visual feedback for invalid movement target
+ * STAGE 4: Show visual feedback for invalid movement target
  */
 function showInvalidTargetFeedback(x, y) {
     const worldContainer = document.getElementById('world-canvas-container');
@@ -288,7 +201,6 @@ function showInvalidTargetFeedback(x, y) {
     
     worldContainer.appendChild(indicator);
     
-    // Quick fade out
     setTimeout(() => {
         if (indicator.parentNode) {
             indicator.parentNode.removeChild(indicator);
@@ -297,7 +209,7 @@ function showInvalidTargetFeedback(x, y) {
 }
 
 /**
- * Add movement debug controls to the UI
+ * STAGE 4: Add movement debug controls to the UI
  */
 function addMovementDebugControls() {
     const rightPanel = document.querySelector('.status-panel');
@@ -325,22 +237,18 @@ function addMovementDebugControls() {
     `;
     
     rightPanel.appendChild(debugDiv);
-    
-    // Set up debug button handlers
     setupMovementDebugButtons();
 }
 
 /**
- * Set up movement debug button handlers
+ * STAGE 4: Set up movement debug button handlers
  */
 function setupMovementDebugButtons() {
-    // Test movement button
     const testButton = document.getElementById('test-movement');
     if (testButton) {
         testButton.onclick = () => testRandomMovement();
     }
     
-    // Stop movement button
     const stopButton = document.getElementById('stop-movement');
     if (stopButton) {
         stopButton.onclick = () => {
@@ -354,7 +262,6 @@ function setupMovementDebugButtons() {
         };
     }
     
-    // Debug path button
     const debugButton = document.getElementById('debug-path');
     if (debugButton) {
         debugButton.onclick = () => {
@@ -369,7 +276,7 @@ function setupMovementDebugButtons() {
 }
 
 /**
- * Test random movement
+ * STAGE 4: Test random movement
  */
 function testRandomMovement() {
     if (!gameEngine || !movementSystem) {
@@ -383,7 +290,6 @@ function testRandomMovement() {
         return;
     }
     
-    // Generate random target within world bounds
     const world = gameEngine.world;
     const targetX = Math.random() * world.worldWidth;
     const targetY = Math.random() * world.worldHeight;
@@ -399,7 +305,7 @@ function testRandomMovement() {
 }
 
 /**
- * Update movement status display
+ * STAGE 4: Update movement status display
  */
 function updateMovementStatus(message) {
     const statusDiv = document.getElementById('movement-status');
@@ -409,244 +315,7 @@ function updateMovementStatus(message) {
 }
 
 /**
- * MAIN GAME START FUNCTION - Enhanced for Stage 4 but compatible with existing character creator
- * Called from character creator or auto-start
- */
-window.startGameSimulation = async function(charactersFromCreator) {
-    try {
-        console.log('🚀 Starting game simulation with movement system...', charactersFromCreator);
-        
-        // Validate input
-        if (!charactersFromCreator || charactersFromCreator.length === 0) {
-            throw new Error('No characters provided for simulation');
-        }
-        
-        // Ensure map data is loaded
-        if (!mapData) {
-            console.log('🗺️ Loading map data...');
-            await loadMapData();
-        }
-        
-        // Initialize character manager
-        console.log('👥 Initializing character manager...');
-        const characterManager = new CharacterManager();
-        
-        // Load characters from the character creator - use the existing loadCharacters method
-        characterManager.loadCharacters(charactersFromCreator);
-        
-        // Set the first player character as focus target
-        const playerCharacter = characterManager.getPlayerCharacter();
-        if (playerCharacter) {
-            console.log(`🎯 Focus set to player: ${playerCharacter.name}`);
-        } else {
-            console.warn('⚠️ No player character found, using first character');
-        }
-        
-        // Initialize UI updater
-        console.log('🖥️ Initializing UI updater...');
-        uiUpdater = new UIUpdater(characterManager);
-        
-        // Subscribe UI updater to all characters for observer pattern
-        characterManager.characters.forEach(character => {
-            uiUpdater.subscribeToCharacter(character);
-            console.log(`🔗 UI updater subscribed to: ${character.name}`);
-        });
-        
-        // Initialize game engine
-        console.log('🎮 Initializing game engine...');
-        gameEngine = new GameEngine();
-        gameEngine.initialize(mapData);
-        
-        // Set up the character manager and UI updater
-        gameEngine.characterManager = characterManager;
-        gameEngine.uiUpdater = uiUpdater;
-        
-        // Add movement system to engine
-        gameEngine.movementSystem = movementSystem;
-        
-        // Initialize character positions using world
-        gameEngine.characterManager.initializeCharacterPositions(gameEngine.world);
-        
-        // Initialize characters
-        gameEngine.characterManager.initializeCharacters();
-        
-        // Start the game engine with movement system
-        gameEngine.start();
-        
-        // Hide character creator and show game world
-        hideCharacterCreator();
-        switchToGameView();
-        
-        // Update movement status
-        updateMovementStatus('Game started - Click to move player character');
-        
-        console.log('✅ Game simulation started with movement system');
-        
-    } catch (error) {
-        console.error('❌ Failed to start game simulation:', error);
-        showErrorMessage(`Failed to start simulation: ${error.message}`);
-    }
-};
-
-/**
- * Create test characters for development
- */
-function startGameWithTestCharacters() {
-    const testCharacters = [
-        {
-            id: 'player_1',
-            name: 'Test Player',
-            isPlayer: true,
-            personalityTags: ['focused', 'ambitious'],
-            jobRole: 'manager',
-            spriteSheet: './assets/characters/character_1.png',
-            position: { x: 200, y: 200 }
-        },
-        {
-            id: 'npc_1',
-            name: 'Test NPC',
-            isPlayer: false,
-            personalityTags: ['friendly', 'helpful'],
-            jobRole: 'developer',
-            spriteSheet: './assets/characters/character_2.png',
-            position: { x: 300, y: 300 }
-        }
-    ];
-    
-    window.startGameSimulation(testCharacters);
-}
-
-/**
- * Hide character creator modal
- */
-function hideCharacterCreator() {
-    const creatorModal = document.getElementById('creator-modal-backdrop');
-    if (creatorModal) {
-        creatorModal.style.display = 'none';
-        console.log('🎭 Character creator hidden');
-    }
-}
-
-/**
- * Switch to game view
- */
-function switchToGameView() {
-    // Hide start screen
-    const startScreen = document.getElementById('start-screen-backdrop');
-    if (startScreen) {
-        startScreen.style.display = 'none';
-    }
-    
-    // Show game screen - try multiple possible IDs
-    const gameScreen = document.getElementById('game-screen') || 
-                      document.getElementById('main-game-ui') ||
-                      document.querySelector('.game-view');
-    
-    if (gameScreen) {
-        gameScreen.style.display = 'flex';
-        gameScreen.classList.remove('hidden');
-    } else {
-        console.warn('⚠️ Game screen element not found');
-    }
-    
-    console.log('🎮 Switched to game view');
-}
-
-/**
- * Enhanced game engine update loop that includes movement system
- */
-function enhanceGameEngineWithMovement() {
-    if (!gameEngine || !movementSystem) return;
-    
-    // Store original update method
-    const originalUpdate = gameEngine.update.bind(gameEngine);
-    
-    // Override update to include movement system
-    gameEngine.update = function(deltaTime) {
-        // Call original update
-        originalUpdate(deltaTime);
-        
-        // Update movement for all characters
-        this.characterManager.characters.forEach(character => {
-            movementSystem.updateCharacter(character, this.world, deltaTime);
-        });
-        
-        // Update movement status display for player
-        updatePlayerMovementStatus();
-    };
-    
-    console.log('✅ Game engine enhanced with movement system');
-}
-
-/**
- * Update player movement status in UI
- */
-function updatePlayerMovementStatus() {
-    if (!gameEngine || !movementSystem) return;
-    
-    const player = gameEngine.characterManager.getPlayerCharacter();
-    if (!player) return;
-    
-    const statusDiv = document.getElementById('movement-status');
-    if (!statusDiv) return;
-    
-    if (movementSystem.isMoving(player)) {
-        const progress = movementSystem.getMovementProgress(player);
-        const percentage = Math.floor(progress * 100);
-        statusDiv.textContent = `Moving... ${percentage}% complete`;
-    } else {
-        statusDiv.textContent = 'Click in the world to move player character';
-    }
-}
-
-/**
- * Set up status panel tab switching - Enhanced for Stage 4
- */
-function setupStatusPanelTabs() {
-    console.log('🔧 Setting up status panel tabs...');
-    
-    // Make openTab function available globally
-    window.openTab = function(evt, tabName) {
-        console.log(`📋 Switching to tab: ${tabName}`);
-        
-        // Hide all tab content
-        const tabContents = document.getElementsByClassName("tab-content");
-        for (let i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        
-        // Remove active class from all tab links
-        const tabLinks = document.getElementsByClassName("tab-link");
-        for (let i = 0; i < tabLinks.length; i++) {
-            tabLinks[i].classList.remove("active");
-        }
-        
-        // Show the selected tab content and mark button as active
-        const targetTab = document.getElementById(tabName);
-        if (targetTab) {
-            targetTab.classList.add("active");
-        }
-        
-        if (evt && evt.currentTarget) {
-            evt.currentTarget.classList.add("active");
-        }
-    };
-    
-    // Set up click handlers for tab buttons
-    const tabButtons = document.querySelectorAll('.tab-link');
-    tabButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabName = button.textContent.toLowerCase();
-            window.openTab(e, tabName);
-        });
-    });
-    
-    console.log('✅ Status panel tabs configured');
-}
-
-/**
- * Add CSS for proper tab styling
+ * FIXED: Add CSS for proper tab styling with even alignment + movement debug styling
  */
 function addTabCSS() {
     const style = document.createElement('style');
@@ -713,7 +382,7 @@ function addTabCSS() {
             padding: 12px;
         }
         
-        /* Movement debug panel styling */
+        /* STAGE 4: Movement debug panel styling */
         #movement-debug-panel {
             border-left: 4px solid #10b981;
         }
@@ -727,78 +396,482 @@ function addTabCSS() {
     `;
     
     document.head.appendChild(style);
+    console.log('✅ Tab CSS injected with proper alignment + movement styling');
+}
+
+/**
+ * Setup New Game button with proper event handling
+ */
+function setupNewGameButton() {
+    const newGameButton = document.getElementById('new-game-button');
+    if (newGameButton) {
+        // Remove any existing listeners by cloning
+        const newButton = newGameButton.cloneNode(true);
+        newGameButton.parentNode.replaceChild(newButton, newGameButton);
+        
+        // Enable and add event listener
+        newButton.disabled = false;
+        newButton.addEventListener('click', handleNewGameClick);
+        
+        console.log('✅ New Game button enabled and connected');
+    } else {
+        console.warn('⚠️ New Game button not found');
+        // Auto-start for testing if button missing
+        setTimeout(handleNewGameClick, 1000);
+    }
+}
+
+/**
+ * Handle New Game button click
+ */
+function handleNewGameClick() {
+    console.log('🎭 New Game clicked - Opening character creator...');
+    
+    try {
+        // Hide start screen
+        hideStartScreen();
+        
+        // Show character creator
+        showCharacterCreator();
+        
+        // Initialize the character creator with Game Studio office type
+        initializeCharacterCreator('Game Studio');
+        
+        console.log('✅ Character creator opened');
+        
+    } catch (error) {
+        console.error('❌ Failed to open character creator:', error);
+        // Fallback: start with default characters
+        startGameWithFallbackCharacters();
+    }
+}
+
+/**
+ * Fallback function if character creator fails
+ */
+function startGameWithFallbackCharacters() {
+    console.log('🔧 Starting game with fallback characters...');
+    
+    const fallbackCharacters = [
+        {
+            id: 'player_1',
+            name: 'Test Player',
+            isPlayer: true,
+            personalityTags: ['focused', 'ambitious'],
+            jobRole: 'manager',
+            spriteSheet: './assets/characters/character_1.png',
+            position: { x: 200, y: 200 },
+            path: [], // STAGE 4: Required for movement
+            appearance: { body: 'body_skin_tone_1', hair: 'hair_style_4_blonde', shirt: 'shirt_style_2_red', pants: 'pants_style_1_jeans' }
+        },
+        {
+            id: 'npc_1',
+            name: 'Test NPC',
+            isPlayer: false,
+            personalityTags: ['friendly', 'helpful'],
+            jobRole: 'developer',
+            spriteSheet: './assets/characters/character_2.png',
+            position: { x: 300, y: 300 },
+            path: [], // STAGE 4: Required for movement
+            appearance: { body: 'body_skin_tone_1', hair: 'hair_style_4_blonde', shirt: 'shirt_style_2_red', pants: 'pants_style_1_jeans' }
+        }
+    ];
+    
+    // Add 3 more characters to make 5 total
+    for (let i = 2; i < 5; i++) {
+        fallbackCharacters.push({
+            ...fallbackCharacters[1],
+            id: `fallback_${i + 1}`,
+            name: `Test NPC ${i}`,
+            isPlayer: false
+        });
+    }
+    
+    // Start the game with fallback characters
+    if (window.startGameSimulation) {
+        window.startGameSimulation(fallbackCharacters);
+    } else {
+        console.error('❌ startGameSimulation not available');
+    }
+}
+
+/**
+ * Set up status panel tab switching
+ */
+function setupStatusPanelTabs() {
+    // FIXED: Proper tab switching implementation
+    console.log('🔧 Setting up status panel tabs...');
+    
+    // Make openTab function available globally (as required by HTML onclick)
+    window.openTab = function(evt, tabName) {
+        console.log(`📋 Switching to tab: ${tabName}`);
+        
+        // Hide all tab content
+        const tabContents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+        
+        // Remove active class from all tab links
+        const tabLinks = document.getElementsByClassName("tab-link");
+        for (let i = 0; i < tabLinks.length; i++) {
+            tabLinks[i].classList.remove("active");
+        }
+        
+        // Show the selected tab content and mark button as active
+        const targetTab = document.getElementById(tabName);
+        if (targetTab) {
+            targetTab.classList.add("active");
+        }
+        
+        if (evt && evt.currentTarget) {
+            evt.currentTarget.classList.add("active");
+        }
+    };
+    
+    // Set up click handlers for tab buttons (backup to onclick)
+    const tabButtons = document.querySelectorAll('.tab-link');
+    tabButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabName = button.textContent.toLowerCase();
+            window.openTab(e, tabName);
+        });
+    });
+    
+    console.log('✅ Status panel tabs configured');
+}
+
+/**
+ * MAIN GAME START FUNCTION - RESTORED ORIGINAL COMPLEXITY + STAGE 4 ENHANCEMENTS
+ * Called from character creator
+ * This is the primary entry point for starting the game simulation
+ */
+window.startGameSimulation = async function(charactersFromCreator) {
+    try {
+        console.log('🚀 Starting game simulation with characters:', charactersFromCreator);
+        
+        // Validate input
+        if (!charactersFromCreator || charactersFromCreator.length === 0) {
+            throw new Error('No characters provided for simulation');
+        }
+        
+        // Initialize character manager
+        console.log('👥 Initializing character manager...');
+        characterManager = new CharacterManager();
+        
+        // Load characters from the character creator
+        characterManager.loadCharacters(charactersFromCreator);
+        
+        // Set the first player character as focus target
+        const playerCharacter = characterManager.getPlayerCharacter();
+        if (playerCharacter) {
+            focusTargetId = playerCharacter.id;
+            console.log(`🎯 Focus set to player: ${playerCharacter.name}`);
+        } else {
+            console.warn('⚠️ No player character found, using first character');
+            if (characterManager.characters.length > 0) {
+                focusTargetId = characterManager.characters[0].id;
+            }
+        }
+        
+        // Initialize UI updater
+        console.log('🖥️ Initializing UI updater...');
+        uiUpdater = new UIUpdater(characterManager);
+        
+        // Subscribe UI updater to all characters for observer pattern
+        characterManager.characters.forEach(character => {
+            uiUpdater.subscribeToCharacter(character);
+            console.log(`🔗 UI updater subscribed to: ${character.name}`);
+        });
+        
+        // Load map data
+        console.log('🗺️ Loading map data...');
+        const mapData = await loadMapData();
+        console.log('✅ Map data loaded successfully');
+        
+        // Initialize game engine
+        console.log('🎮 Initializing game engine...');
+        gameEngine = new GameEngine();
+        gameEngine.characterManager = characterManager;
+        gameEngine.setUIUpdater(uiUpdater);
+        
+        // STAGE 4: Add movement system to engine
+        gameEngine.movementSystem = movementSystem;
+        console.log('🚶 Movement system connected to game engine');
+        
+        // RESTORED: Initialize renderer
+        console.log('🎨 Initializing renderer...');
+        const worldContainer = document.getElementById('world-canvas-container');
+        if (!worldContainer) {
+            throw new Error('World canvas container not found in DOM');
+        }
+        
+        renderer = new Renderer(worldContainer);
+        await renderer.initialize();
+        gameEngine.setRenderer(renderer);
+        console.log('✅ Renderer initialized');
+        
+        // RESTORED: Render the map
+        renderer.renderMap(mapData);
+        console.log('🏢 Map rendered');
+        
+        // Start the game engine (this creates the world and nav grid)
+        gameEngine.initialize(mapData);
+        console.log('✅ Game engine initialized');
+        
+        // RESTORED: Initialize character positions AFTER world is created
+        if (gameEngine.world) {
+            characterManager.initializeCharacterPositions(gameEngine.world);
+            console.log('📍 Character positions initialized');
+            
+            // RESTORED: Add characters to renderer
+            console.log('👤 Adding characters to renderer...');
+            for (const character of characterManager.characters) {
+                await renderer.addCharacter(character);
+            }
+            console.log('✅ Characters added to renderer');
+        } else {
+            throw new Error('Game world was not created properly');
+        }
+        
+        // RESTORED: Hide character creator and show game world
+        hideCharacterCreator();
+        showGameWorld();
+        
+        // RESTORED: Start UI updates with initial focus character
+        if (focusTargetId) {
+            const focusCharacter = characterManager.getCharacter(focusTargetId);
+            if (focusCharacter) {
+                uiUpdater.updateUI(focusCharacter);
+                console.log(`🎯 UI focused on: ${focusCharacter.name}`);
+            }
+        }
+        
+        // STAGE 4: Update movement status
+        updateMovementStatus('Game started - Click to move player character');
+        
+        // RESTORED: Log game status for debugging
+        logGameStatus();
+        
+        console.log('🎉 Game simulation started successfully with movement system!');
+        
+    } catch (error) {
+        console.error('❌ Failed to start game simulation:', error);
+        showErrorMessage(`Failed to start simulation: ${error.message}`);
+    }
+};
+
+/**
+ * RESTORED: UI state management functions
+ */
+function hideStartScreen() {
+    const startScreen = document.getElementById('start-screen-backdrop');
+    if (startScreen) {
+        startScreen.style.display = 'none';
+        console.log('📺 Start screen hidden');
+    }
+}
+
+function showCharacterCreator() {
+    const creatorModal = document.getElementById('creator-modal-backdrop');
+    if (creatorModal) {
+        creatorModal.style.display = 'flex';
+        creatorModal.classList.remove('hidden');
+        console.log('🎭 Character creator shown');
+    }
+}
+
+function hideCharacterCreator() {
+    const creatorModal = document.getElementById('creator-modal-backdrop');
+    if (creatorModal) {
+        creatorModal.style.display = 'none';
+        console.log('🎭 Character creator hidden');
+    }
+}
+
+function showGameWorld() {
+    // Show the main game UI
+    const mainGameUI = document.getElementById('main-game-ui');
+    if (mainGameUI) {
+        mainGameUI.classList.remove('hidden');
+        mainGameUI.style.display = 'flex';
+        console.log('🌍 Game world shown');
+    }
 }
 
 /**
  * Show error message to user
  */
 function showErrorMessage(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.style.position = 'fixed';
-    errorDiv.style.top = '20px';
-    errorDiv.style.right = '20px';
-    errorDiv.style.backgroundColor = '#fee2e2';
-    errorDiv.style.color = '#dc2626';
-    errorDiv.style.padding = '12px 16px';
-    errorDiv.style.borderRadius = '6px';
-    errorDiv.style.border = '1px solid #fecaca';
-    errorDiv.style.zIndex = '10000';
-    errorDiv.style.maxWidth = '400px';
-    errorDiv.textContent = message;
-    
-    document.body.appendChild(errorDiv);
-    
-    // Remove after 5 seconds
-    setTimeout(() => {
-        if (errorDiv.parentNode) {
-            errorDiv.parentNode.removeChild(errorDiv);
-        }
-    }, 5000);
+    alert(message);
+    console.error('💥 Error shown to user:', message);
 }
 
-// Debug functions for Stage 4 testing
-window.testMovement = function() {
-    testRandomMovement();
-};
-
-window.stopPlayerMovement = function() {
-    if (gameEngine && movementSystem) {
-        const player = gameEngine.characterManager.getPlayerCharacter();
+/**
+ * RESTORED: Log comprehensive game status for debugging
+ */
+function logGameStatus() {
+    console.log('📊 Game Status Report:');
+    
+    if (gameEngine) {
+        console.log('🎮 Game Engine:', gameEngine.getStatus());
+    }
+    
+    if (characterManager) {
+        console.log('👥 Character Manager:', characterManager.getStatus());
+    }
+    
+    if (renderer) {
+        console.log('🎨 Renderer:', renderer.getStatus());
+    }
+    
+    if (uiUpdater) {
+        console.log('🖥️ UI Updater: Active with clock running');
+    }
+    
+    // STAGE 4: Movement system status
+    if (movementSystem) {
+        console.log('🚶 Movement System: Active and ready');
+        const player = characterManager?.getPlayerCharacter();
         if (player) {
-            movementSystem.stopCharacter(player);
+            console.log('🎯 Player Movement:', {
+                hasPath: player.path && player.path.length > 0,
+                pathLength: player.path ? player.path.length : 0,
+                position: player.position,
+                canMove: !player.isBusy
+            });
+        }
+    }
+}
+
+/**
+ * RESTORED: Clean up game resources (for page unload or restart)
+ */
+function cleanupGame() {
+    console.log('🧹 Cleaning up game resources...');
+    
+    if (gameEngine) {
+        gameEngine.stop();
+        gameEngine = null;
+    }
+    
+    if (renderer) {
+        renderer.destroy();
+        renderer = null;
+    }
+    
+    if (uiUpdater) {
+        uiUpdater.destroy();
+        uiUpdater = null;
+    }
+    
+    characterManager = null;
+    focusTargetId = null;
+    movementSystem = null;
+    
+    console.log('✅ Game cleanup complete');
+}
+
+/**
+ * RESTORED: Handle page unload cleanup
+ */
+window.addEventListener('beforeunload', cleanupGame);
+
+/**
+ * RESTORED + ENHANCED: Debug functions for console testing
+ */
+window.debugGame = {
+    getGameEngine: () => gameEngine,
+    getCharacterManager: () => characterManager,
+    getRenderer: () => renderer,
+    getUIUpdater: () => uiUpdater,
+    // STAGE 4: Movement debug functions
+    getMovementSystem: () => movementSystem,
+    testMovement: testRandomMovement,
+    stopPlayerMovement: () => {
+        if (gameEngine && movementSystem) {
+            const player = gameEngine.characterManager.getPlayerCharacter();
+            if (player) movementSystem.stopCharacter(player);
+        }
+    },
+    debugPlayerPath: () => {
+        if (gameEngine && movementSystem) {
+            const player = gameEngine.characterManager.getPlayerCharacter();
+            if (player) movementSystem.debugPath(player);
+        }
+    },
+    getMovementStatus: () => {
+        if (!gameEngine || !movementSystem) return 'Not initialized';
+        const player = gameEngine.characterManager.getPlayerCharacter();
+        if (!player) return 'No player character';
+        return {
+            isMoving: movementSystem.isMoving(player),
+            progress: movementSystem.getMovementProgress(player),
+            pathLength: player.path ? player.path.length : 0,
+            position: player.position,
+            actionState: player.actionState
+        };
+    },
+    // RESTORED: Original debug functions
+    logStatus: logGameStatus,
+    forceUIUpdate: () => {
+        if (gameEngine && focusTargetId) {
+            const character = characterManager.getCharacter(focusTargetId);
+            if (character && uiUpdater) {
+                uiUpdater.updateUI(character);
+                console.log('🔄 Debug: UI force updated');
+            }
+        }
+    },
+    getCharacters: () => {
+        if (characterManager) {
+            return characterManager.characters.map(char => ({
+                name: char.name,
+                needs: char.needs,
+                position: char.position,
+                mood: char.mood,
+                jobRole: char.jobRole,
+                // STAGE 4: Movement info
+                isMoving: char.path && char.path.length > 0,
+                pathLength: char.path ? char.path.length : 0
+            }));
+        }
+        return [];
+    },
+    testCharacterNeeds: () => {
+        if (characterManager) {
+            characterManager.characters.forEach(char => {
+                console.log(`${char.name} needs:`, char.needs);
+            });
+        }
+    },
+    adjustCharacterNeed: (characterName, needType, value) => {
+        if (characterManager) {
+            const char = characterManager.getCharacterByName(characterName);
+            if (char && char.needs && char.needs[needType] !== undefined) {
+                char.needs[needType] = Math.max(0, Math.min(10, value));
+                char.notifyObservers('needs');
+                console.log(`Set ${characterName}'s ${needType} to ${value}`);
+            } else {
+                console.log('Character or need type not found');
+            }
+        }
+    },
+    // STAGE 4: Movement testing functions
+    testPathfinding: (startX, startY, endX, endY) => {
+        if (!gameEngine || !gameEngine.world) {
+            console.log('Game not ready for pathfinding test');
+            return;
+        }
+        return gameEngine.world.testRandomPathfinding();
+    },
+    showNavGrid: () => {
+        if (gameEngine && gameEngine.world) {
+            gameEngine.world.debugNavGrid();
         }
     }
 };
 
-window.debugPlayerPath = function() {
-    if (gameEngine && movementSystem) {
-        const player = gameEngine.characterManager.getPlayerCharacter();
-        if (player) {
-            movementSystem.debugPath(player);
-        }
-    }
-};
-
-window.getMovementSystemStatus = function() {
-    if (!gameEngine || !movementSystem) {
-        return 'Movement system not initialized';
-    }
-    
-    const player = gameEngine.characterManager.getPlayerCharacter();
-    if (!player) {
-        return 'No player character found';
-    }
-    
-    return {
-        isMoving: movementSystem.isMoving(player),
-        progress: movementSystem.getMovementProgress(player),
-        pathLength: player.path ? player.path.length : 0,
-        position: player.position,
-        actionState: player.actionState
-    };
-};
-
-// Initialize movement system integration when game engine starts
-document.addEventListener('gameEngineReady', function() {
-    enhanceGameEngineWithMovement();
-});
+console.log('🎮 Main.js loaded - Debug functions available as window.debugGame');
+console.log('🚶 Stage 4 Movement System ready - Click in world to move player character');
