@@ -269,10 +269,15 @@ window.startGameSimulation = async function(characters, focusTarget) {
             // Add characters to renderer if available
             if (renderer) {
                 console.log('👤 Adding characters to renderer...');
-                for (const character of characterManager.characters) {
-                    await renderer.addCharacter(character);
+                try {
+                    for (const character of characterManager.characters) {
+                        await renderer.addCharacter(character);
+                    }
+                    console.log('✅ Characters added to renderer');
+                } catch (rendererError) {
+                    console.warn('⚠️ Failed to add characters to renderer:', rendererError.message);
+                    // Continue without renderer characters
                 }
-                console.log('✅ Characters added to renderer');
             }
         } else {
             throw new Error('Game world was not created properly');
@@ -280,6 +285,11 @@ window.startGameSimulation = async function(characters, focusTarget) {
         
         // STAGE 4 NEW: Connect movement system to game engine
         gameEngine.setMovementSystem(movementSystem);
+        
+        // STAGE 4 NEW: Connect character manager to movement system  
+        // Make characters accessible to movement system via game engine
+        gameEngine.characterManager = characterManager;
+        
         console.log('🚶 Movement system connected');
         
         // Hide character creator and show game world
@@ -289,9 +299,15 @@ window.startGameSimulation = async function(characters, focusTarget) {
         // Start UI updates with initial focus character
         if (focusTargetId) {
             const focusCharacter = characterManager.getCharacter(focusTargetId);
-            if (focusCharacter) {
-                uiUpdater.updateUI(focusCharacter);
-                console.log(`🎯 UI focused on: ${focusCharacter.name}`);
+            if (focusCharacter && uiUpdater) {
+                try {
+                    uiUpdater.updateUI(focusCharacter);
+                    console.log(`🎯 UI focused on: ${focusCharacter.name}`);
+                } catch (uiUpdateError) {
+                    console.warn('⚠️ Failed to update UI for focus character:', uiUpdateError.message);
+                }
+            } else {
+                console.warn('⚠️ Focus character not found or UI updater not available');
             }
         }
         
@@ -302,7 +318,21 @@ window.startGameSimulation = async function(characters, focusTarget) {
         
     } catch (error) {
         console.error('❌ Failed to start game simulation:', error);
-        showErrorMessage('Failed to start game: ' + error.message);
+        console.error('❌ Error stack:', error.stack);
+        
+        // Provide more specific error message
+        let userMessage = 'Failed to start game: ';
+        if (error.message.includes('characters')) {
+            userMessage += 'Character data is invalid. Please try creating characters again.';
+        } else if (error.message.includes('world')) {
+            userMessage += 'Game world failed to initialize. Please refresh and try again.';
+        } else if (error.message.includes('renderer')) {
+            userMessage += 'Graphics system failed to load. The game may still work without graphics.';
+        } else {
+            userMessage += error.message;
+        }
+        
+        showErrorMessage(userMessage);
         
         // Try to show start screen again on critical error
         showStartScreen();
@@ -589,37 +619,63 @@ function addTabCSS() {
 }
 
 /**
- * Log current game status for debugging
+ * Log current game status for debugging - ENHANCED with null checks
  */
 function logGameStatus() {
     console.log('📊 === GAME STATUS ===');
     
     if (gameEngine) {
         console.log('🎮 Game Engine: ✅ Ready');
-        if (gameEngine.world) {
-            console.log('🌍 World Status:', gameEngine.world.getStatus());
+        try {
+            if (gameEngine.world) {
+                console.log('🌍 World Status:', gameEngine.world.getStatus());
+            } else {
+                console.log('🌍 World: ❌ Not initialized');
+            }
+        } catch (error) {
+            console.log('🌍 World Status: ❌ Error getting status:', error.message);
         }
+    } else {
+        console.log('🎮 Game Engine: ❌ Not initialized');
     }
     
     if (characterManager) {
         console.log('👥 Character Manager: ✅ Ready');
-        console.log(`👤 Characters loaded: ${characterManager.characters.length}`);
-        characterManager.characters.forEach(char => {
-            console.log(`   - ${char.name}: ${char.position.x}, ${char.position.y}`);
-        });
+        try {
+            console.log(`👤 Characters loaded: ${characterManager.characters?.length || 0}`);
+            if (characterManager.characters && characterManager.characters.length > 0) {
+                characterManager.characters.forEach(char => {
+                    console.log(`   - ${char.name}: ${char.position?.x || 0}, ${char.position?.y || 0}`);
+                });
+            }
+        } catch (error) {
+            console.log('👥 Character Manager: ❌ Error getting status:', error.message);
+        }
+    } else {
+        console.log('👥 Character Manager: ❌ Not initialized');
     }
     
     if (renderer) {
         console.log('🎨 Renderer: ✅ Ready');
+    } else {
+        console.log('🎨 Renderer: ⚠️ Not loaded (using placeholder)');
     }
     
     if (movementSystem) {
         console.log('🚶 Movement System: ✅ Ready');
-        console.log('🚶 Movement Status:', movementSystem.getStatus());
+        try {
+            console.log('🚶 Movement Status:', movementSystem.getStatus());
+        } catch (error) {
+            console.log('🚶 Movement System: ⚠️ Status unavailable');
+        }
+    } else {
+        console.log('🚶 Movement System: ❌ Not initialized');
     }
     
     if (uiUpdater) {
         console.log('🖥️ UI Updater: ✅ Ready');
+    } else {
+        console.log('🖥️ UI Updater: ❌ Not initialized');
     }
     
     console.log('📊 === END STATUS ===');
