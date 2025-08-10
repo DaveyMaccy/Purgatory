@@ -1,6 +1,6 @@
 /**
- * STAGE 2 FIXED: Character Manager with proper name handling
- * Manages game characters and loads them from character creator data
+ * Character Manager - Manages game characters
+ * Updated with standardized naming and Stage 3 enhancements
  */
 import { Character } from './character.js';
 
@@ -11,7 +11,7 @@ export class CharacterManager {
     }
 
     /**
-     * STAGE 2 FIXED: Load characters from character creator data with proper name handling
+     * STAGE 3 FIXED: Load characters from character creator data with proper name handling
      * @param {Array} characterDataArray - Array of character data from character creator
      */
     loadCharacters(characterDataArray) {
@@ -24,29 +24,8 @@ export class CharacterManager {
         // Create Character instances from the data
         characterDataArray.forEach((charData, index) => {
             try {
-                // FIXED: Create new Character instance with proper data
-                const character = new Character(
-                    charData.id,
-                    charData.name, // This should now come through properly
-                    charData.physicalAttributes,
-                    charData.skills,
-                    charData.personalityTags,
-                    charData.inventory,
-                    charData.deskItems
-                );
-                
-                // FIXED: Set all properties from character creator data
-                character.isPlayer = charData.isPlayer;
-                character.spriteSheet = charData.spriteSheet;
-                character.apiKey = charData.apiKey;
-                character.jobRole = charData.jobRole;
-                
-                // FIXED: Ensure name is properly set
-                character.name = charData.name || `Character ${index + 1}`;
-                
-                // Set initial position (will be properly positioned in Stage 2)
-                character.x = 100 + (index * 60); // Temporary spacing
-                character.y = 100 + (index * 60);
+                // Create new Character instance with proper data structure
+                const character = new Character(charData);
                 
                 // Add to characters array
                 this.characters.push(character);
@@ -75,7 +54,7 @@ export class CharacterManager {
     }
 
     /**
-     * STAGE 2 FIXED: Initialize characters - now checks if characters already loaded
+     * Initialize characters - now checks if characters already loaded
      */
     initializeCharacters() {
         // Only create default characters if none have been loaded
@@ -89,27 +68,29 @@ export class CharacterManager {
     }
 
     /**
-     * STAGE 2 FIXED: Create default characters (fallback method)
+     * UPDATED: Create default characters with standardized asset naming (fallback method)
      */
     createDefaultCharacters() {
         console.log('Creating default characters...');
         
-        // Example default character creation
-        const defaultChar = new Character(
-            'default_char_1',
-            'Default Character',
-            { age: 30, height: 175, weight: 70, build: 'Average', looks: 5 },
-            { competence: 5, laziness: 5, charisma: 5, leadership: 5 },
-            ['Friendly'],
-            ['Coffee'],
-            ['Plant']
-        );
+        // Example default character creation with updated naming
+        const defaultCharData = {
+            id: 'default_char_1',
+            name: 'Default Character',
+            isPlayer: true,
+            jobRole: 'Senior Coder',
+            physicalAttributes: { age: 30, height: 175, weight: 70, build: 'Average', looks: 5 },
+            skills: { competence: 5, laziness: 5, charisma: 5, leadership: 5 },
+            personalityTags: ['Friendly'],
+            inventory: ['Coffee'],
+            deskItems: ['Plant'],
+            spriteSheet: 'assets/characters/character-01.png', // UPDATED: Standardized naming
+            position: { x: 100, y: 100 },
+            needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 },
+            relationships: {}
+        };
         
-        defaultChar.isPlayer = true;
-        defaultChar.x = 100;
-        defaultChar.y = 100;
-        defaultChar.jobRole = 'Senior Coder';
-        defaultChar.spriteSheet = 'assets/characters/Premade_Character_48x48_01.png';
+        const defaultChar = new Character(defaultCharData);
         
         this.characters.push(defaultChar);
         this.playerCharacter = defaultChar;
@@ -142,14 +123,30 @@ export class CharacterManager {
     getPlayerCharacter() {
         return this.characters.find(char => char.isPlayer);
     }
+    
+    /**
+     * BILO_FIX: This function no longer loads hardcoded characters.
+     * It now accepts an array of characters created by the user and adds them.
+     * This is the core fix for the "character data overwriting" bug.
+     * @param {Array<Object>} createdCharacters - The array of character data from the creator.
+     */
+    loadCharacters(createdCharacters) {
+        console.log('Loading characters from creator...');
+        this.characters.length = 0; // Clear any default/placeholder characters
+        this.playerCharacter = null;
+
+        if (createdCharacters && createdCharacters.length > 0) {
+            createdCharacters.forEach(data => this.addCharacter(data));
+        }
+    }
 
     removeCharacter(id) {
         this.characters = this.characters.filter(char => char.id !== id);
     }
 
     /**
-     * STAGE 2 FIXED: Initialize character positions
-     * This function sets the initial x and y positions for all characters by finding
+     * BILO_FIX: This function was missing, causing the original crash.
+     * It sets the initial x and y positions for all characters by finding
      * a random walkable tile on the navigation grid for each one.
      * @param {World} world - The game world instance, containing the navGrid.
      */
@@ -159,49 +156,49 @@ export class CharacterManager {
             return;
         }
 
+        console.log('Initializing character positions...');
+        
         this.characters.forEach((character, index) => {
-            // Get a random walkable position
-            const position = world.getRandomWalkablePosition();
-            character.x = position.x;
-            character.y = position.y;
+            // Find a random walkable position
+            let attempts = 0;
+            let x, y;
             
-            console.log(`Positioned ${character.name} at (${character.x}, ${character.y})`);
+            do {
+                // Generate random grid coordinates
+                const gridX = Math.floor(Math.random() * world.navGrid.length);
+                const gridY = Math.floor(Math.random() * world.navGrid[0].length);
+                
+                // Check if tile is walkable (assuming 1 = walkable, 0 = blocked)
+                if (world.navGrid[gridX] && world.navGrid[gridX][gridY] === 1) {
+                    // Convert grid coordinates to world coordinates
+                    x = gridX * world.TILE_SIZE + (world.TILE_SIZE / 2);
+                    y = gridY * world.TILE_SIZE + (world.TILE_SIZE / 2);
+                    break;
+                }
+                
+                attempts++;
+            } while (attempts < 100); // Prevent infinite loop
+            
+            // Fallback position if no walkable tile found
+            if (attempts >= 100) {
+                x = 100 + (index * 60);
+                y = 100 + (index * 60);
+                console.warn(`Could not find walkable position for ${character.name}, using fallback`);
+            }
+            
+            // Set character position
+            character.position = { x, y };
+            console.log(`Positioned ${character.name} at (${x}, ${y})`);
         });
     }
 
     /**
      * Update all characters
-     * @param {number} deltaTime - Time since last update in milliseconds
+     * @param {number} deltaTime - Time passed in milliseconds
      */
     update(deltaTime) {
         this.characters.forEach(character => {
-            if (character.update) {
-                character.update(deltaTime);
-            }
-        });
-    }
-
-    /**
-     * Get all characters except the specified one
-     * @param {string} excludeId - Character ID to exclude
-     * @returns {Array} Array of characters
-     */
-    getOtherCharacters(excludeId) {
-        return this.characters.filter(char => char.id !== excludeId);
-    }
-
-    /**
-     * Get characters within a certain distance of a position
-     * @param {number} x - X coordinate
-     * @param {number} y - Y coordinate
-     * @param {number} distance - Maximum distance
-     * @returns {Array} Array of nearby characters
-     */
-    getCharactersNear(x, y, distance) {
-        return this.characters.filter(char => {
-            const dx = char.x - x;
-            const dy = char.y - y;
-            return Math.sqrt(dx * dx + dy * dy) <= distance;
+            character.update(deltaTime);
         });
     }
 }
