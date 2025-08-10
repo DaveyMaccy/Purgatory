@@ -1,5 +1,5 @@
 /**
- * STAGE 2 COMPLETE: Updated character-creator.js with proper callback system and event listeners
+ * STAGE 2 COMPLETE: Updated character-creator.js with Randomize All and proper names
  * 
  * Character Creator - Manages character creation UI and flow
  */
@@ -45,6 +45,13 @@ const INVENTORY_ITEMS = [
 const DESK_ITEMS = [
     'Plant', 'Photo Frame', 'Desk Lamp', 'Calendar', 'Stapler',
     'Motivational Quote', 'Rubber Duck', 'Action Figure'
+];
+
+// Random names for characters
+const RANDOM_NAMES = [
+    'Brian', 'Kelly', 'Lucy', 'Stan', 'Sarah', 'Mike', 'Emma', 'Dave', 
+    'Jessica', 'Tom', 'Amanda', 'Chris', 'Lisa', 'Ryan', 'Nicole', 'Josh',
+    'Jennifer', 'Matt', 'Ashley', 'Kevin', 'Michelle', 'Alex', 'Stephanie', 'Tyler'
 ];
 
 // Mock API key for testing phase
@@ -415,67 +422,106 @@ function switchTab(index) {
 }
 
 function randomizeCurrentCharacter() {
-    const char = characters[currentCharacterIndex];
+    console.log('Randomizing all characters...');
     
-    // Randomize sprite
-    const randomIndex = Math.floor(Math.random() * 20) + 1;
-    const randomSprite = `assets/characters/Premade_Character_48x48_${String(randomIndex).padStart(2, '0')}.png`;
-    char.spriteSheet = randomSprite;
-    updatePreviewCanvas(currentCharacterIndex, randomSprite);
-    highlightSelectedSprite(currentCharacterIndex, randomSprite);
-
-    // Randomize physical attributes
-    char.physicalAttributes.age = Math.floor(Math.random() * (50 - 20 + 1)) + 20;
-    char.physicalAttributes.height = Math.floor(Math.random() * (200 - 160 + 1)) + 160;
-    char.physicalAttributes.weight = Math.floor(Math.random() * (100 - 60 + 1)) + 60;
-    char.physicalAttributes.build = BUILDS[Math.floor(Math.random() * BUILDS.length)];
-    
-    // Randomize skills
-    ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
-        const value = Math.floor(Math.random() * 10) + 1;
-        char.skills[skill] = value;
-    });
-
-    // Randomize personality tags
-    const randomTags = [];
-    const availableTags = [...PERSONALITY_TAGS];
-    const maxTags = 6;
-    for (let i = 0; i < maxTags && availableTags.length > 0; i++) {
-        const tagIndex = Math.floor(Math.random() * availableTags.length);
-        const newTag = availableTags.splice(tagIndex, 1)[0];
-        // Check for mutually exclusive tags and re-randomize if a conflict exists
-        const isConflicting = MUTUALLY_EXCLUSIVE_TAGS.some(pair => 
-            pair.includes(newTag) && pair.some(t => randomTags.includes(t))
-        );
-        if (!isConflicting) {
-            randomTags.push(newTag);
-        } else {
-            i--; // Try again for this slot
+    // Randomize all 5 characters at once
+    for (let charIndex = 0; charIndex < NUM_CHARACTERS; charIndex++) {
+        const char = characters[charIndex];
+        
+        // Randomize name from the list
+        const randomName = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
+        char.name = randomName;
+        
+        // Update the name input field
+        const nameInput = document.getElementById(`name-${charIndex}`);
+        if (nameInput) {
+            nameInput.value = randomName;
         }
-    }
-    char.personalityTags = randomTags;
+        
+        // Randomize sprite
+        const randomIndex = Math.floor(Math.random() * 20) + 1;
+        const randomSprite = `assets/characters/Premade_Character_48x48_${String(randomIndex).padStart(2, '0')}.png`;
+        char.spriteSheet = randomSprite;
+        updatePreviewCanvas(charIndex, randomSprite);
+        highlightSelectedSprite(charIndex, randomSprite);
 
-    // Randomize initial items
-    const randomInventory = [];
-    const availableInventory = [...INVENTORY_ITEMS];
-    const maxInventory = 3;
-    for (let i = 0; i < maxInventory && availableInventory.length > 0; i++) {
-        const itemIndex = Math.floor(Math.random() * availableInventory.length);
-        randomInventory.push(availableInventory.splice(itemIndex, 1)[0]);
-    }
-    char.inventory = randomInventory;
+        // Randomize physical attributes
+        char.physicalAttributes.age = Math.floor(Math.random() * (50 - 20 + 1)) + 20;
+        char.physicalAttributes.height = Math.floor(Math.random() * (200 - 160 + 1)) + 160;
+        char.physicalAttributes.weight = Math.floor(Math.random() * (100 - 60 + 1)) + 60;
+        char.physicalAttributes.build = BUILDS[Math.floor(Math.random() * BUILDS.length)];
+        
+        // Randomize skills
+        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
+            const value = Math.floor(Math.random() * 10) + 1;
+            char.skills[skill] = value;
+        });
 
-    const randomDeskItems = [];
-    const availableDeskItems = [...DESK_ITEMS];
-    const maxDeskItems = 2;
-    for (let i = 0; i < maxDeskItems && availableDeskItems.length > 0; i++) {
-        const itemIndex = Math.floor(Math.random() * availableDeskItems.length);
-        randomDeskItems.push(availableDeskItems.splice(itemIndex, 1)[0]);
-    }
-    char.deskItems = randomDeskItems;
+        // Randomize job role
+        const availableRoles = JOB_ROLES_BY_OFFICE[officeType];
+        char.jobRole = availableRoles[Math.floor(Math.random() * availableRoles.length)];
+        
+        // Update job role dropdown
+        const jobRoleSelect = document.getElementById(`jobRole-${charIndex}`);
+        if (jobRoleSelect) {
+            jobRoleSelect.value = char.jobRole;
+        }
 
-    // Update UI elements from new random values
-    updateUIFromCharacterData(currentCharacterIndex, char);
+        // Randomize personality tags
+        const randomTags = [];
+        const availableTags = [...PERSONALITY_TAGS];
+        const maxTags = Math.floor(Math.random() * 6) + 1; // 1-6 tags
+        for (let i = 0; i < maxTags && availableTags.length > 0; i++) {
+            const tagIndex = Math.floor(Math.random() * availableTags.length);
+            const newTag = availableTags.splice(tagIndex, 1)[0];
+            // Check for mutually exclusive tags
+            const isConflicting = MUTUALLY_EXCLUSIVE_TAGS.some(pair => 
+                pair.includes(newTag) && pair.some(t => randomTags.includes(t))
+            );
+            if (!isConflicting) {
+                randomTags.push(newTag);
+            } else {
+                i--; // Try again for this slot
+            }
+        }
+        char.personalityTags = randomTags;
+
+        // Randomize initial items
+        const randomInventory = [];
+        const availableInventory = [...INVENTORY_ITEMS];
+        const maxInventory = Math.floor(Math.random() * 3) + 1; // 1-3 items
+        for (let i = 0; i < maxInventory && availableInventory.length > 0; i++) {
+            const itemIndex = Math.floor(Math.random() * availableInventory.length);
+            randomInventory.push(availableInventory.splice(itemIndex, 1)[0]);
+        }
+        char.inventory = randomInventory;
+
+        const randomDeskItems = [];
+        const availableDeskItems = [...DESK_ITEMS];
+        const maxDeskItems = Math.floor(Math.random() * 2) + 1; // 1-2 items
+        for (let i = 0; i < maxDeskItems && availableDeskItems.length > 0; i++) {
+            const itemIndex = Math.floor(Math.random() * availableDeskItems.length);
+            randomDeskItems.push(availableDeskItems.splice(itemIndex, 1)[0]);
+        }
+        char.deskItems = randomDeskItems;
+
+        // Update UI elements for this character
+        updateUIFromCharacterData(charIndex, char);
+        
+        console.log(`Randomized character ${charIndex}: ${char.name} (${char.jobRole})`);
+    }
+    
+    console.log('All characters randomized!');
+    
+    // Update the randomize button text temporarily
+    const randomizeBtn = document.getElementById('randomize-btn');
+    if (randomizeBtn) {
+        const originalText = randomizeBtn.textContent;
+        randomizeBtn.textContent = 'Randomized!';
+        setTimeout(() => {
+            randomizeBtn.textContent = originalText;
+        }, 1000);
+    }
 }
 
 function updateUIFromCharacterData(index, char) {
