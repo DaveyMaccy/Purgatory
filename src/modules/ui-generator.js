@@ -181,4 +181,229 @@ class UIGenerator {
                         </div>
                         <div class="form-group">
                             <label for="leadership-${index}">Leadership: <span id="leadership-val-${index}">${charData.skills.leadership}/10</span></label>
-                            <input type="range" id="leadership-${index}" min="1" max="10" value="${charData.skills.leadership}"
+                            <input type="range" id="leadership-${index}" min="1" max="10" value="${charData.skills.leadership}" />
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Appearance Section -->
+                <div class="form-section">
+                    <h3>Appearance</h3>
+                    <div class="sprite-selector">
+                        <div class="sprite-navigation">
+                            <button type="button" id="sprite-prev-${index}" class="sprite-nav-btn">◀</button>
+                            <div class="sprite-preview">
+                                <canvas id="preview-canvas-${index}" width="96" height="128"></canvas>
+                                <div id="sprite-info-${index}" class="sprite-info">Character ${index + 1}</div>
+                            </div>
+                            <button type="button" id="sprite-next-${index}" class="sprite-nav-btn">▶</button>
+                        </div>
+                        
+                        <!-- Custom Portrait Upload -->
+                        <div class="portrait-upload">
+                            <label for="portrait-upload-${index}">Custom Portrait:</label>
+                            <input type="file" id="portrait-upload-${index}" accept="image/*" />
+                            <button type="button" id="clear-custom-${index}" class="clear-btn">Clear Custom</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Personality Section -->
+                <div class="form-section">
+                    <h3>Personality Tags (Select 2-5)</h3>
+                    <div class="checkbox-grid" style="max-height: 200px; overflow-y: auto;">
+                        ${tagOptions}
+                    </div>
+                </div>
+                
+                <!-- Inventory Section -->
+                <div class="form-section">
+                    <h3>Inventory Items (Select 3-6)</h3>
+                    <div class="checkbox-grid" style="max-height: 150px; overflow-y: auto;">
+                        ${inventoryOptions}
+                    </div>
+                </div>
+                
+                <!-- Desk Items Section -->
+                <div class="form-section">
+                    <h3>Desk Items (Select 3-6)</h3>
+                    <div class="checkbox-grid" style="max-height: 150px; overflow-y: auto;">
+                        ${deskItemOptions}
+                    </div>
+                </div>
+                
+                <!-- Bio Section -->
+                <div class="form-section">
+                    <h3>Biography</h3>
+                    <textarea id="bio-${index}" placeholder="Character background and personality..." rows="4" style="width: 100%;">${charData.bio}</textarea>
+                </div>
+                
+                <!-- API Configuration Section -->
+                <div class="form-section">
+                    <h3>AI Configuration</h3>
+                    <div class="form-group">
+                        <label for="api-key-${index}">API Key (leave empty to use global):</label>
+                        <input type="password" id="api-key-${index}" value="${charData.apiKey}" placeholder="Individual API key override" />
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="form-section">
+                    <div class="action-buttons">
+                        <button type="button" onclick="randomizeCurrentCharacter()" class="randomize-btn">🎲 Randomize All</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Update a character tab's display name
+     */
+    static updateTabName(index, firstName, lastName) {
+        const tab = document.getElementById(`character-tab-${index}`);
+        if (tab) {
+            tab.textContent = `${firstName} ${lastName}`;
+        }
+    }
+    
+    /**
+     * Create character management controls HTML
+     */
+    static generateManagementControlsHTML() {
+        return `
+            <div class="character-management">
+                <button id="add-character-btn" type="button" class="management-btn">➕ Add Character</button>
+                <button id="remove-character-btn" type="button" class="management-btn">➖ Remove Character</button>
+                <span class="character-count">Characters: <span id="character-count-display">3</span>/5</span>
+            </div>
+        `;
+    }
+    
+    /**
+     * Update character count display
+     */
+    static updateCharacterCount(count) {
+        const display = document.getElementById('character-count-display');
+        if (display) {
+            display.textContent = count;
+        }
+    }
+    
+    /**
+     * Create global settings HTML
+     */
+    static generateGlobalSettingsHTML() {
+        return `
+            <div class="global-settings">
+                <div class="form-section">
+                    <h3>Global Settings</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="office-type-select">Office Type:</label>
+                            <select id="office-type-select">
+                                <option value="Tech Startup">Tech Startup</option>
+                                <option value="Law Firm">Law Firm</option>
+                                <option value="Medical Practice">Medical Practice</option>
+                                <option value="Accounting Firm">Accounting Firm</option>
+                                <option value="Marketing Agency">Marketing Agency</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="global-api-key">Global API Key:</label>
+                            <input type="password" id="global-api-key" placeholder="Default API key for all characters" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Show/hide loading state
+     */
+    static setLoadingState(isLoading, message = 'Loading...') {
+        const existingLoader = document.getElementById('character-creator-loader');
+        
+        if (isLoading) {
+            if (!existingLoader) {
+                const loader = document.createElement('div');
+                loader.id = 'character-creator-loader';
+                loader.className = 'loading-overlay';
+                loader.innerHTML = `
+                    <div class="loading-content">
+                        <div class="spinner"></div>
+                        <div class="loading-message">${message}</div>
+                    </div>
+                `;
+                document.body.appendChild(loader);
+            }
+        } else {
+            if (existingLoader) {
+                existingLoader.remove();
+            }
+        }
+    }
+    
+    /**
+     * Show error message
+     */
+    static showError(message, duration = 5000) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = message;
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4444;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 10000;
+            max-width: 300px;
+            word-wrap: break-word;
+        `;
+        
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, duration);
+    }
+    
+    /**
+     * Show success message
+     */
+    static showSuccess(message, duration = 3000) {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'success-message';
+        successDiv.textContent = message;
+        successDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #44aa44;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 10000;
+            max-width: 300px;
+            word-wrap: break-word;
+        `;
+        
+        document.body.appendChild(successDiv);
+        
+        setTimeout(() => {
+            if (successDiv.parentNode) {
+                successDiv.parentNode.removeChild(successDiv);
+            }
+        }, duration);
+    }
+}
+
+export { UIGenerator };
+
+console.log('🎨 UI Generator Module loaded');
