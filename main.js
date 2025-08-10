@@ -1,379 +1,427 @@
 /**
- * STAGE 3 COMPLETE: Main Game Initialization
+ * Character Creator - Fixed initialization for Stage 3
  * 
- * This is the main entry point that coordinates all game systems:
- * - Character creator integration
- * - Game engine initialization
- * - Renderer setup with PixiJS
- * - World and character positioning
- * - UI system integration
- * - Proper error handling and cleanup
+ * This fixes the undefined array error by ensuring all constants are properly defined
+ * before the initialization functions are called.
  */
 
-import { GameEngine } from './src/core/game-engine.js';
-import { CharacterManager } from './src/core/characters/character-manager.js';
-import { UIUpdater } from './src/ui/ui-updater.js';
-import { Renderer } from './src/rendering/renderer.js';
-import { loadMapData } from './src/core/world/world.js';
-import { initializeCharacterCreator } from './character-creator.js';
+// FIXED: Ensure all constants are defined at the top level
+const JOB_ROLES_BY_OFFICE = {
+    "Corporate": ["Senior Coder", "Junior Coder", "Team Lead", "QA Specialist", "DevOps"],
+    "Creative": ["Art Director", "Graphic Designer", "Copywriter", "UX Designer", "Creative Producer"],
+    "Healthcare": ["Nurse", "Admin", "Doctor", "Technician", "Receptionist"],
+    "Education": ["Teacher", "Principal", "Counselor", "Librarian", "Admin"]
+};
 
-// Global game state for Stage 3
-let gameEngine = null;
-let characterManager = null;
-let uiUpdater = null;
-let renderer = null;
-let focusTargetId = null;
+const PERSONALITY_TAGS = [
+    "Creative", "Introverted", "Extroverted", "Ambitious", "Laid-back", "Analytical", 
+    "Empathetic", "Competitive", "Collaborative", "Independent", "Detail-oriented", 
+    "Big-picture", "Optimistic", "Pessimistic", "Humorous", "Serious", "Spontaneous", 
+    "Organized", "Flexible", "Stubborn", "Patient", "Impatient", "Confident", 
+    "Self-doubting", "Innovative", "Traditional", "Risk-taker", "Cautious", "Witty", "Flirty"
+];
 
-// DOM Ready Event
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎮 Office Purgatory - Game Loading...');
+const INVENTORY_OPTIONS = [
+    "Coffee Mug", "Smartphone", "Notebook", "Pen", "Laptop Charger", "Headphones", 
+    "Energy Bar", "Hand Sanitizer", "Reading Glasses", "Flash Drive", "Stress Ball", 
+    "Office Keys", "Business Cards", "Breath Mints", "Phone Charger"
+];
+
+const DESK_ITEM_OPTIONS = [
+    "Family Photo", "Plant", "Calendar", "Desk Lamp", "Coffee Maker", "Radio", 
+    "Stress Ball", "Award Trophy", "Book", "Fidget Toy", "Tissue Box", "Stapler"
+];
+
+const PHYSICAL_BUILDS = ["Slim", "Average", "Athletic", "Heavy"];
+
+// FIXED: Ensure sprite options are properly defined
+const SPRITE_OPTIONS = [
+    "assets/characters/character-01.png",
+    "assets/characters/character-02.png", 
+    "assets/characters/character-03.png",
+    "assets/characters/character-04.png",
+    "assets/characters/character-05.png"
+];
+
+// Game state variables
+const NUM_CHARACTERS = 5;
+let characters = [];
+let currentCharacterIndex = 0;
+let startGameCallback = null;
+let officeType = 'Corporate';
+
+/**
+ * FIXED: Safe initialization that checks for required DOM elements
+ */
+export function initializeCharacterCreator(onComplete = null, selectedOfficeType = 'Corporate') {
+    console.log('🎭 Initializing character creator...');
     
     try {
-        // Initialize the character creator system
-        initializeCharacterCreator();
-        console.log('✅ Character creator initialized');
+        startGameCallback = onComplete;
+        officeType = selectedOfficeType;
         
-        // Enable the New Game button once everything is loaded
-        const newGameButton = document.getElementById('new-game-button');
-        if (newGameButton) {
-            newGameButton.disabled = false;
-            newGameButton.addEventListener('click', openCharacterCreator);
-            console.log('✅ New game button enabled');
+        // FIXED: Check if required DOM elements exist
+        const tabsContainer = document.getElementById('character-tabs');
+        const panelsContainer = document.getElementById('character-panels');
+        
+        if (!tabsContainer || !panelsContainer) {
+            console.warn('⚠️ Character creator DOM elements not found, using simplified initialization');
+            // Create basic characters for testing
+            initializeBasicCharacters();
+            return;
         }
         
-        // Initialize UI elements
-        initializeUIElements();
+        const randomizeBtn = document.getElementById('randomize-btn');
+        const startBtn = document.getElementById('start-simulation-button');
+
+        // Clear old event listeners to prevent duplicates
+        if (randomizeBtn) randomizeBtn.removeEventListener('click', randomizeCurrentCharacter);
+        if (startBtn) startBtn.removeEventListener('click', startSimulation);
+
+        // Clear containers
+        tabsContainer.innerHTML = '';
+        panelsContainer.innerHTML = '';
+        characters.length = 0;
+
+        // Create characters
+        for (let i = 0; i < NUM_CHARACTERS; i++) {
+            characters.push(createNewCharacter(i));
+            createTab(i);
+            createPanel(i);
+        }
         
-        console.log('🎮 Game initialization complete - Ready to start!');
+        // Set first tab as active
+        switchTab(0);
+
+        // Add event listeners
+        if (randomizeBtn) randomizeBtn.addEventListener('click', randomizeCurrentCharacter);
+        if (startBtn) startBtn.addEventListener('click', startSimulation);
+        
+        console.log('✅ Character creator initialized successfully');
         
     } catch (error) {
-        console.error('❌ Failed to initialize game:', error);
-        showErrorMessage('Failed to initialize game. Please refresh the page.');
+        console.error('❌ Error initializing character creator:', error);
+        // Fallback to basic character creation
+        initializeBasicCharacters();
     }
-});
-
-/**
- * Initialize UI elements and event handlers
- */
-function initializeUIElements() {
-    // Set up game world click handlers (for future movement system)
-    const worldContainer = document.getElementById('world-canvas-container');
-    if (worldContainer) {
-        worldContainer.addEventListener('click', handleWorldClick);
-    }
-    
-    // Set up tab switching in the status panel
-    setupStatusPanelTabs();
-    
-    console.log('✅ UI elements initialized');
 }
 
 /**
- * Handle clicks on the game world (placeholder for movement system)
+ * FIXED: Safe character creation with proper error handling
  */
-function handleWorldClick(event) {
-    // This will be implemented in Stage 4 for character movement
-    console.log('🖱️ World clicked at:', event.offsetX, event.offsetY);
-}
-
-/**
- * Set up status panel tab switching
- */
-function setupStatusPanelTabs() {
-    const tabButtons = document.querySelectorAll('[data-tab]');
-    const tabContents = document.querySelectorAll('[data-tab-content]');
-    
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetTab = button.getAttribute('data-tab');
-            
-            // Remove active class from all tabs and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.add('hidden'));
-            
-            // Add active class to clicked tab and show content
-            button.classList.add('active');
-            const targetContent = document.querySelector(`[data-tab-content="${targetTab}"]`);
-            if (targetContent) {
-                targetContent.classList.remove('hidden');
+function createNewCharacter(index) {
+    try {
+        // FIXED: Ensure arrays are defined before accessing
+        if (!SPRITE_OPTIONS || SPRITE_OPTIONS.length === 0) {
+            console.warn('⚠️ SPRITE_OPTIONS not defined, using fallback');
+            return createFallbackCharacter(index);
+        }
+        
+        if (!JOB_ROLES_BY_OFFICE[officeType]) {
+            console.warn(`⚠️ Job roles for office type '${officeType}' not found, using Corporate`);
+            officeType = 'Corporate';
+        }
+        
+        return {
+            id: `char_${index}`,
+            name: `Character ${index + 1}`,
+            isPlayer: index === 0,
+            spriteSheet: SPRITE_OPTIONS[index % SPRITE_OPTIONS.length],
+            portrait: null,
+            apiKey: '',
+            jobRole: JOB_ROLES_BY_OFFICE[officeType][0],
+            physicalAttributes: { 
+                age: 25 + Math.floor(Math.random() * 20), 
+                height: 160 + Math.floor(Math.random() * 30), 
+                weight: 60 + Math.floor(Math.random() * 40), 
+                build: PHYSICAL_BUILDS[Math.floor(Math.random() * PHYSICAL_BUILDS.length)], 
+                looks: Math.floor(Math.random() * 10) + 1 
+            },
+            skills: { 
+                competence: Math.floor(Math.random() * 10) + 1, 
+                laziness: Math.floor(Math.random() * 10) + 1, 
+                charisma: Math.floor(Math.random() * 10) + 1, 
+                leadership: Math.floor(Math.random() * 10) + 1 
+            },
+            personalityTags: getRandomTags(PERSONALITY_TAGS, 3, 6),
+            experienceTags: [],
+            needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 },
+            inventory: getRandomTags(INVENTORY_OPTIONS, 1, 3),
+            deskItems: getRandomTags(DESK_ITEM_OPTIONS, 1, 2),
+            relationships: {},
+            appearance: {
+                body: 'body_skin_tone_1',
+                hair: 'hair_style_4_blonde',
+                shirt: 'shirt_style_2_red',
+                pants: 'pants_style_1_jeans'
             }
-        });
+        };
+        
+    } catch (error) {
+        console.error(`❌ Error creating character ${index}:`, error);
+        return createFallbackCharacter(index);
+    }
+}
+
+/**
+ * FIXED: Fallback character creation for when assets are missing
+ */
+function createFallbackCharacter(index) {
+    return {
+        id: `char_${index}`,
+        name: `Character ${index + 1}`,
+        isPlayer: index === 0,
+        spriteSheet: null, // Will use placeholder in renderer
+        portrait: null,
+        apiKey: '',
+        jobRole: 'Senior Coder',
+        physicalAttributes: { age: 30, height: 175, weight: 70, build: 'Average', looks: 5 },
+        skills: { competence: 5, laziness: 5, charisma: 5, leadership: 5 },
+        personalityTags: ['Friendly'],
+        experienceTags: [],
+        needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 },
+        inventory: ['Coffee Mug'],
+        deskItems: ['Plant'],
+        relationships: {},
+        appearance: {
+            body: 'body_skin_tone_1',
+            hair: 'hair_style_4_blonde',
+            shirt: 'shirt_style_2_red',
+            pants: 'pants_style_1_jeans'
+        }
+    };
+}
+
+/**
+ * Helper function to get random tags
+ */
+function getRandomTags(sourceArray, min, max) {
+    if (!sourceArray || sourceArray.length === 0) return [];
+    
+    const count = Math.floor(Math.random() * (max - min + 1)) + min;
+    const shuffled = [...sourceArray].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, Math.min(count, sourceArray.length));
+}
+
+/**
+ * FIXED: Basic character initialization for when DOM is not ready
+ */
+function initializeBasicCharacters() {
+    console.log('🔧 Initializing basic characters for testing...');
+    
+    characters.length = 0;
+    
+    for (let i = 0; i < NUM_CHARACTERS; i++) {
+        characters.push(createNewCharacter(i));
+    }
+    
+    console.log(`✅ Created ${characters.length} basic characters`);
+}
+
+/**
+ * Create tab in the UI
+ */
+function createTab(index) {
+    const tabsContainer = document.getElementById('character-tabs');
+    if (!tabsContainer) return;
+    
+    const tab = document.createElement('button');
+    tab.textContent = `Character ${index + 1}`;
+    tab.dataset.index = index;
+    tab.className = index === 0 ? 'active' : '';
+    tab.onclick = () => switchTab(index);
+    tabsContainer.appendChild(tab);
+}
+
+/**
+ * Create panel in the UI
+ */
+function createPanel(index) {
+    const panelsContainer = document.getElementById('character-panels');
+    if (!panelsContainer) return;
+    
+    const panel = document.createElement('div');
+    panel.id = `character-panel-${index}`;
+    panel.className = `creator-panel ${index === 0 ? '' : 'hidden'}`;
+    
+    panel.innerHTML = generateBasicPanelHTML(index, characters[index]);
+    panelsContainer.appendChild(panel);
+}
+
+/**
+ * Generate basic panel HTML (simplified version)
+ */
+function generateBasicPanelHTML(index, charData) {
+    const jobRoleOptions = JOB_ROLES_BY_OFFICE[officeType]
+        .map(role => `<option value="${role}" ${role === charData.jobRole ? 'selected' : ''}>${role}</option>`)
+        .join('');
+        
+    return `
+        <div class="space-y-4">
+            <div class="form-group">
+                <label for="name-${index}">Character Name</label>
+                <input type="text" id="name-${index}" value="${charData.name}" class="w-full p-2 border rounded">
+            </div>
+            
+            <div class="form-group">
+                <label for="jobRole-${index}">Job Role</label>
+                <select id="jobRole-${index}" class="w-full p-2 border rounded">${jobRoleOptions}</select>
+            </div>
+
+            <div class="form-group">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="isPlayer-${index}" ${charData.isPlayer ? 'checked' : ''}>
+                    <label for="isPlayer-${index}">Player Character</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <p><strong>Personality:</strong> ${charData.personalityTags.join(', ')}</p>
+            </div>
+            
+            <div class="form-group">
+                <p><strong>Inventory:</strong> ${charData.inventory.join(', ')}</p>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Switch between character tabs
+ */
+function switchTab(index) {
+    currentCharacterIndex = index;
+    
+    // Update tab appearances
+    document.querySelectorAll('#character-tabs button').forEach((tab, i) => {
+        tab.classList.toggle('active', i === index);
+    });
+    
+    // Update panel visibility
+    document.querySelectorAll('.creator-panel').forEach((panel, i) => {
+        panel.classList.toggle('hidden', i !== index);
     });
 }
 
 /**
- * Open the character creator modal
+ * Randomize current character
  */
-function openCharacterCreator() {
-    console.log('🎭 Opening character creator...');
-    
-    const modal = document.getElementById('character-creator-modal');
-    const startScreen = document.getElementById('start-screen');
-    
-    if (modal && startScreen) {
-        startScreen.style.display = 'none';
-        modal.style.display = 'flex';
-        console.log('✅ Character creator opened');
-    } else {
-        console.error('❌ Character creator modal or start screen not found');
+function randomizeCurrentCharacter() {
+    if (currentCharacterIndex >= 0 && currentCharacterIndex < characters.length) {
+        characters[currentCharacterIndex] = createNewCharacter(currentCharacterIndex);
+        
+        // Update the panel
+        const panel = document.getElementById(`character-panel-${currentCharacterIndex}`);
+        if (panel) {
+            panel.innerHTML = generateBasicPanelHTML(currentCharacterIndex, characters[currentCharacterIndex]);
+        }
+        
+        console.log(`🎲 Randomized character ${currentCharacterIndex + 1}`);
     }
 }
 
 /**
- * MAIN GAME START FUNCTION - Called from character creator
- * This is the primary entry point for starting the game simulation
+ * FIXED: Start simulation with proper validation
  */
-window.startGameSimulation = async function(charactersFromCreator) {
+function startSimulation() {
+    console.log('🚀 Starting simulation...');
+    
     try {
-        console.log('🚀 Starting game simulation with characters:', charactersFromCreator);
+        // Update character data from forms
+        updateCharactersFromForms();
         
-        // Validate input
-        if (!charactersFromCreator || charactersFromCreator.length === 0) {
-            throw new Error('No characters provided for simulation');
+        // Validate characters
+        if (characters.length === 0) {
+            throw new Error('No characters created');
         }
         
-        // Show loading state
-        showLoadingState();
+        // Ensure at least one player character
+        const playerCharacters = characters.filter(char => char.isPlayer);
+        if (playerCharacters.length === 0) {
+            characters[0].isPlayer = true;
+            console.log('⚠️ No player character found, making first character the player');
+        }
         
-        // Initialize character manager
-        console.log('👥 Initializing character manager...');
-        characterManager = new CharacterManager();
+        if (playerCharacters.length > 1) {
+            // Keep only the first player character
+            characters.forEach((char, index) => {
+                if (char.isPlayer && index > 0) {
+                    char.isPlayer = false;
+                }
+            });
+            console.log('⚠️ Multiple player characters found, using first one');
+        }
         
-        // Load characters from the character creator
-        characterManager.loadCharacters(charactersFromCreator);
-        
-        // Set the first player character as focus target
-        const playerCharacter = characterManager.getPlayerCharacter();
-        if (playerCharacter) {
-            focusTargetId = playerCharacter.id;
-            console.log(`🎯 Focus set to player: ${playerCharacter.name}`);
-        } else {
-            console.warn('⚠️ No player character found, using first character');
-            if (characterManager.characters.length > 0) {
-                focusTargetId = characterManager.characters[0].id;
+        // Validate character names
+        characters.forEach((char, index) => {
+            if (!char.name || char.name.trim() === '') {
+                char.name = `Character ${index + 1}`;
             }
-        }
-        
-        // Initialize UI updater
-        console.log('🖥️ Initializing UI updater...');
-        uiUpdater = new UIUpdater(characterManager);
-        
-        // Subscribe UI updater to all characters for observer pattern
-        characterManager.characters.forEach(character => {
-            uiUpdater.subscribeToCharacter(character);
-            console.log(`🔗 UI updater subscribed to: ${character.name}`);
         });
         
-        // Load map data
-        console.log('🗺️ Loading map data...');
-        const mapData = await loadMapData();
-        console.log('✅ Map data loaded successfully');
+        // Convert to proper format for game engine
+        const gameCharacters = characters.map(char => ({
+            ...char,
+            relationships: {},
+            position: { x: 0, y: 0 },
+            actionState: 'idle',
+            mood: 'Neutral',
+            facingAngle: 90,
+            maxSightRange: 250,
+            isBusy: false,
+            currentAction: null,
+            currentActionTranscript: [],
+            pendingIntent: null,
+            heldItem: null,
+            conversationId: null,
+            shortTermMemory: [],
+            longTermMemory: [],
+            longTermGoal: null,
+            assignedTask: null,
+            pixiArmature: null
+        }));
         
-        // Initialize game engine
-        console.log('🎮 Initializing game engine...');
-        gameEngine = new GameEngine();
-        gameEngine.characterManager = characterManager;
-        gameEngine.setUIUpdater(uiUpdater);
+        console.log('✅ Starting simulation with characters:', gameCharacters);
         
-        // Initialize renderer
-        console.log('🎨 Initializing renderer...');
-        const worldContainer = document.getElementById('world-canvas-container');
-        if (!worldContainer) {
-            throw new Error('World canvas container not found in DOM');
-        }
-        
-        renderer = new Renderer(worldContainer);
-        await renderer.initialize();
-        gameEngine.setRenderer(renderer);
-        console.log('✅ Renderer initialized');
-        
-        // Render the map
-        renderer.renderMap(mapData);
-        console.log('🏢 Map rendered');
-        
-        // Start the game engine (this creates the world and nav grid)
-        gameEngine.initialize(mapData);
-        console.log('✅ Game engine initialized');
-        
-        // Initialize character positions AFTER world is created
-        if (gameEngine.world) {
-            characterManager.initializeCharacterPositions(gameEngine.world);
-            console.log('📍 Character positions initialized');
-            
-            // Add characters to renderer
-            console.log('👤 Adding characters to renderer...');
-            for (const character of characterManager.characters) {
-                await renderer.addCharacter(character);
-            }
-            console.log('✅ Characters added to renderer');
+        // Call the game start function
+        if (window.startGameSimulation) {
+            window.startGameSimulation(gameCharacters);
         } else {
-            throw new Error('Game world was not created properly');
+            console.error('❌ startGameSimulation function not found');
+            alert('Failed to start simulation. Please check the console for errors.');
         }
-        
-        // Hide loading/start screens and show game world
-        hideLoadingState();
-        hideStartScreen();
-        hideCharacterCreator();
-        showGameWorld();
-        
-        // Start UI updates with initial focus character
-        if (focusTargetId) {
-            const focusCharacter = characterManager.getCharacter(focusTargetId);
-            if (focusCharacter) {
-                uiUpdater.updateUI(focusCharacter);
-                console.log(`🎯 UI focused on: ${focusCharacter.name}`);
-            }
-        }
-        
-        // Log game status for debugging
-        logGameStatus();
-        
-        console.log('🎉 Game simulation started successfully!');
         
     } catch (error) {
-        console.error('❌ Failed to start game simulation:', error);
-        hideLoadingState();
-        showErrorMessage(`Failed to start game: ${error.message}`);
-    }
-};
-
-/**
- * Show loading state during game initialization
- */
-function showLoadingState() {
-    // You can add a loading spinner or message here
-    console.log('⏳ Loading game...');
-}
-
-/**
- * Hide loading state
- */
-function hideLoadingState() {
-    // Hide loading spinner/message
-    console.log('✅ Loading complete');
-}
-
-/**
- * Hide the start screen
- */
-function hideStartScreen() {
-    const startScreen = document.getElementById('start-screen');
-    if (startScreen) {
-        startScreen.style.display = 'none';
-        console.log('📺 Start screen hidden');
+        console.error('❌ Failed to start simulation:', error);
+        alert(`Failed to start simulation: ${error.message}`);
     }
 }
 
 /**
- * Hide the character creator modal
+ * Update character data from form inputs
  */
-function hideCharacterCreator() {
-    const modal = document.getElementById('character-creator-modal');
-    if (modal) {
-        modal.style.display = 'none';
-        console.log('🎭 Character creator hidden');
-    }
+function updateCharactersFromForms() {
+    characters.forEach((char, index) => {
+        const nameInput = document.getElementById(`name-${index}`);
+        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
+        const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
+        
+        if (nameInput) char.name = nameInput.value || char.name;
+        if (jobRoleSelect) char.jobRole = jobRoleSelect.value || char.jobRole;
+        if (isPlayerCheckbox) char.isPlayer = isPlayerCheckbox.checked;
+    });
 }
 
-/**
- * Show the main game world interface
- */
-function showGameWorld() {
-    const gameContainer = document.querySelector('.game-container');
-    if (gameContainer) {
-        gameContainer.style.display = 'flex';
-        console.log('🌍 Game world shown');
-    }
-}
+// Global functions for HTML onclick handlers
+window.switchTab = switchTab;
+window.randomizeCurrentCharacter = randomizeCurrentCharacter;
+window.startSimulation = startSimulation;
 
-/**
- * Show error message to user
- */
-function showErrorMessage(message) {
-    // You can replace this with a proper error modal
-    alert(message);
-    console.error('💥 Error shown to user:', message);
-}
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎭 Character creator DOM ready');
+    
+    // Don't auto-initialize here, wait for explicit call from main.js
+});
 
-/**
- * Log comprehensive game status for debugging
- */
-function logGameStatus() {
-    console.log('📊 Game Status Report:');
-    
-    if (gameEngine) {
-        console.log('🎮 Game Engine:', gameEngine.getStatus());
-    }
-    
-    if (characterManager) {
-        console.log('👥 Character Manager:', characterManager.getStatus());
-    }
-    
-    if (renderer) {
-        console.log('🎨 Renderer:', renderer.getStatus());
-    }
-    
-    if (uiUpdater) {
-        console.log('🖥️ UI Updater: Active with clock running');
-    }
-}
-
-/**
- * Clean up game resources (for page unload or restart)
- */
-function cleanupGame() {
-    console.log('🧹 Cleaning up game resources...');
-    
-    if (gameEngine) {
-        gameEngine.stop();
-        gameEngine = null;
-    }
-    
-    if (renderer) {
-        renderer.destroy();
-        renderer = null;
-    }
-    
-    if (uiUpdater) {
-        uiUpdater.destroy();
-        uiUpdater = null;
-    }
-    
-    characterManager = null;
-    focusTargetId = null;
-    
-    console.log('✅ Game cleanup complete');
-}
-
-/**
- * Handle page unload cleanup
- */
-window.addEventListener('beforeunload', cleanupGame);
-
-/**
- * Debug functions for console testing
- */
-window.debugGame = {
-    getGameEngine: () => gameEngine,
-    getCharacterManager: () => characterManager,
-    getRenderer: () => renderer,
-    getUIUpdater: () => uiUpdater,
-    logStatus: logGameStatus,
-    forceUIUpdate: () => {
-        if (gameEngine && focusTargetId) {
-            const character = characterManager.getCharacter(focusTargetId);
-            if (character && uiUpdater) {
-                uiUpdater.updateUI(character);
-                console.log('🔄 Debug: UI force updated');
-            }
-        }
-    },
-    getCharacterPositions: () => {
-        if (characterManager) {
-            return characterManager.getCharacterPositions();
-        }
-        return [];
-    }
-};
-
-console.log('🎮 Main.js loaded - Debug functions available as window.debugGame');
+console.log('🎭 Character creator loaded and ready');
