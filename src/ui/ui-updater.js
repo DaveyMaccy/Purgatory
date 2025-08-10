@@ -1,8 +1,7 @@
 /**
- * UI Updater - Complete implementation for Stage 3: Character Status Integration
+ * FIXED UI Updater - Complete implementation for Stage 3: Character Status Integration
  * Handles all status panel updates, real-time clock, and character data binding
- * Based on SSOT Chapter 3.9: UI Data Binding
- * Updated with standardized imports and file paths
+ * FIXED: Proper tab content handling and relationships display
  */
 export class UIUpdater {
     constructor(characterManager) {
@@ -81,6 +80,8 @@ export class UIUpdater {
      * Update all status bars (energy, hunger, social, stress)
      */
     updateStatusBars(character) {
+        if (!character.needs) return;
+        
         this.updateStatusBar('energy', character.needs.energy);
         this.updateStatusBar('hunger', character.needs.hunger);
         this.updateStatusBar('social', character.needs.social);
@@ -108,8 +109,7 @@ export class UIUpdater {
     }
 
     /**
-     * Update character portrait in the status panel
-     * FIXED: Properly crop sprite sheets to show just the character face
+     * FIXED: Update character portrait using custom or sprite portrait
      */
     updatePortrait(character) {
         const portraitCanvas = document.getElementById('player-portrait-canvas');
@@ -120,62 +120,30 @@ export class UIUpdater {
         // Clear the canvas
         ctx.clearRect(0, 0, portraitCanvas.width, portraitCanvas.height);
         
-        // If character has a custom portrait (base64 string), display it
-        if (character.portrait) {
+        // FIXED: Use custom portrait if available, otherwise use sprite portrait
+        const portraitData = character.customPortrait || character.portrait;
+        
+        if (portraitData) {
             const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
             };
-            img.src = character.portrait;
-        } else if (character.spriteSheet) {
-            // Use sprite sheet as fallback portrait - crop to show just the head
-            const img = new Image();
-            img.onload = () => {
-                // Crop the sprite sheet to show just the character's head
-                // Character sprites are 48x96, head is roughly top 24x24 pixels
-                const sourceX = 12; // Start a bit inward from left edge
-                const sourceY = 8;  // Start below any hair/hat
-                const sourceWidth = 24;  // Width of face area
-                const sourceHeight = 24; // Height of face area
-                
-                // Draw the cropped head to fill the portrait canvas
-                ctx.drawImage(
-                    img,
-                    sourceX, sourceY, sourceWidth, sourceHeight, // Source crop
-                    0, 0, portraitCanvas.width, portraitCanvas.height // Destination fill
-                );
-            };
-            img.onerror = () => {
-                // If sprite sheet fails to load, draw placeholder
-                this.drawPortraitPlaceholder(ctx, portraitCanvas, character);
-            };
-            img.src = character.spriteSheet;
+            img.src = portraitData;
         } else {
-            // Draw a simple placeholder
-            this.drawPortraitPlaceholder(ctx, portraitCanvas, character);
+            // Draw a simple placeholder with character's first initial
+            ctx.fillStyle = '#4f46e5';
+            ctx.fillRect(0, 0, portraitCanvas.width, portraitCanvas.height);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(character.name.charAt(0).toUpperCase(), 
+                portraitCanvas.width / 2, portraitCanvas.height / 2 + 6);
         }
     }
 
     /**
-     * Draw a placeholder portrait when no image is available
-     */
-    drawPortraitPlaceholder(ctx, canvas, character) {
-        ctx.fillStyle = '#4f46e5';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = 'white';
-        ctx.font = '16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(
-            character.name.charAt(0).toUpperCase(), 
-            canvas.width / 2, 
-            canvas.height / 2
-        );
-    }
-
-    /**
-     * Update the Inventory tab content
+     * FIXED: Update the Inventory tab content
      */
     updateInventoryTab(character) {
         const inventoryList = document.getElementById('inventory-list');
@@ -188,7 +156,7 @@ export class UIUpdater {
         if (character.heldItem) {
             const li = document.createElement('li');
             li.className = 'p-2 bg-yellow-100 border border-yellow-300 rounded text-sm';
-            li.innerHTML = `<span class="font-semibold">Holding:</span> ${character.heldItem.type || 'Unknown Item'}`;
+            li.innerHTML = `<span class="font-semibold">Holding:</span> ${character.heldItem.type || character.heldItem.name || 'Unknown Item'}`;
             inventoryList.appendChild(li);
         }
         
@@ -198,7 +166,7 @@ export class UIUpdater {
                 const li = document.createElement('li');
                 li.className = 'p-2 bg-gray-50 border border-gray-200 rounded text-sm';
                 
-                // Handle both string items (from character creator) and object items (from game)
+                // FIXED: Handle both string items (from character creator) and object items (from game)
                 if (typeof item === 'string') {
                     li.textContent = item;
                 } else {
@@ -217,7 +185,7 @@ export class UIUpdater {
     }
 
     /**
-     * Update the Tasks tab content
+     * FIXED: Update the Tasks tab content
      */
     updateTasksTab(character) {
         const taskContent = document.getElementById('task-content');
@@ -265,8 +233,8 @@ export class UIUpdater {
         } else {
             // Show job role as default "task"
             const jobDiv = document.createElement('div');
-            jobDiv.className = 'text-gray-600';
-            jobDiv.innerHTML = `<span class="font-medium">Role:</span> ${character.jobRole}`;
+            jobDiv.className = 'text-gray-600 mb-2';
+            jobDiv.innerHTML = `<span class="font-medium">Job Role:</span> ${character.jobRole}`;
             taskContent.appendChild(jobDiv);
             
             const noTask = document.createElement('div');
@@ -295,7 +263,7 @@ export class UIUpdater {
     }
 
     /**
-     * Update the Relationships tab content
+     * FIXED: Update the Relationships tab content with all characters
      */
     updateRelationshipsTab(character) {
         const relationshipsList = document.getElementById('relationships-list');
@@ -304,8 +272,9 @@ export class UIUpdater {
         // Clear existing content
         relationshipsList.innerHTML = '';
         
-        // Get all other characters
-        const otherCharacters = this.characterManager.characters.filter(c => c.id !== character.id);
+        // FIXED: Get all other characters from character manager
+        const allCharacters = this.characterManager.characters;
+        const otherCharacters = allCharacters.filter(c => c.id !== character.id);
         
         if (otherCharacters.length === 0) {
             const li = document.createElement('li');
@@ -315,6 +284,7 @@ export class UIUpdater {
             return;
         }
         
+        // FIXED: Show all characters, not just 3
         otherCharacters.forEach(otherChar => {
             const relationshipScore = character.relationships[otherChar.id] || 50; // Default neutral
             const li = document.createElement('li');
@@ -420,8 +390,10 @@ export class UIUpdater {
         this.stopClock();
         
         // Unsubscribe from all characters
-        this.characterManager.characters.forEach(character => {
-            this.unsubscribeFromCharacter(character);
-        });
+        if (this.characterManager && this.characterManager.characters) {
+            this.characterManager.characters.forEach(character => {
+                this.unsubscribeFromCharacter(character);
+            });
+        }
     }
 }
