@@ -197,4 +197,175 @@ export class World {
             for (let dx = -radius; dx <= radius; dx++) {
                 for (let dy = -radius; dy <= radius; dy++) {
                     // Only check perimeter of current radius
-                    if (Math
+                    if (Math.abs(dx) !== radius && Math.abs(dy) !== radius && radius > 0) {
+                        continue;
+                    }
+                    
+                    const checkX = centerX + dx;
+                    const checkY = centerY + dy;
+                    
+                    if (this.navGrid.isWalkable(checkX, checkY)) {
+                        return {
+                            x: checkX * this.TILE_SIZE + this.TILE_SIZE / 2,
+                            y: checkY * this.TILE_SIZE + this.TILE_SIZE / 2
+                        };
+                    }
+                }
+            }
+        }
+        
+        console.warn('⚠️ No walkable position found near target');
+        return null;
+    }
+
+    /**
+     * STAGE 4: Convert pixel coordinates to grid coordinates
+     * @param {Object} pixelPos - Position in pixels {x, y}
+     * @returns {Object} Position in grid coordinates {x, y}
+     */
+    pixelToGrid(pixelPos) {
+        return {
+            x: Math.floor(pixelPos.x / this.TILE_SIZE),
+            y: Math.floor(pixelPos.y / this.TILE_SIZE)
+        };
+    }
+
+    /**
+     * STAGE 4: Convert grid coordinates to pixel coordinates (center of tile)
+     * @param {Object} gridPos - Position in grid coordinates {x, y}
+     * @returns {Object} Position in pixels {x, y}
+     */
+    gridToPixel(gridPos) {
+        return {
+            x: gridPos.x * this.TILE_SIZE + this.TILE_SIZE / 2,
+            y: gridPos.y * this.TILE_SIZE + this.TILE_SIZE / 2
+        };
+    }
+
+    /**
+     * Update world state
+     * @param {number} deltaTime - Time since last update in milliseconds
+     */
+    update(deltaTime) {
+        this.gameTime += deltaTime;
+        
+        // Update world systems here
+        // This will be expanded in later stages
+    }
+
+    /**
+     * STAGE 5+: Populate world with objects (placeholder for later stages)
+     */
+    populateWorldWithObjects() {
+        console.log('🏢 Populating world with objects...');
+        // Implementation will be completed in later stages
+    }
+
+    /**
+     * STAGE 4: Debug method to visualize navigation grid
+     */
+    debugNavGrid() {
+        if (!this.navGrid) {
+            console.log('❌ Navigation grid not available');
+            return;
+        }
+        
+        console.log('🗺️ World Navigation Grid Debug:');
+        console.log(`World Size: ${this.worldWidth}x${this.worldHeight} pixels`);
+        console.log(`Grid Size: ${this.width}x${this.height} tiles`);
+        console.log(`Tile Size: ${this.TILE_SIZE}x${this.TILE_SIZE} pixels`);
+        
+        this.navGrid.debugPrint();
+    }
+
+    /**
+     * STAGE 4: Test pathfinding between two random positions
+     */
+    testRandomPathfinding() {
+        const start = this.getRandomWalkablePosition();
+        const end = this.getRandomWalkablePosition();
+        
+        console.log(`🧪 Testing pathfinding from (${Math.floor(start.x)}, ${Math.floor(start.y)}) to (${Math.floor(end.x)}, ${Math.floor(end.y)})`);
+        
+        const path = this.findPath(start, end);
+        
+        if (path.length > 0) {
+            console.log(`✅ Path found with ${path.length} waypoints`);
+            console.log('Path waypoints:', path.map(p => `(${Math.floor(p.x)}, ${Math.floor(p.y)})`));
+        } else {
+            console.log('❌ No path found');
+        }
+        
+        return { start, end, path };
+    }
+
+    /**
+     * STAGE 4: Get world boundaries for validation
+     */
+    getWorldBounds() {
+        return {
+            minX: 0,
+            minY: 0,
+            maxX: this.worldWidth,
+            maxY: this.worldHeight,
+            width: this.worldWidth,
+            height: this.worldHeight
+        };
+    }
+
+    /**
+     * STAGE 4: Check if position is within world bounds
+     * @param {Object} position - Position to check {x, y}
+     * @returns {boolean} True if within bounds
+     */
+    isWithinBounds(position) {
+        return position.x >= 0 && position.x < this.worldWidth &&
+               position.y >= 0 && position.y < this.worldHeight;
+    }
+
+    /**
+     * STAGE 4: Clamp position to world bounds
+     * @param {Object} position - Position to clamp {x, y}
+     * @returns {Object} Clamped position
+     */
+    clampToWorldBounds(position) {
+        return {
+            x: Math.max(0, Math.min(this.worldWidth - 1, position.x)),
+            y: Math.max(0, Math.min(this.worldHeight - 1, position.y))
+        };
+    }
+
+    /**
+     * STAGE 4: Get walkable positions near a specific location
+     * @param {Object} center - Center position {x, y}
+     * @param {number} radius - Search radius in pixels
+     * @returns {Array} Array of walkable positions
+     */
+    getWalkablePositionsNear(center, radius = 100) {
+        const walkablePositions = [];
+        const gridRadius = Math.ceil(radius / this.TILE_SIZE);
+        const centerGridX = Math.floor(center.x / this.TILE_SIZE);
+        const centerGridY = Math.floor(center.y / this.TILE_SIZE);
+        
+        for (let dx = -gridRadius; dx <= gridRadius; dx++) {
+            for (let dy = -gridRadius; dy <= gridRadius; dy++) {
+                const gridX = centerGridX + dx;
+                const gridY = centerGridY + dy;
+                
+                if (this.navGrid.isWalkable(gridX, gridY)) {
+                    const pixelPos = this.gridToPixel({ x: gridX, y: gridY });
+                    const distance = Math.sqrt(
+                        Math.pow(pixelPos.x - center.x, 2) + 
+                        Math.pow(pixelPos.y - center.y, 2)
+                    );
+                    
+                    if (distance <= radius) {
+                        walkablePositions.push(pixelPos);
+                    }
+                }
+            }
+        }
+        
+        return walkablePositions;
+    }
+}
