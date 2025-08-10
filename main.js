@@ -1,11 +1,11 @@
 /**
- * STAGE 1 FIX: Complete rewrite of main.js initialization sequence
+ * STAGE 2 FIX: Updated main.js with PixiJS rendering support
  * 
  * Fixed Issues:
- * 1. Proper UI state management with modals
- * 2. Correct function name for character creator
- * 3. Map data loading before game engine initialization
- * 4. Proper callback flow from character creation to game start
+ * 1. Added PixiJS initialization
+ * 2. Connected renderer to game engine
+ * 3. Added character positioning and rendering
+ * 4. Proper error handling for rendering
  */
 
 import { GameEngine } from './src/core/gameEngine.js';
@@ -13,11 +13,13 @@ import { CharacterManager } from './src/core/characters/characterManager.js';
 import { UIUpdater } from './src/ui/uiUpdater.js';
 import { loadMapData } from './src/core/world/world.js';
 import { initializeCharacterCreator } from './character-creator.js';
+import { Renderer } from './src/rendering/renderer.js';
 
 // Global game state
 let gameEngine = null;
 let characterManager = null;
 let uiUpdater = null;
+let renderer = null;
 let mapData = null;
 
 /**
@@ -26,6 +28,9 @@ let mapData = null;
 async function initializeGame() {
     try {
         console.log('Initializing game...');
+        
+        // Load PixiJS from CDN
+        await loadPixiJS();
         
         // Load map data first
         mapData = await loadMapData();
@@ -58,6 +63,29 @@ async function initializeGame() {
             loadingStatus.textContent = 'Error loading game. Please refresh.';
         }
     }
+}
+
+/**
+ * Load PixiJS from CDN
+ */
+async function loadPixiJS() {
+    return new Promise((resolve, reject) => {
+        if (window.PIXI) {
+            resolve();
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js';
+        script.onload = () => {
+            console.log('PixiJS loaded successfully');
+            resolve();
+        };
+        script.onerror = () => {
+            reject(new Error('Failed to load PixiJS'));
+        };
+        document.head.appendChild(script);
+    });
 }
 
 /**
@@ -156,11 +184,31 @@ async function startGameWithCharacters(characterData, selectedOfficeType) {
             mainGameUI.classList.remove('hidden');
         }
         
+        // STAGE 2: Initialize renderer first
+        const worldContainer = document.getElementById('world-canvas-container');
+        if (!worldContainer) {
+            throw new Error('World canvas container not found');
+        }
+        
+        renderer = new Renderer(worldContainer);
+        await renderer.initialize();
+        
+        // Render the map
+        renderer.renderMap(mapData);
+        
         // Initialize game systems
         characterManager = new CharacterManager();
         
         // Load characters from character creator data
         characterManager.loadCharacters(characterData);
+        
+        // Position characters in valid world locations
+        positionCharactersInWorld();
+        
+        // STAGE 2: Add characters to renderer
+        for (const character of characterManager.characters) {
+            await renderer.addCharacter(character);
+        }
         
         // Initialize UI updater
         uiUpdater = new UIUpdater(characterManager);
@@ -173,25 +221,64 @@ async function startGameWithCharacters(characterData, selectedOfficeType) {
         // Initialize game engine with map data
         gameEngine = new GameEngine();
         gameEngine.uiUpdater = uiUpdater;
+        gameEngine.renderer = renderer; // Connect renderer to game engine
         
         // Start game engine with loaded map data
         gameEngine.initialize(mapData);
         
         console.log('Game started successfully');
+        console.log('Characters rendered in world');
         
     } catch (error) {
         console.error('Failed to start game:', error);
         
         // Show error to user and return to start screen
-        alert('Failed to start game. Please try again.');
+        alert(`Failed to start game: ${error.message}. Please try again.`);
         returnToStartScreen();
     }
+}
+
+/**
+ * Position characters in valid world locations
+ */
+function positionCharactersInWorld() {
+    if (!characterManager || !characterManager.characters) {
+        return;
+    }
+    
+    // Define valid character spawn positions in the office
+    const spawnPositions = [
+        { x: 160, y: 120 }, // Near desk 1
+        { x: 360, y: 120 }, // Near desk 2
+        { x: 560, y: 120 }, // Near desk 3
+        { x: 160, y: 320 }, // Near desk 4
+        { x: 360, y: 320 }, // Near desk 5
+    ];
+    
+    characterManager.characters.forEach((character, index) => {
+        const position = spawnPositions[index % spawnPositions.length];
+        
+        // Add some random offset to prevent exact overlap
+        const offsetX = (Math.random() - 0.5) * 40;
+        const offsetY = (Math.random() - 0.5) * 40;
+        
+        character.x = position.x + offsetX;
+        character.y = position.y + offsetY;
+        
+        console.log(`Positioned ${character.name} at (${character.x}, ${character.y})`);
+    });
 }
 
 /**
  * Return to start screen (for error handling)
  */
 function returnToStartScreen() {
+    // Cleanup renderer if it exists
+    if (renderer) {
+        renderer.destroy();
+        renderer = null;
+    }
+    
     // Hide all modals
     const modals = ['office-type-modal-backdrop', 'creator-modal-backdrop', 'main-game-ui'];
     modals.forEach(modalId => {
