@@ -65,22 +65,38 @@ function initializeUIElements() {
 }
 
 /**
- * FIXED: Add CSS for proper tab styling
+ * FIXED: Add CSS for proper tab styling with even alignment
  */
 function addTabCSS() {
     const style = document.createElement('style');
     style.textContent = `
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #d1d5db;
+            margin-bottom: 0;
+            background-color: #f9fafb;
+            padding: 8px 8px 0 8px;
+            border-radius: 6px 6px 0 0;
+            gap: 2px;
+        }
+        
         .tab-link {
             background-color: #f3f4f6;
             border: 1px solid #d1d5db;
             color: #374151;
-            padding: 8px 16px;
+            padding: 8px 12px;
             cursor: pointer;
             border-radius: 6px 6px 0 0;
             font-size: 14px;
             font-weight: 500;
             transition: all 0.2s ease;
-            margin-right: 4px;
+            flex: 1;
+            text-align: center;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom: none;
         }
         
         .tab-link:hover {
@@ -92,6 +108,7 @@ function addTabCSS() {
             background-color: #3b82f6;
             color: white;
             border-color: #3b82f6;
+            border-bottom: 1px solid #3b82f6;
         }
         
         .tab-content {
@@ -102,22 +119,26 @@ function addTabCSS() {
             border-radius: 0 0 6px 6px;
             background-color: white;
             min-height: 200px;
+            margin-top: -1px;
         }
         
         .tab-content.active {
             display: block;
         }
         
-        .tabs {
-            border-bottom: 1px solid #d1d5db;
-            margin-bottom: 0;
-            background-color: #f9fafb;
-            padding: 8px 8px 0 8px;
-            border-radius: 6px 6px 0 0;
+        /* Ensure the widget container has proper flex layout */
+        .widget.flex-grow {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .widget .flex-grow {
+            flex: 1;
+            overflow-y: auto;
         }
     `;
     document.head.appendChild(style);
-    console.log('✅ Tab CSS injected');
+    console.log('✅ Tab CSS injected with proper alignment');
 }
 
 /**
