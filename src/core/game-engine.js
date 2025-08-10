@@ -1,5 +1,10 @@
-// src/core/game-engine.js - Enhanced with Movement System for Stage 4
+// src/core/game-engine.js - COMPLETE FIXED VERSION
+// Restores ALL original methods + adds Stage 4 movement system integration
 
+/**
+ * Game Engine - Complete Stage 2-3 Integration + Stage 4 Movement
+ * Lightweight coordinator for game systems with full renderer support
+ */
 import { CharacterManager } from './characters/character-manager.js';
 import { World } from './world/world.js';
 
@@ -7,17 +12,16 @@ export class GameEngine {
     constructor() {
         // Core systems
         this.characterManager = new CharacterManager();
+        // World will be initialized after map data is loaded
         this.world = null;
         
         // STAGE 2: Rendering system
         this.renderer = null;
         this.uiUpdater = null;
         
-        // STAGE 4: Movement system
-        this.movementSystem = null;
-        
-        // STAGE 3+: Systems for future stages
+        // STAGE 3 + 4: Systems that will be added in later stages
         this.interactionSystem = null;
+        this.movementSystem = null;
         this.perceptionSystem = null;
         this.eventSystem = null;
         this.conversationSystem = null;
@@ -28,15 +32,14 @@ export class GameEngine {
         this.gameTime = 0;
         this.isRunning = false;
         this.updateLoop = null;
-        this.lastUpdateTime = 0;
     }
 
     /**
-     * STAGE 4: Initialize with movement system support
+     * RESTORED: Initialize with full renderer support
      */
     initialize(mapData) {
         try {
-            console.log('🎮 Initializing game engine with movement system...');
+            console.log('🎮 Initializing game engine...');
             
             if (!mapData) {
                 throw new Error('Map data is required for initialization');
@@ -45,143 +48,125 @@ export class GameEngine {
             // Initialize world with map data
             this.world = new World(this.characterManager, mapData);
             
-            // Generate navigation grid for character positioning and pathfinding
+            // Generate navigation grid for character positioning
             this.world.generateNavGrid();
             
-            // Validate navigation grid
-            if (!this.world.navGrid || this.world.navGrid.grid.length === 0) {
-                throw new Error('Navigation grid initialization failed');
-            }
+            // Initialize characters (they should already be loaded by characterManager)
+            this.characterManager.initializeCharacters();
+            
+            // STAGE 2: Start the update loop
+            this.startSimpleUpdateLoop();
+            this.isRunning = true;
             
             console.log('✅ Game engine initialized successfully');
             
-            // Dispatch ready event for movement system integration
-            document.dispatchEvent(new CustomEvent('gameEngineReady'));
-            
         } catch (error) {
-            console.error('❌ Game engine initialization failed:', error);
+            console.error('❌ Failed to initialize game engine:', error);
             throw error;
         }
     }
 
     /**
-     * STAGE 4: Start the game with movement system
+     * RESTORED: Set renderer reference
+     * @param {Renderer} renderer - The renderer instance
      */
-    start() {
-        if (this.isRunning) {
-            console.warn('⚠️ Game engine already running');
-            return;
-        }
-
-        console.log('🚀 Starting game engine...');
-        
-        try {
-            // Validate required systems
-            this.validateSystems();
-            
-            // Start the update loop
-            this.isRunning = true;
-            this.lastUpdateTime = performance.now();
-            this.startUpdateLoop();
-            
-            console.log('✅ Game engine started successfully');
-            
-        } catch (error) {
-            console.error('❌ Failed to start game engine:', error);
-            this.isRunning = false;
-            throw error;
-        }
+    setRenderer(renderer) {
+        this.renderer = renderer;
+        console.log('🎨 Renderer connected to game engine');
     }
 
     /**
-     * STAGE 4: Enhanced update loop with movement system
+     * RESTORED: Set UI updater reference
+     * @param {UIUpdater} uiUpdater - The UI updater instance
      */
-    startUpdateLoop() {
-        const updateFunction = (currentTime) => {
-            if (!this.isRunning) return;
-            
-            // Calculate delta time
-            const deltaTime = currentTime - this.lastUpdateTime;
-            this.lastUpdateTime = currentTime;
-            
-            // Update game systems
-            this.update(deltaTime);
-            
-            // Schedule next update
-            requestAnimationFrame(updateFunction);
-        };
-        
-        requestAnimationFrame(updateFunction);
+    setUIUpdater(uiUpdater) {
+        this.uiUpdater = uiUpdater;
+        console.log('🖥️ UI updater connected to game engine');
     }
 
     /**
-     * STAGE 4: Main update function with movement system integration
+     * RESTORED: Simple update loop for basic functionality
+     */
+    startSimpleUpdateLoop() {
+        const updateInterval = 1000 / 60; // 60 FPS
+        
+        this.updateLoop = setInterval(() => {
+            this.update(updateInterval);
+        }, updateInterval);
+        
+        console.log('🔄 Update loop started at 60 FPS');
+    }
+
+    /**
+     * RESTORED + ENHANCED: Enhanced update with renderer support + movement system
+     * @param {number} deltaTime - Time in milliseconds since last update
      */
     update(deltaTime) {
         if (!this.isRunning) return;
         
-        try {
-            // Update game time
-            this.gameTime += deltaTime;
-            
-            // Update world systems
-            if (this.world) {
-                this.world.update(deltaTime);
-            }
-            
-            // Update all characters (needs decay, etc.)
+        this.gameTime += deltaTime;
+        
+        // Update characters (includes needs decay and observer notifications)
+        if (this.characterManager) {
+            this.characterManager.update(deltaTime);
+        }
+        
+        // STAGE 4: Update movement system for all characters
+        if (this.movementSystem) {
             this.characterManager.characters.forEach(character => {
-                character.update(deltaTime);
+                this.movementSystem.updateCharacter(character, this.world, deltaTime);
+            });
+        }
+        
+        // STAGE 2: Update renderer if available
+        if (this.renderer && this.renderer.isInitialized) {
+            // Update character positions in renderer
+            this.characterManager.characters.forEach(character => {
+                if (character.position) {
+                    this.renderer.updateCharacterPosition(
+                        character.id, 
+                        character.position.x, 
+                        character.position.y
+                    );
+                }
             });
             
-            // STAGE 4: Update movement system for all characters
-            if (this.movementSystem) {
-                this.characterManager.characters.forEach(character => {
-                    this.movementSystem.updateCharacter(character, this.world, deltaTime);
-                });
-            }
-            
-            // Update renderer if available
-            if (this.renderer && this.renderer.update) {
-                this.renderer.update(deltaTime);
-            }
-            
-            // Update UI
-            if (this.uiUpdater) {
-                const playerCharacter = this.characterManager.getPlayerCharacter();
-                if (playerCharacter) {
-                    this.uiUpdater.updateUI(playerCharacter);
-                }
-            }
-            
-        } catch (error) {
-            console.error('❌ Error in game update loop:', error);
+            this.renderer.update();
         }
+        
+        // STAGE 3: UI updates are handled by observer pattern
+        // The UI updater automatically receives notifications from characters
     }
 
     /**
-     * Validate that required systems are available
-     * @private
+     * RESTORED: Variable update (for non-fixed updates in future stages)
+     * @param {number} deltaTime - Time in milliseconds since last update
      */
-    validateSystems() {
-        if (!this.world) {
-            throw new Error('World system not initialized');
-        }
-        
-        if (!this.characterManager) {
-            throw new Error('Character manager not initialized');
-        }
-        
-        if (this.characterManager.characters.length === 0) {
-            console.warn('⚠️ No characters loaded');
-        }
-        
-        if (!this.world.navGrid) {
-            throw new Error('Navigation grid not available');
-        }
-        
-        console.log('✅ System validation passed');
+    variableUpdate(deltaTime) {
+        // Currently empty, but can be used for non-fixed updates in later stages
     }
+
+    /**
+     * RESTORED: Get game world bounds for movement/camera systems
+     */
+    getWorldBounds() {
+        if (this.renderer) {
+            return this.renderer.getWorldBounds();
+        }
+        return { width: 800, height: 600 }; // Default fallback
+    }
+
+    /**
+     * RESTORED: Add a prompt to the global queue (placeholder for Stage 5)
+     * @param {Object} promptData - Prompt data object
+     */
+    addToPromptQueue(promptData) {
+        console.log('🤖 AI queue not implemented yet (Stage 5):', promptData);
+    }
+
+    // ========================================
+    // STAGE 4: NEW MOVEMENT SYSTEM METHODS
+    // ========================================
 
     /**
      * STAGE 4: Move character to position (public interface)
@@ -233,52 +218,110 @@ export class GameEngine {
     }
 
     /**
-     * Add a prompt to the AI queue (placeholder for Stage 5)
+     * STAGE 4: Start the game with movement system support
      */
-    addToPromptQueue(promptData) {
-        console.log('🤖 AI queue not implemented yet (Stage 5):', promptData);
+    start() {
+        if (this.isRunning) {
+            console.warn('⚠️ Game engine already running');
+            return;
+        }
+
+        console.log('🚀 Starting game engine with movement system...');
+        
+        try {
+            // Validate required systems
+            this.validateSystems();
+            
+            // Start the update loop (if not already started)
+            if (!this.updateLoop) {
+                this.isRunning = true;
+                this.startSimpleUpdateLoop();
+            } else {
+                this.isRunning = true;
+            }
+            
+            console.log('✅ Game engine started successfully');
+            
+        } catch (error) {
+            console.error('❌ Failed to start game engine:', error);
+            this.isRunning = false;
+            throw error;
+        }
     }
 
     /**
-     * Pause the game
+     * STAGE 4: Validate that required systems are available
+     * @private
+     */
+    validateSystems() {
+        if (!this.world) {
+            throw new Error('World system not initialized');
+        }
+        
+        if (!this.characterManager) {
+            throw new Error('Character manager not initialized');
+        }
+        
+        if (this.characterManager.characters.length === 0) {
+            console.warn('⚠️ No characters loaded');
+        }
+        
+        if (!this.world.navGrid) {
+            throw new Error('Navigation grid not available');
+        }
+        
+        console.log('✅ System validation passed');
+    }
+
+    // ========================================
+    // RESTORED: ORIGINAL GAME CONTROL METHODS
+    // ========================================
+
+    /**
+     * RESTORED: Pause the game
      */
     pause() {
-        if (!this.isRunning) return;
-        
         this.isRunning = false;
+        if (this.updateLoop) {
+            clearInterval(this.updateLoop);
+        }
         console.log('⏸️ Game paused');
     }
 
     /**
-     * Resume the game
+     * RESTORED: Resume the game
      */
     resume() {
-        if (this.isRunning) return;
-        
-        this.isRunning = true;
-        this.lastUpdateTime = performance.now();
-        this.startUpdateLoop();
-        console.log('▶️ Game resumed');
+        if (!this.isRunning) {
+            this.isRunning = true;
+            this.startSimpleUpdateLoop();
+            console.log('▶️ Game resumed');
+        }
     }
 
     /**
-     * Stop and cleanup the game
+     * RESTORED: Stop and cleanup the game
      */
     stop() {
         this.isRunning = false;
         
+        if (this.updateLoop) {
+            clearInterval(this.updateLoop);
+            this.updateLoop = null;
+        }
+        
         // Cleanup systems
-        if (this.renderer && this.renderer.destroy) {
+        if (this.renderer) {
             this.renderer.destroy();
             this.renderer = null;
         }
         
-        if (this.uiUpdater && this.uiUpdater.destroy) {
+        if (this.uiUpdater) {
             this.uiUpdater.destroy();
             this.uiUpdater = null;
         }
         
-        // Stop all character movement
+        // STAGE 4: Stop all character movement
         if (this.movementSystem) {
             this.characterManager.characters.forEach(character => {
                 this.movementSystem.stopCharacter(character);
@@ -288,8 +331,12 @@ export class GameEngine {
         console.log('⛔ Game stopped and cleaned up');
     }
 
+    // ========================================
+    // RESTORED + ENHANCED: DEBUG AND STATUS METHODS
+    // ========================================
+
     /**
-     * Get comprehensive game status for debugging
+     * RESTORED + ENHANCED: Get comprehensive game status for debugging
      */
     getStatus() {
         const playerCharacter = this.characterManager.getPlayerCharacter();
@@ -297,7 +344,7 @@ export class GameEngine {
         return {
             isRunning: this.isRunning,
             gameTime: Math.floor(this.gameTime),
-            characterCount: this.characterManager.characters.length,
+            characterCount: this.characterManager ? this.characterManager.characters.length : 0,
             playerCharacter: playerCharacter ? {
                 id: playerCharacter.id,
                 name: playerCharacter.name,
@@ -306,16 +353,31 @@ export class GameEngine {
                 isMoving: this.movementSystem ? this.movementSystem.isMoving(playerCharacter) : false
             } : null,
             hasRenderer: !!this.renderer,
+            rendererInitialized: this.renderer ? this.renderer.isInitialized : false,
             hasWorld: !!this.world,
-            hasMovementSystem: !!this.movementSystem,
             hasUIUpdater: !!this.uiUpdater,
+            hasMovementSystem: !!this.movementSystem,
             worldNavGridSize: this.world && this.world.navGrid ? 
-                `${this.world.navGrid.height}x${this.world.navGrid.width}` : 'none'
+                `${this.world.navGrid.length}x${this.world.navGrid[0]?.length || 0}` : 'none'
         };
     }
 
     /**
-     * STAGE 4: Debug function to get all character positions and movement states
+     * RESTORED: Debug function to get character positions
+     */
+    getCharacterPositions() {
+        if (!this.characterManager) return [];
+        
+        return this.characterManager.characters.map(char => ({
+            id: char.id,
+            name: char.name,
+            position: char.position,
+            isPlayer: char.isPlayer
+        }));
+    }
+
+    /**
+     * STAGE 4: Debug function to get all character movement status
      */
     getCharacterMovementStatus() {
         if (!this.characterManager) return [];
@@ -336,14 +398,14 @@ export class GameEngine {
      * STAGE 4: Debug function to test pathfinding
      */
     testPathfinding(start, end) {
-        if (!this.world || !this.world.navGrid) {
-            console.error('❌ Navigation grid not available for pathfinding test');
+        if (!this.world || !this.world.findPath) {
+            console.error('❌ World pathfinding not available');
             return null;
         }
         
         console.log(`🧪 Testing pathfinding from (${start.x}, ${start.y}) to (${end.x}, ${end.y})`);
         
-        const path = this.world.navGrid.findPath(start, end);
+        const path = this.world.findPath(start, end);
         
         if (path.length > 0) {
             console.log(`✅ Path found with ${path.length} waypoints:`, path);
@@ -355,7 +417,7 @@ export class GameEngine {
     }
 
     /**
-     * STAGE 4: Debug function to force UI update
+     * RESTORED: Debug function to force UI update
      */
     forceUIUpdate() {
         if (this.uiUpdater && this.characterManager) {
@@ -371,10 +433,10 @@ export class GameEngine {
      * STAGE 4: Debug function to show navigation grid
      */
     debugNavGrid() {
-        if (this.world && this.world.navGrid) {
-            this.world.navGrid.debugPrint();
+        if (this.world && this.world.debugNavGrid) {
+            this.world.debugNavGrid();
         } else {
-            console.log('❌ Navigation grid not available');
+            console.log('❌ Navigation grid debug not available');
         }
     }
 }
