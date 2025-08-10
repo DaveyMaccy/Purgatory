@@ -88,14 +88,14 @@ export class MovementSystem {
             return;
         }
         
-        const speed = 100; // pixels per second
+        const speed = 150; // pixels per second (increased for more visible movement)
         const target = character.path[0];
         const dx = target.x - character.position.x;
         const dy = target.y - character.position.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         // If we're close to the current waypoint, snap to it and move to next
-        if (distance < 5) {
+        if (distance < 8) { // Increased threshold for smoother movement
             character.position = { ...target };
             character.path.shift();
             
@@ -103,12 +103,14 @@ export class MovementSystem {
             if (character.notifyObservers) {
                 character.notifyObservers('position');
             }
+            
+            console.log(`📍 ${character.name} reached waypoint, ${character.path.length} waypoints remaining`);
             return;
         }
         
         // Move towards the current waypoint
         const moveDistance = speed * deltaTime;
-        const ratio = moveDistance / distance;
+        const ratio = Math.min(1, moveDistance / distance); // Prevent overshooting
         
         // Calculate new position
         const newX = character.position.x + (dx * ratio);
@@ -123,20 +125,11 @@ export class MovementSystem {
             character.notifyObservers('position');
         }
         
-        // Safety check: if we hit an obstacle, recalculate path
-        if (!world.isPositionWalkable(character.position.x, character.position.y)) {
-            console.warn(`⚠️ ${character.name} hit obstacle, recalculating path`);
-            const destination = character.path[character.path.length - 1];
-            const newPath = world.findPath(character.position, destination);
-            
-            if (newPath.length > 0) {
-                character.path = newPath.slice(1); // Remove current position
-            } else {
-                // Can't find new path, stop movement
-                character.path = [];
-                console.warn(`🚫 ${character.name} stuck, stopping movement`);
-            }
-        }
+        // Optional: Add bounds checking
+        if (character.position.x < 50) character.position.x = 50;
+        if (character.position.x > 750) character.position.x = 750;
+        if (character.position.y < 50) character.position.y = 50;
+        if (character.position.y > 400) character.position.y = 400;
     }
 
     /**
