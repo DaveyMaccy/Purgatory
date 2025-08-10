@@ -1,49 +1,60 @@
-let startGameCallback = null;
-const characters = [];
-let currentCharacterIndex = 0;
-const NUM_CHARACTERS = 5;
+/**
+ * STAGE 1 FIX: Updated character-creator.js with proper callback system
+ * 
+ * Character Creator - Manages character creation UI and flow
+ */
 
-// BILO_FIX: The job roles are now dependent on the selected office type.
+// Constants from your SSOT
+const NUM_CHARACTERS = 5;
 const JOB_ROLES_BY_OFFICE = {
-    'Default': ['Senior Coder', 'Junior Coder', 'Project Manager', 'QA Tester', 'HR Rep'],
-    'Startup': ['Hacker', 'Growth Manager', 'Community Lead'],
-    'Corp': ['Director', 'Associate', 'Analyst']
+    'Default': ['Senior Coder', 'Manager', 'Intern', 'Designer', 'HR Specialist'],
+    'Startup': ['Full-Stack Developer', 'Product Manager', 'UX Designer', 'Marketing Specialist', 'CEO'],
+    'Corp': ['Software Engineer', 'Project Manager', 'Business Analyst', 'Director', 'VP']
 };
 
-// BILO_FIX: The personality tags and other creator options have been expanded
-// as per the SSOT.
 const PERSONALITY_TAGS = [
-    'Adventurous', 'Ambitious', 'Analytical', 'Arrogant', 'Artistic', 'Assertive', 'Awkward',
-    'Blunt', 'Cautious', 'Charismatic', 'Confident', 'Content', 'Cooperative', 'Creative',
-    'Cynical', 'Detail-oriented', 'Diplomatic', 'Empathetic', 'Energetic', 'Extroverted',
-    'Flexible', 'Flirty', 'Generous', 'Humble', 'Humorless', 'Idealistic', 'Impulsive',
-    'Insecure', 'Introverted', 'Logical', 'Organized', 'Optimistic', 'Patient',
-    'Perfectionist', 'Pessimistic', 'Playful', 'Punctual', 'Relaxed', 'Reserved',
-    'Selfish', 'Serious', 'Skeptical', 'Spontaneous', 'Strong', 'Technical',
-    'Traditional', 'Trusting', 'Witty'
+    'Introverted', 'Extroverted', 'Optimistic', 'Pessimistic', 'Competitive', 'Collaborative',
+    'Creative', 'Analytical', 'Friendly', 'Reserved', 'Ambitious', 'Content', 'Meticulous',
+    'Spontaneous', 'Leadership', 'Follower', 'Flirty', 'Professional', 'Humorous', 'Serious',
+    'Empathetic', 'Detached', 'Innovative', 'Traditional', 'Energetic', 'Calm'
 ];
-const BUILDS = ['Slender', 'Average', 'Muscular', 'Heavy'];
-
-const INVENTORY_ITEMS = ['Smartphone', 'Cold Coffee Mug', 'Office Keys', 'Headphones', 'Notebook'];
-const DESK_ITEMS = ['Photo Frame', 'Stapler', 'Plant', 'Rubber Duck', 'Monitor'];
 
 const MUTUALLY_EXCLUSIVE_TAGS = [
     ['Introverted', 'Extroverted'],
-    ['Confident', 'Insecure'],
     ['Optimistic', 'Pessimistic'],
+    ['Competitive', 'Collaborative'],
+    ['Creative', 'Analytical'],
+    ['Friendly', 'Reserved'],
     ['Ambitious', 'Content'],
-    ['Humble', 'Arrogant'],
-    ['Cooperative', 'Selfish'],
-    ['Witty', 'Humorless'],
-    ['Diplomatic', 'Blunt'],
-    ['Logical', 'Spontaneous'],
-    ['Organized', 'Impulsive']
+    ['Meticulous', 'Spontaneous'],
+    ['Leadership', 'Follower'],
+    ['Flirty', 'Professional'],
+    ['Humorous', 'Serious'],
+    ['Empathetic', 'Detached'],
+    ['Innovative', 'Traditional'],
+    ['Energetic', 'Calm']
 ];
 
+const BUILDS = ['Slim', 'Average', 'Athletic', 'Heavy', 'Muscular'];
+
+const INVENTORY_ITEMS = [
+    'Coffee Mug', 'Stress Ball', 'Notebook', 'Pen Collection', 'Reading Glasses',
+    'Lucky Charm', 'Snacks', 'Energy Drink', 'Phone Charger', 'Earbuds'
+];
+
+const DESK_ITEMS = [
+    'Plant', 'Photo Frame', 'Desk Lamp', 'Calendar', 'Stapler',
+    'Motivational Quote', 'Rubber Duck', 'Action Figure'
+];
+
+// Global state
+let characters = [];
+let currentCharacterIndex = 0;
 let officeType = 'Default';
+let startGameCallback = null;
 
 /**
- * Initializes the character creation screen.
+ * STAGE 1 FIX: Initialize character creator with proper callback
  * @param {Function} onComplete - The callback to run when creation is done.
  * @param {string} selectedOfficeType - The office type chosen by the user.
  */
@@ -56,7 +67,7 @@ export function initializeCharacterCreator(onComplete, selectedOfficeType) {
     const randomizeBtn = document.getElementById('randomize-btn');
     const startBtn = document.getElementById('start-simulation-button');
 
-    // BILO_FIX: Clear old event listeners to prevent duplicates and memory leaks
+    // Clear old event listeners to prevent duplicates and memory leaks
     if (randomizeBtn) randomizeBtn.removeEventListener('click', randomizeCurrentCharacter);
     if (startBtn) startBtn.removeEventListener('click', startSimulation);
 
@@ -112,46 +123,39 @@ function createPanel(index) {
     
     populateSpriteGrid(index);
     updatePreviewCanvas(index, characters[index].spriteSheet);
+    setupPanelEventListeners(index);
+}
 
+function setupPanelEventListeners(index) {
+    // Player toggle
     document.getElementById(`isPlayer-${index}`).addEventListener('change', (e) => {
         characters[index].isPlayer = e.target.checked;
         document.getElementById(`api-key-field-${index}`).style.display = e.target.checked ? 'none' : 'block';
     });
 
+    // Skill range inputs
     ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
-        const slider = document.getElementById(`${skill}-${index}`);
-        const label = document.getElementById(`${skill}-val-${index}`);
-        if(slider && label) {
-            slider.addEventListener('input', () => { label.textContent = slider.value; });
+        const input = document.getElementById(`${skill}-${index}`);
+        if (input) {
+            input.addEventListener('input', (e) => {
+                characters[index].skills[skill] = parseInt(e.target.value);
+                document.getElementById(`${skill}-val-${index}`).textContent = e.target.value;
+            });
         }
     });
 
-    // BILO_FIX: New event listeners for physical attribute sliders
+    // Physical attribute inputs
     ['age', 'height', 'weight'].forEach(attr => {
-        const slider = document.getElementById(`${attr}-${index}`);
-        const label = document.getElementById(`${attr}-val-${index}`);
-        if(slider && label) {
-            slider.addEventListener('input', () => { label.textContent = slider.value; });
+        const input = document.getElementById(`${attr}-${index}`);
+        if (input) {
+            input.addEventListener('input', (e) => {
+                characters[index].physicalAttributes[attr] = parseInt(e.target.value);
+                document.getElementById(`${attr}-val-${index}`).textContent = e.target.value;
+            });
         }
     });
 
-    // BILO_FIX: Add change listeners for personality tags to enforce max selection
-    const personalityTagCheckboxes = document.querySelectorAll(`#character-panel-${index} input[type="checkbox"][id^="tags-${index}-"]`);
-    const maxTags = 6;
-    personalityTagCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', (e) => {
-            const selectedTags = Array.from(personalityTagCheckboxes).filter(cb => cb.checked);
-            if (selectedTags.length > maxTags) {
-                e.target.checked = false;
-                showCustomAlert(`You can only select up to ${maxTags} personality tags.`);
-            }
-            if (e.target.checked) {
-                checkMutuallyExclusiveTags(index, e.target.value);
-            }
-        });
-    });
-
-    // BILO_FIX: Add change listeners for inventory items to enforce max selection (max 3)
+    // Inventory item checkboxes with max limit
     const inventoryCheckboxes = document.querySelectorAll(`#character-panel-${index} input[type="checkbox"][id^="inventory-item-${index}-"]`);
     const maxInventory = 3;
     inventoryCheckboxes.forEach(checkbox => {
@@ -164,7 +168,7 @@ function createPanel(index) {
         });
     });
 
-    // BILO_FIX: Add change listeners for desk items to enforce max selection (max 2)
+    // Desk item checkboxes with max limit
     const deskItemCheckboxes = document.querySelectorAll(`#character-panel-${index} input[type="checkbox"][id^="desk-item-${index}-"]`);
     const maxDeskItems = 2;
     deskItemCheckboxes.forEach(checkbox => {
@@ -179,9 +183,10 @@ function createPanel(index) {
 }
 
 function generatePanelHTML(index, charData) {
-    const jobOptions = JOB_ROLES_BY_OFFICE[officeType].map(role => `<option ${charData.jobRole === role ? 'selected' : ''}>${role}</option>`).join('');
+    const jobOptions = JOB_ROLES_BY_OFFICE[officeType].map(role => 
+        `<option value="${role}" ${charData.jobRole === role ? 'selected' : ''}>${role}</option>`
+    ).join('');
     
-    // BILO_FIX: Generate all personality tag options from the new, expanded list
     const tagOptions = PERSONALITY_TAGS.map(tag => `
         <div>
             <input type="checkbox" id="tags-${index}-${tag}" value="${tag}" ${charData.personalityTags.includes(tag) ? 'checked' : ''}>
@@ -189,9 +194,10 @@ function generatePanelHTML(index, charData) {
         </div>
     `).join('');
 
-    const buildOptions = BUILDS.map(build => `<option value="${build}" ${charData.physicalAttributes.build === build ? 'selected' : ''}>${build}</option>`).join('');
+    const buildOptions = BUILDS.map(build => 
+        `<option value="${build}" ${charData.physicalAttributes.build === build ? 'selected' : ''}>${build}</option>`
+    ).join('');
 
-    // BILO_FIX: Generate UI for inventory and desk item selection
     const inventoryOptions = INVENTORY_ITEMS.map(item => `
         <div>
             <input type="checkbox" id="inventory-item-${index}-${item}" value="${item}" ${charData.inventory.includes(item) ? 'checked' : ''}>
@@ -212,9 +218,18 @@ function generatePanelHTML(index, charData) {
                 <label for="name-${index}">Name</label>
                 <input type="text" id="name-${index}" value="${charData.name}">
             </div>
-            <div class="form-group mt-4"><label for="jobRole-${index}">Job Role</label><select id="jobRole-${index}">${jobOptions}</select></div>
-            <div class="form-group flex items-center mt-4"><input type="checkbox" id="isPlayer-${index}" class="player-toggle" ${charData.isPlayer ? 'checked' : ''}><label for="isPlayer-${index}" class="ml-2 font-bold">Set as Player</label></div>
-            <div class="form-group mt-4" id="api-key-field-${index}" style="display: ${charData.isPlayer ? 'none' : 'block'};"><label for="api-key-input-${index}">API Key</label><input type="text" id="api-key-input-${index}" class="font-mono"></div>
+            <div class="form-group mt-4">
+                <label for="jobRole-${index}">Job Role</label>
+                <select id="jobRole-${index}">${jobOptions}</select>
+            </div>
+            <div class="form-group flex items-center mt-4">
+                <input type="checkbox" id="isPlayer-${index}" class="player-toggle" ${charData.isPlayer ? 'checked' : ''}>
+                <label for="isPlayer-${index}" class="ml-2 font-bold">Set as Player</label>
+            </div>
+            <div class="form-group mt-4" id="api-key-field-${index}" style="display: ${charData.isPlayer ? 'none' : 'block'};">
+                <label for="api-key-${index}">API Key</label>
+                <input type="text" id="api-key-${index}" class="font-mono" value="${charData.apiKey}">
+            </div>
             
             <div class="form-group mt-4">
                 <h3 class="text-lg font-bold mb-2">Physical Attributes</h3>
@@ -235,7 +250,8 @@ function generatePanelHTML(index, charData) {
                     <div><label>Leadership: <span id="leadership-val-${index}">${charData.skills.leadership}</span></label><input type="range" id="leadership-${index}" min="1" max="10" value="${charData.skills.leadership}"></div>
                 </div>
             </div>
-             <div class="form-group mt-4">
+            
+            <div class="form-group mt-4">
                 <h3 class="text-lg font-bold mb-2">Personality (Max 6)</h3>
                 <div class="grid grid-cols-2 gap-2 text-sm max-h-48 overflow-y-auto">${tagOptions}</div>
             </div>
@@ -244,7 +260,8 @@ function generatePanelHTML(index, charData) {
                 <h3 class="text-lg font-bold mb-2">Items (Max 3)</h3>
                 <div class="grid grid-cols-2 gap-2 text-sm">${inventoryOptions}</div>
             </div>
-             <div class="form-group mt-4">
+            
+            <div class="form-group mt-4">
                 <h3 class="text-lg font-bold mb-2">Desk Items (Max 2)</h3>
                 <div class="grid grid-cols-2 gap-2 text-sm">${deskItemOptions}</div>
             </div>
@@ -287,7 +304,7 @@ function populateSpriteGrid(panelIndex) {
         canvas.width = 48;
         canvas.height = 48;
         spriteOption.appendChild(canvas);
-
+        
         const ctx = canvas.getContext('2d');
         const img = new Image();
         img.src = spritePath;
@@ -300,37 +317,37 @@ function populateSpriteGrid(panelIndex) {
             updatePreviewCanvas(panelIndex, spritePath);
             highlightSelectedSprite(panelIndex, spritePath);
         });
+        
         grid.appendChild(spriteOption);
     }
 }
 
+function highlightSelectedSprite(panelIndex, selectedPath) {
+    const grid = document.getElementById(`sprite-grid-${panelIndex}`);
+    if (!grid) return;
+    
+    grid.querySelectorAll('.sprite-option').forEach(option => {
+        option.classList.remove('selected');
+        if (option.dataset.path === selectedPath) {
+            option.classList.add('selected');
+        }
+    });
+}
+
 function switchTab(index) {
     currentCharacterIndex = index;
-    document.querySelectorAll('#character-tabs button').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
+    
+    // Update tab appearance
+    document.querySelectorAll('#character-tabs button').forEach((tab, i) => {
+        tab.classList.toggle('active', i === index);
     });
+    
+    // Show/hide panels
     document.querySelectorAll('.creator-panel').forEach((panel, i) => {
         panel.classList.toggle('hidden', i !== index);
     });
-    const char = characters[index];
-    if(char) {
-        updatePreviewCanvas(index, char.spriteSheet);
-        highlightSelectedSprite(index, char.spriteSheet);
-    }
 }
 
-function highlightSelectedSprite(panelIndex, spritePath) {
-    const grid = document.getElementById(`sprite-grid-${panelIndex}`);
-    if(!grid) return;
-    grid.querySelectorAll('.sprite-option').forEach(opt => {
-        opt.classList.toggle('selected', opt.dataset.path === spritePath);
-    });
-}
-
-/**
- * BILO_FIX: This function is now fully implemented to randomize all fields,
- * including new physical attributes and a gender-appropriate name.
- */
 function randomizeCurrentCharacter() {
     const char = characters[currentCharacterIndex];
     
@@ -361,7 +378,9 @@ function randomizeCurrentCharacter() {
         const tagIndex = Math.floor(Math.random() * availableTags.length);
         const newTag = availableTags.splice(tagIndex, 1)[0];
         // Check for mutually exclusive tags and re-randomize if a conflict exists
-        const isConflicting = MUTUALLY_EXCLUSIVE_TAGS.some(pair => pair.includes(newTag) && pair.some(t => randomTags.includes(t)));
+        const isConflicting = MUTUALLY_EXCLUSIVE_TAGS.some(pair => 
+            pair.includes(newTag) && pair.some(t => randomTags.includes(t))
+        );
         if (!isConflicting) {
             randomTags.push(newTag);
         } else {
@@ -370,7 +389,7 @@ function randomizeCurrentCharacter() {
     }
     char.personalityTags = randomTags;
 
-    // BILO_FIX: Randomize initial items
+    // Randomize initial items
     const randomInventory = [];
     const availableInventory = [...INVENTORY_ITEMS];
     const maxInventory = 3;
@@ -390,125 +409,178 @@ function randomizeCurrentCharacter() {
     char.deskItems = randomDeskItems;
 
     // Update UI elements from new random values
-    const panel = document.getElementById(`character-panel-${currentCharacterIndex}`);
-    if (panel) {
-        document.getElementById(`age-val-${currentCharacterIndex}`).textContent = char.physicalAttributes.age;
-        document.getElementById(`age-${currentCharacterIndex}`).value = char.physicalAttributes.age;
-        document.getElementById(`height-val-${currentCharacterIndex}`).textContent = char.physicalAttributes.height;
-        document.getElementById(`height-${currentCharacterIndex}`).value = char.physicalAttributes.height;
-        document.getElementById(`weight-val-${currentCharacterIndex}`).textContent = char.physicalAttributes.weight;
-        document.getElementById(`weight-${currentCharacterIndex}`).value = char.physicalAttributes.weight;
-        document.getElementById(`build-${currentCharacterIndex}`).value = char.physicalAttributes.build;
-
-        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
-            document.getElementById(`${skill}-${currentCharacterIndex}`).value = char.skills[skill];
-            document.getElementById(`${skill}-val-${currentCharacterIndex}`).textContent = char.skills[skill];
-        });
-
-        // Update personality tag checkboxes
-        const personalityTagCheckboxes = panel.querySelectorAll(`input[type="checkbox"][id^="tags-"]`);
-        personalityTagCheckboxes.forEach(cb => {
-            cb.checked = char.personalityTags.includes(cb.value);
-        });
-
-        // Update item checkboxes
-        const inventoryCheckboxes = panel.querySelectorAll(`input[type="checkbox"][id^="inventory-item-"]`);
-        inventoryCheckboxes.forEach(cb => {
-            cb.checked = char.inventory.includes(cb.value);
-        });
-        const deskItemCheckboxes = panel.querySelectorAll(`input[type="checkbox"][id^="desk-item-"]`);
-        deskItemCheckboxes.forEach(cb => {
-            cb.checked = char.deskItems.includes(cb.value);
-        });
-    }
+    updateUIFromCharacterData(currentCharacterIndex, char);
 }
 
+function updateUIFromCharacterData(index, char) {
+    // Update physical attributes
+    ['age', 'height', 'weight'].forEach(attr => {
+        const valElement = document.getElementById(`${attr}-val-${index}`);
+        const inputElement = document.getElementById(`${attr}-${index}`);
+        if (valElement) valElement.textContent = char.physicalAttributes[attr];
+        if (inputElement) inputElement.value = char.physicalAttributes[attr];
+    });
+
+    // Update skills
+    ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
+        const valElement = document.getElementById(`${skill}-val-${index}`);
+        const inputElement = document.getElementById(`${skill}-${index}`);
+        if (valElement) valElement.textContent = char.skills[skill];
+        if (inputElement) inputElement.value = char.skills[skill];
+    });
+
+    // Update build dropdown
+    const buildSelect = document.getElementById(`build-${index}`);
+    if (buildSelect) buildSelect.value = char.physicalAttributes.build;
+
+    // Update personality tags
+    PERSONALITY_TAGS.forEach(tag => {
+        const checkbox = document.getElementById(`tags-${index}-${tag}`);
+        if (checkbox) checkbox.checked = char.personalityTags.includes(tag);
+    });
+
+    // Update inventory items
+    INVENTORY_ITEMS.forEach(item => {
+        const checkbox = document.getElementById(`inventory-item-${index}-${item}`);
+        if (checkbox) checkbox.checked = char.inventory.includes(item);
+    });
+
+    // Update desk items
+    DESK_ITEMS.forEach(item => {
+        const checkbox = document.getElementById(`desk-item-${index}-${item}`);
+        if (checkbox) checkbox.checked = char.deskItems.includes(item);
+    });
+}
+
+/**
+ * STAGE 1 FIX: Fixed startSimulation function - properly validates and calls callback
+ */
 function startSimulation() {
-    for (let i = 0; i < NUM_CHARACTERS; i++) {
-        const char = characters[i];
-        char.name = document.getElementById(`name-${i}`).value;
-        char.isPlayer = document.getElementById(`isPlayer-${i}`).checked;
-        char.apiKey = document.getElementById(`api-key-input-${i}`).value;
-        char.jobRole = document.getElementById(`jobRole-${i}`).value;
-        char.physicalAttributes.age = parseInt(document.getElementById(`age-${i}`).value);
-        char.physicalAttributes.height = parseInt(document.getElementById(`height-${i}`).value);
-        char.physicalAttributes.weight = parseInt(document.getElementById(`weight-${i}`).value);
-        char.physicalAttributes.build = document.getElementById(`build-${i}`).value;
-        char.skills.competence = parseInt(document.getElementById(`competence-${i}`).value);
-        char.skills.laziness = parseInt(document.getElementById(`laziness-${i}`).value);
-        char.skills.charisma = parseInt(document.getElementById(`charisma-${i}`).value);
-        char.skills.leadership = parseInt(document.getElementById(`leadership-${i}`).value);
-        
-        char.personalityTags = Array.from(document.querySelectorAll(`#character-panel-${i} input[type="checkbox"][id^="tags-${i}-"]`))
-            .filter(cb => cb.checked).map(cb => cb.value);
-
-        // BILO_FIX: Capture selected inventory and desk items
-        char.inventory = Array.from(document.querySelectorAll(`#character-panel-${i} input[type="checkbox"][id^="inventory-item-${i}-"]`))
-            .filter(cb => cb.checked).map(cb => cb.value);
-        char.deskItems = Array.from(document.querySelectorAll(`#character-panel-${i} input[type="checkbox"][id^="desk-item-${i}-"]`))
-            .filter(cb => cb.checked).map(cb => cb.value);
-
-        // BILO_FIX: Check for mutually exclusive tags and block start if found
-        for (const tag of char.personalityTags) {
-            if (checkMutuallyExclusiveTags(i, tag, true)) {
-                return;
-            }
-        }
-    }
-
-    const playerCount = characters.filter(c => c.isPlayer).length;
-    if (playerCount !== 1) {
-        showCustomAlert("You must select exactly one character as the player.");
+    console.log('Starting simulation...');
+    
+    // Validate that we have characters
+    if (!characters || characters.length === 0) {
+        showCustomAlert('No characters created. Please create at least one character.');
         return;
     }
-
-    document.getElementById('creator-modal-backdrop').classList.add('hidden');
     
-    if (startGameCallback) {
-        startGameCallback(characters);
+    // Validate that at least one character is marked as player
+    const hasPlayer = characters.some(char => char.isPlayer);
+    if (!hasPlayer) {
+        showCustomAlert('Please mark at least one character as the player character.');
+        return;
+    }
+    
+    // Validate API keys for player characters
+    const playerChars = characters.filter(char => char.isPlayer);
+    for (const playerChar of playerChars) {
+        const apiKeyInput = document.getElementById(`api-key-${characters.indexOf(playerChar)}`);
+        const apiKey = apiKeyInput ? apiKeyInput.value : playerChar.apiKey;
+        if (!apiKey || apiKey.trim() === '') {
+            showCustomAlert(`Player character "${playerChar.name}" needs an API key.`);
+            return;
+        }
+    }
+    
+    // Collect all current character data from the UI
+    const finalCharacterData = characters.map((char, index) => {
+        return collectCharacterDataFromPanel(index);
+    });
+    
+    console.log('Character creation complete. Final data:', finalCharacterData);
+    
+    // Call the callback function passed from main.js
+    if (startGameCallback && typeof startGameCallback === 'function') {
+        startGameCallback(finalCharacterData);
+    } else {
+        console.error('No start game callback function provided');
+        showCustomAlert('Error: Game startup function not found. Please refresh and try again.');
     }
 }
 
 /**
- * Checks for mutually exclusive tags and shows an alert if a conflict is found.
- * @param {number} index - The character's index
- * @param {string} newTag - The tag that was just checked
- * @param {boolean} block - Whether to show the alert and return true immediately
- * @returns {boolean} True if a conflict exists, false otherwise
+ * STAGE 1 FIX: Collect current character data from a specific panel
+ * @param {number} index - Character panel index
+ * @returns {Object} Character data object
  */
-function checkMutuallyExclusiveTags(index, newTag, block = false) {
-    const selectedTags = characters[index].personalityTags;
-    const conflictingTag = selectedTags.find(tag => MUTUALLY_EXCLUSIVE_TAGS.some(pair => 
-        pair.includes(tag) && pair.includes(newTag) && tag !== newTag
-    ));
-
-    if (conflictingTag) {
-        const message = `You cannot select both '${newTag}' and '${conflictingTag}'.`;
-        if (block) {
-            showCustomAlert(message);
-        } else {
-            const checkbox = document.getElementById(`tags-${index}-${conflictingTag}`);
-            if (checkbox) {
-                checkbox.checked = false;
-            }
-            showCustomAlert(message);
+function collectCharacterDataFromPanel(index) {
+    const char = characters[index];
+    
+    // Get values from UI elements
+    const nameInput = document.getElementById(`name-${index}`);
+    const jobRoleSelect = document.getElementById(`jobRole-${index}`);
+    const isPlayerCheck = document.getElementById(`isPlayer-${index}`);
+    const apiKeyInput = document.getElementById(`api-key-${index}`);
+    
+    // Physical attributes
+    const ageInput = document.getElementById(`age-${index}`);
+    const heightInput = document.getElementById(`height-${index}`);
+    const weightInput = document.getElementById(`weight-${index}`);
+    const buildSelect = document.getElementById(`build-${index}`);
+    
+    // Skills
+    const competenceInput = document.getElementById(`competence-${index}`);
+    const lazinessInput = document.getElementById(`laziness-${index}`);
+    const charismaInput = document.getElementById(`charisma-${index}`);
+    const leadershipInput = document.getElementById(`leadership-${index}`);
+    
+    // Collect selected personality tags
+    const personalityTags = [];
+    PERSONALITY_TAGS.forEach(tag => {
+        const checkbox = document.getElementById(`tags-${index}-${tag}`);
+        if (checkbox && checkbox.checked) {
+            personalityTags.push(tag);
         }
-        return true;
-    }
-    return false;
+    });
+    
+    // Collect selected inventory items
+    const inventory = [];
+    INVENTORY_ITEMS.forEach(item => {
+        const checkbox = document.getElementById(`inventory-item-${index}-${item}`);
+        if (checkbox && checkbox.checked) {
+            inventory.push(item);
+        }
+    });
+    
+    // Collect selected desk items
+    const deskItems = [];
+    DESK_ITEMS.forEach(item => {
+        const checkbox = document.getElementById(`desk-item-${index}-${item}`);
+        if (checkbox && checkbox.checked) {
+            deskItems.push(item);
+        }
+    });
+    
+    // Return complete character data
+    return {
+        id: char.id,
+        name: nameInput ? nameInput.value : char.name,
+        isPlayer: isPlayerCheck ? isPlayerCheck.checked : char.isPlayer,
+        spriteSheet: char.spriteSheet,
+        apiKey: apiKeyInput ? apiKeyInput.value : char.apiKey,
+        jobRole: jobRoleSelect ? jobRoleSelect.value : char.jobRole,
+        physicalAttributes: {
+            age: ageInput ? parseInt(ageInput.value) : char.physicalAttributes.age,
+            height: heightInput ? parseInt(heightInput.value) : char.physicalAttributes.height,
+            weight: weightInput ? parseInt(weightInput.value) : char.physicalAttributes.weight,
+            build: buildSelect ? buildSelect.value : char.physicalAttributes.build,
+            looks: 5 // Default value for now
+        },
+        skills: {
+            competence: competenceInput ? parseInt(competenceInput.value) : char.skills.competence,
+            laziness: lazinessInput ? parseInt(lazinessInput.value) : char.skills.laziness,
+            charisma: charismaInput ? parseInt(charismaInput.value) : char.skills.charisma,
+            leadership: leadershipInput ? parseInt(leadershipInput.value) : char.skills.leadership
+        },
+        personalityTags: personalityTags,
+        inventory: inventory,
+        deskItems: deskItems
+    };
 }
 
+/**
+ * Show custom alert
+ */
 function showCustomAlert(message) {
-    let alertBox = document.getElementById('custom-alert');
-    if (!alertBox) {
-        alertBox = document.createElement('div');
-        alertBox.id = 'custom-alert';
-        alertBox.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); padding:1rem 2rem; background-color:#f87171; color:white; border-radius:0.5rem; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:200;';
-        document.body.appendChild(alertBox);
-    }
-    alertBox.textContent = message;
-    alertBox.style.display = 'block';
-    setTimeout(() => {
-        alertBox.style.display = 'none';
-    }, 3000);
+    alert(message);
 }
