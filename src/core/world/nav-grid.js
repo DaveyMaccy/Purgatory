@@ -1,6 +1,14 @@
 /**
  * NavGrid class - Handles pathfinding and navigation grid operations
  * Complete A* pathfinding implementation for Stage 4
+ * 
+ * FIXES APPLIED:
+ * - Enhanced input validation with better debugging
+ * - Automatic nearby position finding for blocked positions
+ * - Rounded coordinates to handle floating point issues
+ * - Better error messages and logging
+ * - Diagonal movement corner-cutting prevention
+ * - Comprehensive A* algorithm implementation
  */
 export class NavGrid {
     constructor() {
@@ -18,7 +26,7 @@ export class NavGrid {
         this.width = width;
         this.height = height;
         this.grid = Array(height).fill(null).map(() => Array(width).fill(0));
-        console.log(`🗺️ NavGrid initialized: ${width}x${height}`);
+        console.log(`🗺️ NavGrid initialized: ${width}×${height}`);
     }
 
     /**
@@ -317,10 +325,11 @@ export class NavGrid {
         const obstacleCount = (this.width * this.height) - walkableCount;
         
         return {
-            dimensions: `${this.width}x${this.height}`,
+            dimensions: `${this.width}×${this.height}`,
             walkableTiles: walkableCount,
             obstacles: obstacleCount,
-            density: `${((obstacleCount / (this.width * this.height)) * 100).toFixed(1)}% obstacles`
+            density: `${((obstacleCount / (this.width * this.height)) * 100).toFixed(1)}% obstacles`,
+            totalTiles: this.width * this.height
         };
     }
 
@@ -354,6 +363,41 @@ export class NavGrid {
         if (this.height > 10 || this.width > 20) {
             visual += '... (truncated for display)\n';
         }
+        visual += '\nLegend: . = walkable, # = obstacle\n';
         return visual;
+    }
+
+    /**
+     * Test pathfinding between two specific points (for debugging)
+     * @param {number} startX - Start X coordinate
+     * @param {number} startY - Start Y coordinate  
+     * @param {number} endX - End X coordinate
+     * @param {number} endY - End Y coordinate
+     * @returns {Array} Path result
+     */
+    testPath(startX, startY, endX, endY) {
+        console.log(`🧪 Testing path from (${startX}, ${startY}) to (${endX}, ${endY})`);
+        
+        const start = { x: startX, y: startY };
+        const end = { x: endX, y: endY };
+        
+        const startWalkable = this.isWalkable(startX, startY);
+        const endWalkable = this.isWalkable(endX, endY);
+        
+        console.log(`   Start walkable: ${startWalkable}, End walkable: ${endWalkable}`);
+        
+        if (!startWalkable || !endWalkable) {
+            console.warn('   Cannot test: one or both positions not walkable');
+            return [];
+        }
+        
+        const path = this.findPath(start, end);
+        console.log(`   Result: ${path.length} waypoints`);
+        
+        if (path.length > 0) {
+            console.log('   Path waypoints:', path);
+        }
+        
+        return path;
     }
 }
