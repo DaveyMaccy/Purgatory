@@ -109,6 +109,7 @@ export class UIUpdater {
 
     /**
      * Update character portrait in the status panel
+     * FIXED: Properly crop sprite sheets to show just the character face
      */
     updatePortrait(character) {
         const portraitCanvas = document.getElementById('player-portrait-canvas');
@@ -119,7 +120,7 @@ export class UIUpdater {
         // Clear the canvas
         ctx.clearRect(0, 0, portraitCanvas.width, portraitCanvas.height);
         
-        // If character has a portrait (base64 string), display it
+        // If character has a custom portrait (base64 string), display it
         if (character.portrait) {
             const img = new Image();
             img.onload = () => {
@@ -127,23 +128,50 @@ export class UIUpdater {
             };
             img.src = character.portrait;
         } else if (character.spriteSheet) {
-            // Use sprite sheet as fallback portrait
+            // Use sprite sheet as fallback portrait - crop to show just the head
             const img = new Image();
             img.onload = () => {
-                ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
+                // Crop the sprite sheet to show just the character's head
+                // Character sprites are 48x96, head is roughly top 24x24 pixels
+                const sourceX = 12; // Start a bit inward from left edge
+                const sourceY = 8;  // Start below any hair/hat
+                const sourceWidth = 24;  // Width of face area
+                const sourceHeight = 24; // Height of face area
+                
+                // Draw the cropped head to fill the portrait canvas
+                ctx.drawImage(
+                    img,
+                    sourceX, sourceY, sourceWidth, sourceHeight, // Source crop
+                    0, 0, portraitCanvas.width, portraitCanvas.height // Destination fill
+                );
+            };
+            img.onerror = () => {
+                // If sprite sheet fails to load, draw placeholder
+                this.drawPortraitPlaceholder(ctx, portraitCanvas, character);
             };
             img.src = character.spriteSheet;
         } else {
             // Draw a simple placeholder
-            ctx.fillStyle = '#4f46e5';
-            ctx.fillRect(0, 0, portraitCanvas.width, portraitCanvas.height);
-            
-            ctx.fillStyle = 'white';
-            ctx.font = '12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(character.name.charAt(0).toUpperCase(), 
-                portraitCanvas.width / 2, portraitCanvas.height / 2 + 4);
+            this.drawPortraitPlaceholder(ctx, portraitCanvas, character);
         }
+    }
+
+    /**
+     * Draw a placeholder portrait when no image is available
+     */
+    drawPortraitPlaceholder(ctx, canvas, character) {
+        ctx.fillStyle = '#4f46e5';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            character.name.charAt(0).toUpperCase(), 
+            canvas.width / 2, 
+            canvas.height / 2
+        );
     }
 
     /**
