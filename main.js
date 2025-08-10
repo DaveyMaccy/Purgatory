@@ -2,7 +2,7 @@ import { GameEngine } from './src/core/game-engine.js';
 import { CharacterManager } from './src/core/characters/character-manager.js';
 import { UIUpdater } from './src/ui/ui-updater.js';
 import { loadMapData } from './src/core/world/world.js';
-import { initializeCharacterUI } from './character-creator.js';
+import { initializeCharacterCreator } from './character-creator.js';
 
 // Global game state for Stage 3
 let gameEngine = null;
@@ -86,7 +86,7 @@ function hideStartScreen() {
 }
 
 function hideCharacterCreator() {
-    const creator = document.getElementById('character-creator-backdrop');
+    const creator = document.getElementById('creator-modal-backdrop');
     if (creator) {
         creator.style.display = 'none';
     }
@@ -96,7 +96,31 @@ function showGameWorld() {
     const gameContainer = document.querySelector('.game-container');
     if (gameContainer) {
         gameContainer.style.display = 'flex';
+        gameContainer.classList.remove('hidden');
     }
+    
+    // Also show the main game UI
+    const mainGameUI = document.getElementById('main-game-ui');
+    if (mainGameUI) {
+        mainGameUI.classList.remove('hidden');
+        mainGameUI.style.display = 'flex';
+    }
+}
+
+function showCharacterCreator() {
+    // Hide start screen
+    hideStartScreen();
+    
+    // Show character creator modal
+    const creator = document.getElementById('creator-modal-backdrop');
+    if (creator) {
+        creator.style.display = 'flex';
+        creator.classList.remove('hidden');
+    }
+    
+    // Initialize the character creator
+    initializeCharacterCreator(null, 'Corporate');
+    console.log('Character creator opened');
 }
 
 // Game loop function for Stage 3 - UI sync
@@ -143,16 +167,30 @@ window.getGameState = function() {
     };
 };
 
+// FIXED: Add New Game button event handler
+function setupNewGameButton() {
+    const newGameButton = document.getElementById('new-game-button');
+    if (newGameButton) {
+        newGameButton.disabled = false;
+        
+        // Remove any existing event listeners
+        newGameButton.removeEventListener('click', showCharacterCreator);
+        
+        // Add the click handler
+        newGameButton.addEventListener('click', showCharacterCreator);
+        
+        console.log('New Game button enabled and connected');
+    } else {
+        console.error('New Game button not found in DOM');
+    }
+}
+
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Main.js loaded - waiting for character creator to start simulation');
     
-    // Enable new game button
-    const newGameButton = document.getElementById('new-game-button');
-    if (newGameButton) {
-        newGameButton.disabled = false;
-        console.log('New Game button enabled');
-    }
+    // FIXED: Setup the New Game button
+    setupNewGameButton();
     
     // Start the UI update loop
     requestAnimationFrame(gameLoop);
