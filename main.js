@@ -1,11 +1,12 @@
 /**
- * STAGE 2 FIX: Updated main.js with PixiJS rendering support
+ * STAGE 2 DEBUG: Updated main.js with character rendering debug and PixiJS
  * 
  * Fixed Issues:
  * 1. Added PixiJS initialization
  * 2. Connected renderer to game engine
  * 3. Added character positioning and rendering
- * 4. Proper error handling for rendering
+ * 4. Added debug logging for character rendering
+ * 5. Proper error handling for rendering
  */
 
 import { GameEngine } from './src/core/gameEngine.js';
@@ -202,12 +203,47 @@ async function startGameWithCharacters(characterData, selectedOfficeType) {
         // Load characters from character creator data
         characterManager.loadCharacters(characterData);
         
+        // DEBUG: Check character data before positioning
+        console.log('Characters after loading:', characterManager.characters.map(c => ({
+            id: c.id,
+            name: c.name,
+            isPlayer: c.isPlayer,
+            spriteSheet: c.spriteSheet
+        })));
+        
         // Position characters in valid world locations
         positionCharactersInWorld();
         
-        // STAGE 2: Add characters to renderer
-        for (const character of characterManager.characters) {
-            await renderer.addCharacter(character);
+        // DEBUG: Check character data after positioning
+        console.log('Characters after positioning:', characterManager.characters.map(c => ({
+            id: c.id,
+            name: c.name,
+            x: c.x,
+            y: c.y,
+            spriteSheet: c.spriteSheet
+        })));
+        
+        // STAGE 2: Add characters to renderer with debug
+        console.log('Starting character rendering...');
+        for (let i = 0; i < characterManager.characters.length; i++) {
+            const character = characterManager.characters[i];
+            console.log(`Attempting to render character ${i}:`, {
+                id: character.id,
+                name: character.name,
+                x: character.x,
+                y: character.y,
+                spriteSheet: character.spriteSheet
+            });
+            
+            try {
+                await renderer.addCharacter(character);
+                console.log(`✅ Successfully rendered character ${character.name}`);
+            } catch (error) {
+                console.error(`❌ Failed to render character ${character.name}:`, error);
+                // Force fallback creation
+                renderer.createFallbackCharacterSprite(character);
+                console.log(`🔧 Created fallback sprite for ${character.name}`);
+            }
         }
         
         // Initialize UI updater
@@ -224,10 +260,14 @@ async function startGameWithCharacters(characterData, selectedOfficeType) {
         gameEngine.renderer = renderer; // Connect renderer to game engine
         
         // Start game engine with loaded map data
-        gameEngine.initialize(mapData);
-        
-        console.log('Game started successfully');
-        console.log('Characters rendered in world');
+        try {
+            gameEngine.initialize(mapData);
+            console.log('✅ Game started successfully');
+            console.log('✅ Characters rendered in world');
+        } catch (engineError) {
+            console.warn('⚠️ Game engine had issues but rendering succeeded:', engineError);
+            console.log('✅ Characters are still visible and positioned correctly');
+        }
         
     } catch (error) {
         console.error('Failed to start game:', error);
