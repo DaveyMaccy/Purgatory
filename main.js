@@ -421,7 +421,12 @@ window.debugGame = {
     },
     getCharacterPositions: () => {
         if (characterManager) {
-            return characterManager.getCharacterPositions();
+            const positions = characterManager.getCharacterPositions();
+            console.log('Character Positions:');
+            positions.forEach(pos => {
+                console.log(`${pos.name}: (${pos.x}, ${pos.y}) - Player: ${pos.isPlayer}`);
+            });
+            return positions;
         }
         return [];
     },
