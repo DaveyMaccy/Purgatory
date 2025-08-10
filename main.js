@@ -1,13 +1,16 @@
-// main.js - Movement System Integration for Stage 4
+// main.js - Movement System Integration for Stage 4 (Compatible with existing system)
 
 // Import core systems
 import { GameEngine } from './src/core/game-engine.js';
 import { CharacterManager } from './src/core/characters/character-manager.js';
 import { UIUpdater } from './src/ui/ui-updater.js';
 import { MovementSystem } from './src/core/systems/movement-system.js';
+import { loadMapData } from './src/core/world/world.js';
+import { initializeCharacterCreator } from './character-creator.js';
 
 // Global game state
 let gameEngine = null;
+let characterManager = null;
 let uiUpdater = null;
 let movementSystem = null;
 let mapData = null;
@@ -18,13 +21,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     try {
         // Load map data first
-        await loadMapData();
+        await loadMapDataAsync();
         
         // Initialize UI elements
         initializeUIElements();
         
         // Create movement system
         movementSystem = new MovementSystem();
+        
+        // Setup the New Game button
+        setupNewGameButton();
         
         // Check if we should start the game immediately (for testing)
         const urlParams = new URLSearchParams(window.location.search);
@@ -44,16 +50,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 /**
  * Load map data from JSON file
  */
-async function loadMapData() {
+async function loadMapDataAsync() {
     try {
         console.log('🗺️ Loading map data...');
-        const response = await fetch('./assets/maps/purgatorygamemap.json');
-        
-        if (!response.ok) {
-            throw new Error(`Failed to load map: ${response.status}`);
-        }
-        
-        mapData = await response.json();
+        mapData = await loadMapData();
         console.log('✅ Map data loaded successfully');
         
     } catch (error) {
@@ -66,6 +66,77 @@ async function loadMapData() {
             tileheight: 48
         };
         console.log('🔧 Using fallback map data');
+    }
+}
+
+/**
+ * Setup New Game button with proper event handling
+ */
+function setupNewGameButton() {
+    const newGameButton = document.getElementById('new-game-button');
+    if (newGameButton) {
+        // Remove any existing listeners by cloning
+        const newButton = newGameButton.cloneNode(true);
+        newGameButton.parentNode.replaceChild(newButton, newGameButton);
+        
+        // Enable and add event listener
+        newButton.disabled = false;
+        newButton.addEventListener('click', handleNewGameClick);
+        
+        console.log('✅ New Game button enabled and connected');
+    } else {
+        console.warn('⚠️ New Game button not found');
+        // Auto-start for testing if button missing
+        setTimeout(handleNewGameClick, 1000);
+    }
+}
+
+/**
+ * Handle New Game button click
+ */
+function handleNewGameClick() {
+    console.log('🎭 New Game clicked - Opening character creator...');
+    
+    try {
+        // Hide start screen
+        hideStartScreen();
+        
+        // Show character creator
+        showCharacterCreator();
+        
+        // Initialize the character creator
+        if (window.initializeCharacterCreator) {
+            window.initializeCharacterCreator('Game Studio');
+        } else {
+            initializeCharacterCreator('Game Studio');
+        }
+        
+        console.log('✅ Character creator opened');
+        
+    } catch (error) {
+        console.error('❌ Failed to open character creator:', error);
+        // Fallback: start with default characters
+        startGameWithTestCharacters();
+    }
+}
+
+/**
+ * UI state management functions
+ */
+function hideStartScreen() {
+    const startScreen = document.getElementById('start-screen-backdrop');
+    if (startScreen) {
+        startScreen.style.display = 'none';
+        console.log('📺 Start screen hidden');
+    }
+}
+
+function showCharacterCreator() {
+    const creatorModal = document.getElementById('creator-modal-backdrop');
+    if (creatorModal) {
+        creatorModal.style.display = 'flex';
+        creatorModal.classList.remove('hidden');
+        console.log('🎭 Character creator shown');
     }
 }
 
@@ -338,45 +409,72 @@ function updateMovementStatus(message) {
 }
 
 /**
- * MAIN GAME START FUNCTION - Enhanced for Stage 4
+ * MAIN GAME START FUNCTION - Enhanced for Stage 4 but compatible with existing character creator
  * Called from character creator or auto-start
  */
-window.startGameSimulation = function(characterTemplates) {
-    console.log('🚀 Starting game simulation with movement system...');
-    
+window.startGameSimulation = async function(charactersFromCreator) {
     try {
-        if (!mapData) {
-            throw new Error('Map data not loaded');
+        console.log('🚀 Starting game simulation with movement system...', charactersFromCreator);
+        
+        // Validate input
+        if (!charactersFromCreator || charactersFromCreator.length === 0) {
+            throw new Error('No characters provided for simulation');
         }
         
+        // Ensure map data is loaded
+        if (!mapData) {
+            console.log('🗺️ Loading map data...');
+            await loadMapData();
+        }
+        
+        // Initialize character manager
+        console.log('👥 Initializing character manager...');
+        const characterManager = new CharacterManager();
+        
+        // Load characters from the character creator - use the existing loadCharacters method
+        characterManager.loadCharacters(charactersFromCreator);
+        
+        // Set the first player character as focus target
+        const playerCharacter = characterManager.getPlayerCharacter();
+        if (playerCharacter) {
+            console.log(`🎯 Focus set to player: ${playerCharacter.name}`);
+        } else {
+            console.warn('⚠️ No player character found, using first character');
+        }
+        
+        // Initialize UI updater
+        console.log('🖥️ Initializing UI updater...');
+        uiUpdater = new UIUpdater(characterManager);
+        
+        // Subscribe UI updater to all characters for observer pattern
+        characterManager.characters.forEach(character => {
+            uiUpdater.subscribeToCharacter(character);
+            console.log(`🔗 UI updater subscribed to: ${character.name}`);
+        });
+        
         // Initialize game engine
+        console.log('🎮 Initializing game engine...');
         gameEngine = new GameEngine();
         gameEngine.initialize(mapData);
+        
+        // Set up the character manager and UI updater
+        gameEngine.characterManager = characterManager;
+        gameEngine.uiUpdater = uiUpdater;
         
         // Add movement system to engine
         gameEngine.movementSystem = movementSystem;
         
-        // Create characters from templates
-        if (characterTemplates && characterTemplates.length > 0) {
-            gameEngine.characterManager.createCharacters(characterTemplates);
-        } else {
-            console.warn('⚠️ No character templates provided');
-        }
-        
-        // Initialize character positions
+        // Initialize character positions using world
         gameEngine.characterManager.initializeCharacterPositions(gameEngine.world);
         
         // Initialize characters
         gameEngine.characterManager.initializeCharacters();
         
-        // Create UI updater
-        uiUpdater = new UIUpdater(gameEngine.characterManager);
-        gameEngine.uiUpdater = uiUpdater;
-        
         // Start the game engine with movement system
         gameEngine.start();
         
-        // Switch to game view
+        // Hide character creator and show game world
+        hideCharacterCreator();
         switchToGameView();
         
         // Update movement status
@@ -386,7 +484,7 @@ window.startGameSimulation = function(characterTemplates) {
         
     } catch (error) {
         console.error('❌ Failed to start game simulation:', error);
-        showErrorMessage('Failed to start game. Please check the console for details.');
+        showErrorMessage(`Failed to start simulation: ${error.message}`);
     }
 };
 
@@ -419,19 +517,36 @@ function startGameWithTestCharacters() {
 }
 
 /**
+ * Hide character creator modal
+ */
+function hideCharacterCreator() {
+    const creatorModal = document.getElementById('creator-modal-backdrop');
+    if (creatorModal) {
+        creatorModal.style.display = 'none';
+        console.log('🎭 Character creator hidden');
+    }
+}
+
+/**
  * Switch to game view
  */
 function switchToGameView() {
     // Hide start screen
-    const startScreen = document.getElementById('start-screen');
+    const startScreen = document.getElementById('start-screen-backdrop');
     if (startScreen) {
         startScreen.style.display = 'none';
     }
     
-    // Show game screen
-    const gameScreen = document.getElementById('game-screen');
+    // Show game screen - try multiple possible IDs
+    const gameScreen = document.getElementById('game-screen') || 
+                      document.getElementById('main-game-ui') ||
+                      document.querySelector('.game-view');
+    
     if (gameScreen) {
         gameScreen.style.display = 'flex';
+        gameScreen.classList.remove('hidden');
+    } else {
+        console.warn('⚠️ Game screen element not found');
     }
     
     console.log('🎮 Switched to game view');
