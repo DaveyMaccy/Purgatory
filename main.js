@@ -1,4 +1,23 @@
 /**
+ * Handle right-clicks on the game world to stop movement
+ */
+function handleRightClick(event) {
+    if (!gameEngine || !movementSystem || !characterManager) {
+        console.warn('🚫 Game systems not ready');
+        return;
+    }
+
+    // Get the focused character (player character)
+    const focusCharacter = characterManager.getCharacter(focusTargetId);
+    if (!focusCharacter) {
+        console.warn('🚫 No focus character to stop');
+        return;
+    }
+
+    // Stop the character's movement
+    movementSystem.stopCharacter(focusCharacter);
+    console.log(`🛑 Stopped movement for ${focusCharacter.name}`);
+}/**
  * Main.js - Game initialization and coordination
  * 
  * This file handles:
@@ -93,6 +112,12 @@ function initializeUIElements() {
     const worldContainer = document.getElementById('world-canvas-container');
     if (worldContainer) {
         worldContainer.addEventListener('click', handleWorldClick);
+        
+        // Add right-click to stop movement
+        worldContainer.addEventListener('contextmenu', (event) => {
+            event.preventDefault(); // Prevent browser context menu
+            handleRightClick(event);
+        });
     }
     
     // Set up tab switching in the status panel
@@ -719,7 +744,35 @@ window.testMovement = function(x, y) {
     
     const character = characterManager.getCharacter(focusTargetId);
     if (character) {
+        console.log(`🧪 Test movement: ${character.name} from (${character.position.x}, ${character.position.y}) to (${x}, ${y})`);
         movementSystem.moveCharacterTo(character, {x, y}, gameEngine.world);
-        console.log(`🧪 Test movement: ${character.name} to ${x}, ${y}`);
+        
+        // Add debug info about game loop
+        console.log('🔄 Game loop running:', gameEngine.isRunning);
+        console.log('🚶 Movement system connected:', !!gameEngine.movementSystem);
+        console.log('👤 Character has path:', character.path?.length || 0, 'waypoints');
     }
+};
+
+/**
+ * DEBUG: Check if movement is updating
+ */
+window.debugMovement = function() {
+    if (!characterManager || !gameEngine) {
+        console.warn('🚫 Game not ready');
+        return;
+    }
+    
+    const characters = characterManager.characters;
+    console.log('📊 Movement Debug Status:');
+    console.log('🔄 Game loop running:', gameEngine.isRunning);
+    console.log('⏱️ Last update time:', gameEngine.lastUpdateTime);
+    console.log('🚶 Movement system exists:', !!gameEngine.movementSystem);
+    
+    characters.forEach(char => {
+        console.log(`👤 ${char.name}:`);
+        console.log(`   Position: (${char.position.x.toFixed(1)}, ${char.position.y.toFixed(1)})`);
+        console.log(`   Path: ${char.path?.length || 0} waypoints`);
+        console.log(`   Moving: ${gameEngine.movementSystem?.movingCharacters?.has(char.id) || false}`);
+    });
 };
