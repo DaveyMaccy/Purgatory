@@ -1,5 +1,3 @@
-// src/core/world/nav-grid.js
-
 /**
  * NavGrid class - Handles pathfinding and navigation grid operations
  * Complete A* pathfinding implementation for Stage 4
