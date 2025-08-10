@@ -47,6 +47,9 @@ const DESK_ITEMS = [
     'Motivational Quote', 'Rubber Duck', 'Action Figure'
 ];
 
+// Mock API key for testing phase
+const MOCK_API_KEY = 'mock-test-api-key-for-development';
+
 // Global state
 let characters = [];
 let currentCharacterIndex = 0;
@@ -93,7 +96,7 @@ function createNewCharacter(index) {
         name: `Character ${index + 1}`,
         isPlayer: index === 0,
         spriteSheet: `assets/characters/Premade_Character_48x48_01.png`,
-        apiKey: index === 0 ? '' : MOCK_API_KEY, // Player doesn't need API key, NPCs get mock key,
+        apiKey: index === 0 ? '' : MOCK_API_KEY, // Player doesn't need API key, NPCs get mock key
         jobRole: JOB_ROLES_BY_OFFICE[officeType][0],
         physicalAttributes: { age: 30, height: 175, weight: 70, build: 'Average', looks: 5 },
         skills: { competence: 5, laziness: 5, charisma: 5, leadership: 5 },
@@ -486,10 +489,6 @@ function updateUIFromCharacterData(index, char) {
         const checkbox = document.getElementById(`desk-item-${index}-${item}`);
         if (checkbox) checkbox.checked = char.deskItems.includes(item);
     });
-
-    // Mock API key for testing phase
-const MOCK_API_KEY = 'mock-test-api-key-for-development';
-    });
 }
 
 /**
@@ -625,5 +624,6 @@ function collectCharacterDataFromPanel(index) {
 function showCustomAlert(message) {
     alert(message);
 }
+
 
 
