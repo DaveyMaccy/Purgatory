@@ -1,43 +1,39 @@
-/**
- * Main.js - Game initialization and coordination
- * 
- * This file handles:
- * 1. Game system initialization (game engine, renderer, UI, etc.)
- * 2. DOM ready events and button setup
- * 3. Game start sequence coordination
- * 4. UI state management
- * 
- * Character creator functionality is in separate character-creator.js
- */
+// main.js - Movement System Integration for Stage 4
 
+// Import core systems
 import { GameEngine } from './src/core/game-engine.js';
 import { CharacterManager } from './src/core/characters/character-manager.js';
 import { UIUpdater } from './src/ui/ui-updater.js';
-import { Renderer } from './src/rendering/renderer.js';
-import { loadMapData } from './src/core/world/world.js';
-import { initializeCharacterCreator } from './character-creator.js';
+import { MovementSystem } from './src/core/systems/movement-system.js';
 
-// Global game state for Stage 3
+// Global game state
 let gameEngine = null;
-let characterManager = null;
 let uiUpdater = null;
-let renderer = null;
-let focusTargetId = null;
+let movementSystem = null;
+let mapData = null;
 
-/**
- * DOM Ready Event - Main initialization
- */
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎮 Office Purgatory - Game Loading...');
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🎮 Office Purgatory - Starting initialization...');
     
     try {
+        // Load map data first
+        await loadMapData();
+        
         // Initialize UI elements
         initializeUIElements();
         
-        // Setup the New Game button
-        setupNewGameButton();
+        // Create movement system
+        movementSystem = new MovementSystem();
         
-        console.log('🎮 Game initialization complete - Ready to start!');
+        // Check if we should start the game immediately (for testing)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('autostart') === 'true') {
+            console.log('🚀 Auto-starting game for testing...');
+            startGameWithTestCharacters();
+        }
+        
+        console.log('✅ Initialization complete');
         
     } catch (error) {
         console.error('❌ Failed to initialize game:', error);
@@ -46,526 +42,320 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Initialize UI elements and event handlers
+ * Load map data from JSON file
+ */
+async function loadMapData() {
+    try {
+        console.log('🗺️ Loading map data...');
+        const response = await fetch('./assets/maps/purgatorygamemap.json');
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load map: ${response.status}`);
+        }
+        
+        mapData = await response.json();
+        console.log('✅ Map data loaded successfully');
+        
+    } catch (error) {
+        console.error('❌ Failed to load map data:', error);
+        // Create basic fallback map data
+        mapData = {
+            width: 16,
+            height: 12,
+            tilewidth: 48,
+            tileheight: 48
+        };
+        console.log('🔧 Using fallback map data');
+    }
+}
+
+/**
+ * Initialize UI elements and event handlers - STAGE 4 ENHANCED
  */
 function initializeUIElements() {
-    // FIXED: Add proper tab styling
+    // Add proper tab styling
     addTabCSS();
     
-    // Set up game world click handlers (for future movement system)
-    const worldContainer = document.getElementById('world-canvas-container');
-    if (worldContainer) {
-        worldContainer.addEventListener('click', handleWorldClick);
-    }
+    // Set up game world click handlers for movement
+    setupWorldClickHandlers();
     
     // Set up tab switching in the status panel
     setupStatusPanelTabs();
     
-    console.log('✅ UI elements initialized');
-}
-
-/**
- * FIXED: Add CSS for proper tab styling with even alignment
- */
-function addTabCSS() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #d1d5db;
-            margin-bottom: 0;
-            background-color: #f9fafb;
-            padding: 8px 8px 0 8px;
-            border-radius: 6px 6px 0 0;
-            gap: 2px;
-        }
-        
-        .tab-link {
-            background-color: #f3f4f6;
-            border: 1px solid #d1d5db;
-            color: #374151;
-            padding: 8px 12px;
-            cursor: pointer;
-            border-radius: 6px 6px 0 0;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            flex: 1;
-            text-align: center;
-            min-width: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            border-bottom: none;
-        }
-        
-        .tab-link:hover {
-            background-color: #e5e7eb;
-            color: #1f2937;
-        }
-        
-        .tab-link.active {
-            background-color: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-            border-bottom: 1px solid #3b82f6;
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 16px;
-            border: 1px solid #d1d5db;
-            border-top: none;
-            border-radius: 0 0 6px 6px;
-            background-color: white;
-            min-height: 200px;
-            margin-top: -1px;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        /* Ensure the widget container has proper flex layout */
-        .widget.flex-grow {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .widget .flex-grow {
-            flex: 1;
-            overflow-y: auto;
-        }
-    `;
-    document.head.appendChild(style);
-    console.log('✅ Tab CSS injected with proper alignment');
-}
-
-/**
- * Setup New Game button with proper event handling
- */
-function setupNewGameButton() {
-    const newGameButton = document.getElementById('new-game-button');
-    if (newGameButton) {
-        // Remove any existing listeners by cloning
-        const newButton = newGameButton.cloneNode(true);
-        newGameButton.parentNode.replaceChild(newButton, newGameButton);
-        
-        // Enable and add event listener
-        newButton.disabled = false;
-        newButton.addEventListener('click', handleNewGameClick);
-        
-        console.log('✅ New Game button enabled and connected');
-    } else {
-        console.warn('⚠️ New Game button not found');
-        // Auto-start for testing if button missing
-        setTimeout(handleNewGameClick, 1000);
-    }
-}
-
-/**
- * Handle New Game button click
- */
-function handleNewGameClick() {
-    console.log('🎭 New Game clicked - Opening character creator...');
+    // Add movement debug controls
+    addMovementDebugControls();
     
-    try {
-        // Hide start screen
-        hideStartScreen();
-        
-        // Show character creator
-        showCharacterCreator();
-        
-        // Initialize the character creator with Game Studio office type
-        initializeCharacterCreator('Game Studio');
-        
-        console.log('✅ Character creator opened');
-        
-    } catch (error) {
-        console.error('❌ Failed to open character creator:', error);
-        // Fallback: start with default characters
-        startGameWithFallbackCharacters();
+    console.log('✅ UI elements initialized with movement support');
+}
+
+/**
+ * STAGE 4: Set up world click handlers for character movement
+ */
+function setupWorldClickHandlers() {
+    console.log('🖱️ Setting up world click handlers...');
+    
+    // Main world container click handler
+    const worldContainer = document.getElementById('world-canvas-container');
+    if (worldContainer) {
+        worldContainer.addEventListener('click', handleWorldClick);
+        worldContainer.style.cursor = 'crosshair'; // Visual indicator
+        console.log('✅ World click handler attached');
+    } else {
+        console.warn('⚠️ World container not found for click handling');
+    }
+    
+    // Optional: Add right-click for stopping movement
+    if (worldContainer) {
+        worldContainer.addEventListener('contextmenu', handleWorldRightClick);
     }
 }
 
 /**
- * Handle clicks on the game world (placeholder for movement system)
+ * STAGE 4: Handle clicks on the game world for character movement
  */
 function handleWorldClick(event) {
-    // This will be implemented in Stage 4 for character movement
-    console.log('🖱️ World clicked at:', event.offsetX, event.offsetY);
+    if (!gameEngine || !movementSystem) {
+        console.log('🖱️ World clicked but game not ready');
+        return;
+    }
+    
+    // Get click position relative to the world container
+    const rect = event.currentTarget.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+    
+    console.log(`🖱️ World clicked at: (${clickX}, ${clickY})`);
+    
+    // Get the player character
+    const playerCharacter = gameEngine.characterManager.getPlayerCharacter();
+    if (!playerCharacter) {
+        console.warn('⚠️ No player character found for movement');
+        return;
+    }
+    
+    // Create target position
+    const targetPosition = { x: clickX, y: clickY };
+    
+    // Attempt to move player character to clicked position
+    const success = movementSystem.moveCharacterTo(playerCharacter, targetPosition, gameEngine.world);
+    
+    if (success) {
+        console.log(`🚶 Moving ${playerCharacter.name} to (${clickX}, ${clickY})`);
+        
+        // Visual feedback
+        showMovementTarget(clickX, clickY);
+    } else {
+        console.warn(`🚫 Cannot move ${playerCharacter.name} to (${clickX}, ${clickY})`);
+        showInvalidTargetFeedback(clickX, clickY);
+    }
 }
 
 /**
- * Set up status panel tab switching
+ * Handle right-click to stop movement
  */
-function setupStatusPanelTabs() {
-    // FIXED: Proper tab switching implementation
-    console.log('🔧 Setting up status panel tabs...');
+function handleWorldRightClick(event) {
+    event.preventDefault(); // Prevent context menu
     
-    // Make openTab function available globally (as required by HTML onclick)
-    window.openTab = function(evt, tabName) {
-        console.log(`📋 Switching to tab: ${tabName}`);
-        
-        // Hide all tab content
-        const tabContents = document.getElementsByClassName("tab-content");
-        for (let i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        
-        // Remove active class from all tab links
-        const tabLinks = document.getElementsByClassName("tab-link");
-        for (let i = 0; i < tabLinks.length; i++) {
-            tabLinks[i].classList.remove("active");
-        }
-        
-        // Show the selected tab content and mark button as active
-        const targetTab = document.getElementById(tabName);
-        if (targetTab) {
-            targetTab.classList.add("active");
-        }
-        
-        if (evt && evt.currentTarget) {
-            evt.currentTarget.classList.add("active");
-        }
-    };
+    if (!gameEngine || !movementSystem) return;
     
-    // Set up click handlers for tab buttons (backup to onclick)
-    const tabButtons = document.querySelectorAll('.tab-link');
-    tabButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabName = button.textContent.toLowerCase();
-            window.openTab(e, tabName);
-        });
-    });
-    
-    console.log('✅ Status panel tabs configured');
+    const playerCharacter = gameEngine.characterManager.getPlayerCharacter();
+    if (playerCharacter) {
+        movementSystem.stopCharacter(playerCharacter);
+        console.log('⏹️ Player movement stopped');
+    }
 }
 
 /**
- * MAIN GAME START FUNCTION - Called from character creator
- * This is the primary entry point for starting the game simulation
+ * Show visual feedback for movement target
  */
-window.startGameSimulation = async function(charactersFromCreator) {
-    try {
-        console.log('🚀 Starting game simulation with characters:', charactersFromCreator);
-        
-        // Validate input
-        if (!charactersFromCreator || charactersFromCreator.length === 0) {
-            throw new Error('No characters provided for simulation');
+function showMovementTarget(x, y) {
+    // Create a temporary visual indicator
+    const worldContainer = document.getElementById('world-canvas-container');
+    if (!worldContainer) return;
+    
+    const indicator = document.createElement('div');
+    indicator.style.position = 'absolute';
+    indicator.style.left = (x - 5) + 'px';
+    indicator.style.top = (y - 5) + 'px';
+    indicator.style.width = '10px';
+    indicator.style.height = '10px';
+    indicator.style.backgroundColor = '#00ff00';
+    indicator.style.border = '2px solid #ffffff';
+    indicator.style.borderRadius = '50%';
+    indicator.style.pointerEvents = 'none';
+    indicator.style.zIndex = '1000';
+    
+    worldContainer.appendChild(indicator);
+    
+    // Remove after animation
+    setTimeout(() => {
+        if (indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
         }
-        
-        // Initialize character manager
-        console.log('👥 Initializing character manager...');
-        characterManager = new CharacterManager();
-        
-        // Load characters from the character creator
-        characterManager.loadCharacters(charactersFromCreator);
-        
-        // Set the first player character as focus target
-        const playerCharacter = characterManager.getPlayerCharacter();
-        if (playerCharacter) {
-            focusTargetId = playerCharacter.id;
-            console.log(`🎯 Focus set to player: ${playerCharacter.name}`);
-        } else {
-            console.warn('⚠️ No player character found, using first character');
-            if (characterManager.characters.length > 0) {
-                focusTargetId = characterManager.characters[0].id;
+    }, 1000);
+}
+
+/**
+ * Show visual feedback for invalid movement target
+ */
+function showInvalidTargetFeedback(x, y) {
+    const worldContainer = document.getElementById('world-canvas-container');
+    if (!worldContainer) return;
+    
+    const indicator = document.createElement('div');
+    indicator.style.position = 'absolute';
+    indicator.style.left = (x - 8) + 'px';
+    indicator.style.top = (y - 8) + 'px';
+    indicator.style.width = '16px';
+    indicator.style.height = '16px';
+    indicator.style.backgroundColor = '#ff0000';
+    indicator.style.border = '2px solid #ffffff';
+    indicator.style.borderRadius = '50%';
+    indicator.style.pointerEvents = 'none';
+    indicator.style.zIndex = '1000';
+    indicator.style.opacity = '0.8';
+    
+    worldContainer.appendChild(indicator);
+    
+    // Quick fade out
+    setTimeout(() => {
+        if (indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+        }
+    }, 500);
+}
+
+/**
+ * Add movement debug controls to the UI
+ */
+function addMovementDebugControls() {
+    const rightPanel = document.querySelector('.status-panel');
+    if (!rightPanel) return;
+    
+    const debugDiv = document.createElement('div');
+    debugDiv.id = 'movement-debug-panel';
+    debugDiv.className = 'widget mt-4';
+    debugDiv.innerHTML = `
+        <h3 class="font-bold mb-2 text-sm">Movement Debug (Stage 4)</h3>
+        <div class="flex flex-wrap gap-2 mb-2">
+            <button id="test-movement" class="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
+                Test Movement
+            </button>
+            <button id="stop-movement" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">
+                Stop Movement
+            </button>
+            <button id="debug-path" class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
+                Debug Path
+            </button>
+        </div>
+        <div id="movement-status" class="text-xs text-gray-600">
+            Click in the world to move player character
+        </div>
+    `;
+    
+    rightPanel.appendChild(debugDiv);
+    
+    // Set up debug button handlers
+    setupMovementDebugButtons();
+}
+
+/**
+ * Set up movement debug button handlers
+ */
+function setupMovementDebugButtons() {
+    // Test movement button
+    const testButton = document.getElementById('test-movement');
+    if (testButton) {
+        testButton.onclick = () => testRandomMovement();
+    }
+    
+    // Stop movement button
+    const stopButton = document.getElementById('stop-movement');
+    if (stopButton) {
+        stopButton.onclick = () => {
+            if (gameEngine && movementSystem) {
+                const player = gameEngine.characterManager.getPlayerCharacter();
+                if (player) {
+                    movementSystem.stopCharacter(player);
+                    updateMovementStatus('Movement stopped');
+                }
             }
+        };
+    }
+    
+    // Debug path button
+    const debugButton = document.getElementById('debug-path');
+    if (debugButton) {
+        debugButton.onclick = () => {
+            if (gameEngine) {
+                const player = gameEngine.characterManager.getPlayerCharacter();
+                if (player && movementSystem) {
+                    movementSystem.debugPath(player);
+                }
+            }
+        };
+    }
+}
+
+/**
+ * Test random movement
+ */
+function testRandomMovement() {
+    if (!gameEngine || !movementSystem) {
+        console.warn('⚠️ Game not ready for movement test');
+        return;
+    }
+    
+    const player = gameEngine.characterManager.getPlayerCharacter();
+    if (!player) {
+        console.warn('⚠️ No player character for movement test');
+        return;
+    }
+    
+    // Generate random target within world bounds
+    const world = gameEngine.world;
+    const targetX = Math.random() * world.worldWidth;
+    const targetY = Math.random() * world.worldHeight;
+    
+    const success = movementSystem.moveCharacterTo(player, {x: targetX, y: targetY}, world);
+    
+    if (success) {
+        updateMovementStatus(`Moving to (${Math.floor(targetX)}, ${Math.floor(targetY)})`);
+        showMovementTarget(targetX, targetY);
+    } else {
+        updateMovementStatus('Failed to find path to random target');
+    }
+}
+
+/**
+ * Update movement status display
+ */
+function updateMovementStatus(message) {
+    const statusDiv = document.getElementById('movement-status');
+    if (statusDiv) {
+        statusDiv.textContent = message;
+    }
+}
+
+/**
+ * MAIN GAME START FUNCTION - Enhanced for Stage 4
+ * Called from character creator or auto-start
+ */
+window.startGameSimulation = function(characterTemplates) {
+    console.log('🚀 Starting game simulation with movement system...');
+    
+    try {
+        if (!mapData) {
+            throw new Error('Map data not loaded');
         }
-        
-        // Initialize UI updater
-        console.log('🖥️ Initializing UI updater...');
-        uiUpdater = new UIUpdater(characterManager);
-        
-        // Subscribe UI updater to all characters for observer pattern
-        characterManager.characters.forEach(character => {
-            uiUpdater.subscribeToCharacter(character);
-            console.log(`🔗 UI updater subscribed to: ${character.name}`);
-        });
-        
-        // Load map data
-        console.log('🗺️ Loading map data...');
-        const mapData = await loadMapData();
-        console.log('✅ Map data loaded successfully');
         
         // Initialize game engine
-        console.log('🎮 Initializing game engine...');
         gameEngine = new GameEngine();
-        gameEngine.characterManager = characterManager;
-        gameEngine.setUIUpdater(uiUpdater);
-        
-        // Initialize renderer
-        console.log('🎨 Initializing renderer...');
-        const worldContainer = document.getElementById('world-canvas-container');
-        if (!worldContainer) {
-            throw new Error('World canvas container not found in DOM');
-        }
-        
-        renderer = new Renderer(worldContainer);
-        await renderer.initialize();
-        gameEngine.setRenderer(renderer);
-        console.log('✅ Renderer initialized');
-        
-        // Render the map
-        renderer.renderMap(mapData);
-        console.log('🏢 Map rendered');
-        
-        // Start the game engine (this creates the world and nav grid)
         gameEngine.initialize(mapData);
-        console.log('✅ Game engine initialized');
         
-        // Initialize character positions AFTER world is created
-        if (gameEngine.world) {
-            characterManager.initializeCharacterPositions(gameEngine.world);
-            console.log('📍 Character positions initialized');
-            
-            // Add characters to renderer
-            console.log('👤 Adding characters to renderer...');
-            for (const character of characterManager.characters) {
-                await renderer.addCharacter(character);
-            }
-            console.log('✅ Characters added to renderer');
-        } else {
-            throw new Error('Game world was not created properly');
-        }
+        // Add movement system to engine
+        gameEngine.movementSystem = movementSystem;
         
-        // Hide character creator and show game world
-        hideCharacterCreator();
-        showGameWorld();
-        
-        // Start UI updates with initial focus character
-        if (focusTargetId) {
-            const focusCharacter = characterManager.getCharacter(focusTargetId);
-            if (focusCharacter) {
-                uiUpdater.updateUI(focusCharacter);
-                console.log(`🎯 UI focused on: ${focusCharacter.name}`);
-            }
-        }
-        
-        // Log game status for debugging
-        logGameStatus();
-        
-        console.log('🎉 Game simulation started successfully!');
-        
-    } catch (error) {
-        console.error('❌ Failed to start game simulation:', error);
-        showErrorMessage(`Failed to start game: ${error.message}`);
-    }
-};
-
-/**
- * Fallback game start with default characters
- */
-function startGameWithFallbackCharacters() {
-    console.log('🔧 Starting with fallback characters...');
-    
-    const fallbackCharacters = [
-        {
-            id: 'fallback_1', name: 'Test Player', isPlayer: true, jobRole: 'Senior Coder',
-            spriteSheet: null, portrait: null, apiKey: '',
-            physicalAttributes: { age: 30, height: 175, weight: 70, build: 'Average', looks: 5 },
-            skills: { competence: 7, laziness: 3, charisma: 6, leadership: 5 },
-            personalityTags: ['Analytical', 'Focused'], experienceTags: [],
-            needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 },
-            inventory: ['Coffee Mug', 'Laptop'], deskItems: ['Monitor', 'Keyboard'],
-            relationships: {}, appearance: { body: 'body_skin_tone_1', hair: 'hair_style_4_blonde', shirt: 'shirt_style_2_red', pants: 'pants_style_1_jeans' }
-        },
-        {
-            id: 'fallback_2', name: 'Test NPC 1', isPlayer: false, jobRole: 'Junior Coder',
-            spriteSheet: null, portrait: null, apiKey: '',
-            physicalAttributes: { age: 25, height: 170, weight: 65, build: 'Slim', looks: 6 },
-            skills: { competence: 5, laziness: 4, charisma: 7, leadership: 3 },
-            personalityTags: ['Enthusiastic', 'Collaborative'], experienceTags: [],
-            needs: { energy: 7, hunger: 6, social: 9, comfort: 7, stress: 3 },
-            inventory: ['Notebook', 'Pen'], deskItems: ['Plant', 'Photo'],
-            relationships: {}, appearance: { body: 'body_skin_tone_1', hair: 'hair_style_4_blonde', shirt: 'shirt_style_2_red', pants: 'pants_style_1_jeans' }
-        }
-    ];
-    
-    // Add 3 more characters to make 5 total
-    for (let i = 2; i < 5; i++) {
-        fallbackCharacters.push({
-            ...fallbackCharacters[1],
-            id: `fallback_${i + 1}`,
-            name: `Test NPC ${i}`,
-            isPlayer: false
-        });
-    }
-    
-    // Start the game with fallback characters
-    if (window.startGameSimulation) {
-        window.startGameSimulation(fallbackCharacters);
-    } else {
-        console.error('❌ startGameSimulation not available');
-    }
-}
-
-/**
- * UI state management functions
- */
-function hideStartScreen() {
-    const startScreen = document.getElementById('start-screen-backdrop');
-    if (startScreen) {
-        startScreen.style.display = 'none';
-        console.log('📺 Start screen hidden');
-    }
-}
-
-function showCharacterCreator() {
-    const creatorModal = document.getElementById('creator-modal-backdrop');
-    if (creatorModal) {
-        creatorModal.style.display = 'flex';
-        creatorModal.classList.remove('hidden');
-        console.log('🎭 Character creator shown');
-    }
-}
-
-function hideCharacterCreator() {
-    const creatorModal = document.getElementById('creator-modal-backdrop');
-    if (creatorModal) {
-        creatorModal.style.display = 'none';
-        console.log('🎭 Character creator hidden');
-    }
-}
-
-function showGameWorld() {
-    // Show the main game UI
-    const mainGameUI = document.getElementById('main-game-ui');
-    if (mainGameUI) {
-        mainGameUI.classList.remove('hidden');
-        mainGameUI.style.display = 'flex';
-        console.log('🌍 Game world shown');
-    }
-}
-
-/**
- * Show error message to user
- */
-function showErrorMessage(message) {
-    alert(message);
-    console.error('💥 Error shown to user:', message);
-}
-
-/**
- * Log comprehensive game status for debugging
- */
-function logGameStatus() {
-    console.log('📊 Game Status Report:');
-    
-    if (gameEngine) {
-        console.log('🎮 Game Engine:', gameEngine.getStatus());
-    }
-    
-    if (characterManager) {
-        console.log('👥 Character Manager:', characterManager.getStatus());
-    }
-    
-    if (renderer) {
-        console.log('🎨 Renderer:', renderer.getStatus());
-    }
-    
-    if (uiUpdater) {
-        console.log('🖥️ UI Updater: Active with clock running');
-    }
-}
-
-/**
- * Clean up game resources (for page unload or restart)
- */
-function cleanupGame() {
-    console.log('🧹 Cleaning up game resources...');
-    
-    if (gameEngine) {
-        gameEngine.stop();
-        gameEngine = null;
-    }
-    
-    if (renderer) {
-        renderer.destroy();
-        renderer = null;
-    }
-    
-    if (uiUpdater) {
-        uiUpdater.destroy();
-        uiUpdater = null;
-    }
-    
-    characterManager = null;
-    focusTargetId = null;
-    
-    console.log('✅ Game cleanup complete');
-}
-
-/**
- * Handle page unload cleanup
- */
-window.addEventListener('beforeunload', cleanupGame);
-
-/**
- * Debug functions for console testing
- */
-window.debugGame = {
-    getGameEngine: () => gameEngine,
-    getCharacterManager: () => characterManager,
-    getRenderer: () => renderer,
-    getUIUpdater: () => uiUpdater,
-    logStatus: logGameStatus,
-    forceUIUpdate: () => {
-        if (gameEngine && focusTargetId) {
-            const character = characterManager.getCharacter(focusTargetId);
-            if (character && uiUpdater) {
-                uiUpdater.updateUI(character);
-                console.log('🔄 Debug: UI force updated');
-            }
-        }
-    },
-    getCharacterPositions: () => {
-        if (characterManager) {
-            const positions = characterManager.getCharacterPositions();
-            console.log('Character Positions:');
-            positions.forEach(pos => {
-                console.log(`${pos.name}: (${pos.x}, ${pos.y}) - Player: ${pos.isPlayer}`);
-            });
-            return positions;
-        }
-        return [];
-    },
-    testNewGame: handleNewGameClick,
-    startFallback: startGameWithFallbackCharacters,
-    // ADDED: Character testing commands
-    getCharacters: () => {
-        if (characterManager) {
-            return characterManager.characters.map(char => ({
-                name: char.name,
-                needs: char.needs,
-                position: char.position,
-                mood: char.mood,
-                jobRole: char.jobRole
-            }));
-        }
-        return [];
-    },
-    testCharacterNeeds: () => {
-        if (characterManager) {
-            characterManager.characters.forEach(char => {
-                console.log(`${char.name} needs:`, char.needs);
-            });
-        }
-    },
-    adjustCharacterNeed: (characterName, needType, value) => {
-        if (characterManager) {
-            const char = characterManager.getCharacterByName(characterName);
-            if (char && char.needs && char.needs[needType] !== undefined) {
-                char.needs[needType] = Math.max(0, Math.min(10, value));
-                char.notifyObservers('needs');
-                console.log(`Set ${characterName}'s ${needType} to ${value}`);
-            } else {
-                console.log('Character or need type not found');
-            }
-        }
-    }
-};
-
-console.log('🎮 Main.js loaded - Debug functions available as window.debugGame');
+        // Create characters from templates
+        if (characterTemplates && characterTemplates.length > 0) {
+            gameEngine.characterManager.createCharacters(characterTemplates);
