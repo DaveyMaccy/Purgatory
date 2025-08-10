@@ -1,146 +1,110 @@
 /**
- * FIXED: Rendering System with 16:9 aspect ratio and responsive canvas
- * 
- * This file handles all visual rendering for the game world with proper dimensions
+ * Enhanced Renderer with Character Animation System
+ * Handles character sprite animation, facing direction, and collision-aware obstacles
  */
-
 export class Renderer {
-    constructor(containerElement) {
-        this.container = containerElement;
+    constructor(container) {
+        this.container = container;
         this.app = null;
-        this.worldContainer = null;
-        this.characterSprites = new Map(); // Map character IDs to sprites
-        this.mapSprites = [];
         this.isInitialized = false;
         
-        // FIXED: 16:9 aspect ratio constants
-        this.TILE_SIZE = 48;
+        // World settings for 16:9 aspect ratio
+        this.WORLD_WIDTH = 800;
+        this.WORLD_HEIGHT = 450;
         this.CHARACTER_WIDTH = 48;
-        this.CHARACTER_HEIGHT = 96; // Characters are 48x96 (2 tiles tall)
+        this.CHARACTER_HEIGHT = 96;
         
-        // FIXED: 16:9 aspect ratio dimensions
-        this.BASE_WIDTH = 1280;
-        this.BASE_HEIGHT = 720;
+        // Layers
+        this.mapLayer = null;
+        this.obstacleLayer = null;
+        this.characterLayer = null;
         
-        // Current render dimensions (will be calculated)
-        this.WORLD_WIDTH = this.BASE_WIDTH;
-        this.WORLD_HEIGHT = this.BASE_HEIGHT;
+        // Character management
+        this.characterSprites = new Map();
+        this.characterAnimations = new Map();
+        
+        // Animation frame tracking
+        this.animationTimer = 0;
+        this.walkAnimationSpeed = 200; // milliseconds per frame
         
         console.log('🎨 Renderer constructor called with 16:9 aspect ratio');
     }
 
     /**
-     * FIXED: Initialize PixiJS application with responsive 16:9 canvas
+     * Initialize the PixiJS renderer with enhanced animation support
      */
     async initialize() {
         try {
             console.log('🔧 Initializing PixiJS renderer with 16:9 aspect ratio...');
-            
-            // Calculate optimal canvas size for container
-            this.calculateCanvasSize();
-            
-            // Create PixiJS application with calculated dimensions
+
+            // Create PixiJS application
             this.app = new PIXI.Application({
                 width: this.WORLD_WIDTH,
                 height: this.WORLD_HEIGHT,
-                backgroundColor: 0x2c3e50,
+                backgroundColor: 0xf0f0f0,
                 antialias: true,
-                resolution: window.devicePixelRatio || 1,
-                autoDensity: true
+                resolution: 1
             });
 
-            // FIXED: Make canvas responsive and centered
-            this.setupResponsiveCanvas();
-
-            // Add canvas to container
-            this.container.appendChild(this.app.view);
-
-            // Create world container for all game objects
-            this.worldContainer = new PIXI.Container();
-            this.app.stage.addChild(this.worldContainer);
-
-            // Create layers in proper order (bottom to top)
+            // Create layers in order (back to front)
             this.mapLayer = new PIXI.Container();
+            this.obstacleLayer = new PIXI.Container();
             this.characterLayer = new PIXI.Container();
             
-            this.worldContainer.addChild(this.mapLayer);
-            this.worldContainer.addChild(this.characterLayer);
+            this.app.stage.addChild(this.mapLayer);
+            this.app.stage.addChild(this.obstacleLayer);
+            this.app.stage.addChild(this.characterLayer);
 
-            // Add resize listener for responsive behavior
-            this.setupResizeListener();
+            // Append to container
+            if (this.container) {
+                this.container.innerHTML = '';
+                this.container.appendChild(this.app.view);
+                console.log(`📐 Canvas size calculated: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`);
+            }
+
+            // Set up resize handling
+            this.resizeHandler = () => this.handleResize();
+            window.addEventListener('resize', this.resizeHandler);
 
             this.isInitialized = true;
             console.log(`✅ PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`);
 
         } catch (error) {
-            console.error('❌ Failed to initialize renderer:', error);
+            console.error('❌ Failed to initialize PixiJS renderer:', error);
             throw error;
         }
     }
 
     /**
-     * FIXED: Calculate optimal canvas size maintaining 16:9 aspect ratio
+     * Handle window resize
      */
-    calculateCanvasSize() {
-        const containerRect = this.container.getBoundingClientRect();
-        const containerWidth = containerRect.width || window.innerWidth * 0.7; // Fallback
-        const containerHeight = containerRect.height || window.innerHeight * 0.7; // Fallback
+    handleResize() {
+        if (!this.app || !this.container) return;
         
-        // Calculate 16:9 dimensions that fit in container
+        const containerRect = this.container.getBoundingClientRect();
         const aspectRatio = 16 / 9;
         
-        let width = containerWidth;
-        let height = width / aspectRatio;
+        let newWidth = containerRect.width;
+        let newHeight = newWidth / aspectRatio;
         
-        // If height exceeds container, scale by height instead
-        if (height > containerHeight) {
-            height = containerHeight;
-            width = height * aspectRatio;
+        if (newHeight > containerRect.height) {
+            newHeight = containerRect.height;
+            newWidth = newHeight * aspectRatio;
         }
         
-        // Ensure minimum size for playability
-        const MIN_WIDTH = 800;
-        const MIN_HEIGHT = 450;
+        this.app.renderer.resize(newWidth, newHeight);
         
-        this.WORLD_WIDTH = Math.max(Math.floor(width), MIN_WIDTH);
-        this.WORLD_HEIGHT = Math.max(Math.floor(height), MIN_HEIGHT);
+        // Scale the stage to maintain aspect ratio
+        const scaleX = newWidth / this.WORLD_WIDTH;
+        const scaleY = newHeight / this.WORLD_HEIGHT;
+        const scale = Math.min(scaleX, scaleY);
         
-        console.log(`📐 Canvas size calculated: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`);
+        this.app.stage.scale.set(scale);
     }
 
     /**
-     * FIXED: Setup responsive canvas styling
-     */
-    setupResponsiveCanvas() {
-        const canvas = this.app.view;
-        canvas.style.display = 'block';
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-        canvas.style.objectFit = 'contain'; // Maintain aspect ratio
-        canvas.style.maxWidth = '100%';
-        canvas.style.maxHeight = '100%';
-    }
-
-    /**
-     * FIXED: Setup resize listener for responsive behavior
-     */
-    setupResizeListener() {
-        const resizeHandler = () => {
-            this.calculateCanvasSize();
-            if (this.app) {
-                this.app.renderer.resize(this.WORLD_WIDTH, this.WORLD_HEIGHT);
-            }
-        };
-        
-        window.addEventListener('resize', resizeHandler);
-        
-        // Store reference for cleanup
-        this.resizeHandler = resizeHandler;
-    }
-
-    /**
-     * FIXED: Render office map with proper 16:9 proportions
-     * @param {Object} mapData - Map data from JSON file
+     * Render the map with obstacles
+     * @param {Object} mapData - Map data from JSON
      */
     renderMap(mapData) {
         if (!this.isInitialized) {
@@ -150,74 +114,98 @@ export class Renderer {
 
         console.log('🗺️ Rendering map with 16:9 layout...');
 
-        // Clear existing map
+        // Clear existing map content
         this.mapLayer.removeChildren();
+        this.obstacleLayer.removeChildren();
 
-        // Create office background that fills the 16:9 area
+        // Create floor background
         const floor = new PIXI.Graphics();
-        floor.beginFill(0xf5f5f5); // Light gray floor
+        floor.beginFill(0xe8f4f8); // Light blue office floor
         floor.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT);
         floor.endFill();
         this.mapLayer.addChild(floor);
 
-        // Add office elements scaled for 16:9 layout
-        this.addOfficeElements();
+        // Add office walls
+        this.renderWalls();
+        
+        // Add office obstacles (desks, tables, etc.)
+        this.renderOfficeObstacles();
 
         console.log('✅ Map rendered successfully in 16:9 format');
     }
 
     /**
-     * FIXED: Add office elements scaled for 16:9 layout
+     * Render office walls
      */
-    addOfficeElements() {
+    renderWalls() {
         const graphics = new PIXI.Graphics();
-
-        // FIXED: Scale desk positions for wider 16:9 layout
-        const deskColor = 0x8b4513;
-        const scaleX = this.WORLD_WIDTH / 800; // Scale from old 800px width
-        const scaleY = this.WORLD_HEIGHT / 600; // Scale from old 600px height
         
-        const desks = [
-            { x: 150 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 400 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 650 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 900 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 150 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 400 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 650 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 900 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY }
-        ];
-
-        desks.forEach(desk => {
-            graphics.beginFill(deskColor);
-            graphics.drawRect(desk.x, desk.y, desk.width, desk.height);
-            graphics.endFill();
-        });
-
-        // FIXED: Walls scaled for 16:9
-        graphics.lineStyle(4 * Math.min(scaleX, scaleY), 0x333333);
+        // Wall styling
+        graphics.lineStyle(4, 0x333333);
         
-        // Top wall
-        graphics.moveTo(0, 0);
-        graphics.lineTo(this.WORLD_WIDTH, 0);
+        // Outer walls
+        graphics.drawRect(4, 4, this.WORLD_WIDTH - 8, this.WORLD_HEIGHT - 8);
         
-        // Bottom wall
-        graphics.moveTo(0, this.WORLD_HEIGHT - 4);
-        graphics.lineTo(this.WORLD_WIDTH, this.WORLD_HEIGHT - 4);
-        
-        // Left wall
-        graphics.moveTo(0, 0);
-        graphics.lineTo(0, this.WORLD_HEIGHT);
-        
-        // Right wall
-        graphics.moveTo(this.WORLD_WIDTH - 4, 0);
-        graphics.lineTo(this.WORLD_WIDTH - 4, this.WORLD_HEIGHT);
-
-        this.mapLayer.addChild(graphics);
+        this.obstacleLayer.addChild(graphics);
     }
 
     /**
-     * FIXED: Create character sprite with proper scaling
+     * Render office obstacles (desks, tables, etc.) that characters should collide with
+     */
+    renderOfficeObstacles() {
+        // Define desk positions that match the collision grid
+        const obstacles = [
+            // Top row desks
+            { x: 100, y: 150, width: 140, height: 60, type: 'desk', label: 'Desk 1' },
+            { x: 280, y: 150, width: 140, height: 60, type: 'desk', label: 'Desk 2' },
+            { x: 460, y: 150, width: 140, height: 60, type: 'desk', label: 'Desk 3' },
+            
+            // Bottom row desks
+            { x: 100, y: 300, width: 140, height: 60, type: 'desk', label: 'Desk 4' },
+            { x: 280, y: 300, width: 140, height: 60, type: 'desk', label: 'Desk 5' },
+            
+            // Meeting table
+            { x: 500, y: 280, width: 120, height: 80, type: 'table', label: 'Meeting Table' },
+            
+            // Break room area
+            { x: 650, y: 100, width: 100, height: 50, type: 'counter', label: 'Break Counter' }
+        ];
+
+        obstacles.forEach(obstacle => {
+            const graphics = new PIXI.Graphics();
+            
+            // Set color based on type
+            let color = 0x8B4513; // Brown for desks
+            if (obstacle.type === 'table') color = 0x654321; // Darker brown for tables
+            if (obstacle.type === 'counter') color = 0xA0522D; // Lighter brown for counters
+            
+            // Draw obstacle
+            graphics.beginFill(color);
+            graphics.drawRoundedRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height, 8);
+            graphics.endFill();
+            
+            // Add border
+            graphics.lineStyle(2, 0x444444);
+            graphics.drawRoundedRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height, 8);
+            
+            // Add label
+            const label = new PIXI.Text(obstacle.label, {
+                fontFamily: 'Arial',
+                fontSize: 10,
+                fill: 0xffffff,
+                align: 'center'
+            });
+            label.anchor.set(0.5);
+            label.x = obstacle.x + obstacle.width / 2;
+            label.y = obstacle.y + obstacle.height / 2;
+            
+            this.obstacleLayer.addChild(graphics);
+            this.obstacleLayer.addChild(label);
+        });
+    }
+
+    /**
+     * Add character with animation support
      * @param {Object} character - Character data
      */
     async addCharacter(character) {
@@ -229,22 +217,17 @@ export class Renderer {
         try {
             console.log(`👤 Adding character sprite for ${character.name}`);
 
+            let characterContainer = new PIXI.Container();
             let sprite;
 
-            // Try to load custom spritesheet first
+            // Try to load character spritesheet
             if (character.spriteSheet) {
                 try {
                     // Load the full spritesheet texture
-                    const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
+                    const texture = await PIXI.Texture.fromURL(character.spriteSheet);
                     
-                    // Create a cropped texture for proper 48x96 character
-                    const croppedTexture = new PIXI.Texture(
-                        fullTexture.baseTexture,
-                        new PIXI.Rectangle(0, 0, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT)
-                    );
-                    
-                    // Create sprite from cropped texture
-                    sprite = new PIXI.Sprite(croppedTexture);
+                    // Create animated sprite with walk cycle
+                    sprite = this.createAnimatedSprite(texture, character);
                     
                 } catch (spriteError) {
                     console.warn(`⚠️ Failed to load sprite for ${character.name}, using placeholder:`, spriteError);
@@ -255,14 +238,12 @@ export class Renderer {
                 sprite = this.createPlaceholderSprite(character);
             }
             
-            // Set proper sprite dimensions and position
-            sprite.width = this.CHARACTER_WIDTH;
-            sprite.height = this.CHARACTER_HEIGHT;
-            sprite.x = character.position?.x || (this.WORLD_WIDTH / 2);
-            sprite.y = character.position?.y || (this.WORLD_HEIGHT / 2);
+            // Set up character container
+            characterContainer.addChild(sprite);
             
-            // Anchor at bottom center so character "stands" on the ground
-            sprite.anchor.set(0.5, 1.0);
+            // Set position
+            characterContainer.x = character.position?.x || (this.WORLD_WIDTH / 2);
+            characterContainer.y = character.position?.y || (this.WORLD_HEIGHT / 2);
             
             // Add name label
             const nameText = new PIXI.Text(character.name, {
@@ -274,7 +255,7 @@ export class Renderer {
             nameText.anchor.set(0.5);
             nameText.x = 0;
             nameText.y = -this.CHARACTER_HEIGHT - 10;
-            sprite.addChild(nameText);
+            characterContainer.addChild(nameText);
 
             // Add player indicator if this is the player
             if (character.isPlayer) {
@@ -282,32 +263,64 @@ export class Renderer {
                 playerIndicator.beginFill(0x00ff00); // Green circle
                 playerIndicator.drawCircle(0, -this.CHARACTER_HEIGHT - 20, 5);
                 playerIndicator.endFill();
-                sprite.addChild(playerIndicator);
+                characterContainer.addChild(playerIndicator);
             }
 
-            // Store sprite reference
-            this.characterSprites.set(character.id, sprite);
-            this.characterLayer.addChild(sprite);
+            // Store character data
+            this.characterSprites.set(character.id, characterContainer);
+            this.characterAnimations.set(character.id, {
+                sprite: sprite,
+                facing: 'down', // down, up, left, right
+                isWalking: false,
+                walkFrame: 0,
+                lastUpdate: 0,
+                lastPosition: { x: characterContainer.x, y: characterContainer.y }
+            });
             
-            console.log(`✅ Character sprite added for ${character.name} at (${sprite.x}, ${sprite.y})`);
+            this.characterLayer.addChild(characterContainer);
+            
+            console.log(`✅ Character sprite added for ${character.name} at (${characterContainer.x}, ${characterContainer.y})`);
 
         } catch (error) {
             console.error(`❌ Failed to add character ${character.name}:`, error);
-            // Create a basic placeholder as fallback
-            const fallbackSprite = this.createPlaceholderSprite(character);
-            fallbackSprite.x = character.position?.x || (this.WORLD_WIDTH / 2);
-            fallbackSprite.y = character.position?.y || (this.WORLD_HEIGHT / 2);
-            fallbackSprite.anchor.set(0.5, 1.0);
-            
-            this.characterSprites.set(character.id, fallbackSprite);
-            this.characterLayer.addChild(fallbackSprite);
         }
     }
 
     /**
-     * Create a placeholder sprite for characters without custom sprites
+     * Create animated sprite from spritesheet
+     * @param {PIXI.Texture} texture - Spritesheet texture
      * @param {Object} character - Character data
-     * @returns {PIXI.Graphics} A placeholder sprite
+     * @returns {PIXI.Sprite} Animated sprite
+     */
+    createAnimatedSprite(texture, character) {
+        // For now, create a simple sprite from the first frame (down-facing idle)
+        // The spritesheet has 4 directions x 4 frames each = 16 frames total
+        // Layout: [down-idle, down-walk1, down-walk2, down-walk3, 
+        //          up-idle, up-walk1, up-walk2, up-walk3,
+        //          left-idle, left-walk1, left-walk2, left-walk3,
+        //          right-idle, right-walk1, right-walk2, right-walk3]
+        
+        const frameWidth = this.CHARACTER_WIDTH;
+        const frameHeight = this.CHARACTER_HEIGHT;
+        
+        // Create texture for down-facing idle (first frame)
+        const idleTexture = new PIXI.Texture(
+            texture.baseTexture,
+            new PIXI.Rectangle(0, 0, frameWidth, frameHeight)
+        );
+        
+        const sprite = new PIXI.Sprite(idleTexture);
+        sprite.width = this.CHARACTER_WIDTH;
+        sprite.height = this.CHARACTER_HEIGHT;
+        sprite.anchor.set(0.5, 1.0); // Anchor at bottom center
+        
+        return sprite;
+    }
+
+    /**
+     * Create placeholder sprite for characters without custom sprites
+     * @param {Object} character - Character data
+     * @returns {PIXI.Graphics} Placeholder sprite
      */
     createPlaceholderSprite(character) {
         const graphics = new PIXI.Graphics();
@@ -328,20 +341,108 @@ export class Renderer {
         graphics.drawCircle(4, -this.CHARACTER_HEIGHT + 12, 1);  // Right eye
         graphics.endFill();
         
+        // Direction indicator (small triangle pointing down)
+        graphics.beginFill(0xff0000);
+        graphics.drawPolygon([0, -this.CHARACTER_HEIGHT + 25, -3, -this.CHARACTER_HEIGHT + 20, 3, -this.CHARACTER_HEIGHT + 20]);
+        graphics.endFill();
+        
         return graphics;
     }
 
     /**
-     * Update character sprite position
+     * Update character position and animation
      * @param {string} characterId - Character ID
      * @param {number} x - New X position
      * @param {number} y - New Y position
      */
     updateCharacterPosition(characterId, x, y) {
-        const sprite = this.characterSprites.get(characterId);
-        if (sprite) {
-            sprite.x = x;
-            sprite.y = y;
+        const characterContainer = this.characterSprites.get(characterId);
+        const animData = this.characterAnimations.get(characterId);
+        
+        if (!characterContainer || !animData) return;
+        
+        // Calculate movement direction
+        const oldX = characterContainer.x;
+        const oldY = characterContainer.y;
+        const deltaX = x - oldX;
+        const deltaY = y - oldY;
+        const isMoving = Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1;
+        
+        // Update position
+        characterContainer.x = x;
+        characterContainer.y = y;
+        
+        // Update facing direction and animation state
+        if (isMoving) {
+            // Determine primary direction
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                animData.facing = deltaX > 0 ? 'right' : 'left';
+            } else {
+                animData.facing = deltaY > 0 ? 'down' : 'up';
+            }
+            animData.isWalking = true;
+        } else {
+            animData.isWalking = false;
+        }
+        
+        // Update sprite animation based on direction and movement
+        this.updateCharacterAnimation(characterId);
+    }
+
+    /**
+     * Update character animation based on movement state
+     * @param {string} characterId - Character ID
+     */
+    updateCharacterAnimation(characterId) {
+        const animData = this.characterAnimations.get(characterId);
+        if (!animData || !animData.sprite.texture) return;
+        
+        const currentTime = Date.now();
+        
+        // Only update animation frame if walking and enough time has passed
+        if (animData.isWalking && currentTime - animData.lastUpdate > this.walkAnimationSpeed) {
+            animData.walkFrame = (animData.walkFrame + 1) % 4; // 4 frames per direction
+            animData.lastUpdate = currentTime;
+        } else if (!animData.isWalking) {
+            animData.walkFrame = 0; // Idle frame
+        }
+        
+        // Calculate frame position in spritesheet
+        const frameWidth = this.CHARACTER_WIDTH;
+        const frameHeight = this.CHARACTER_HEIGHT;
+        
+        let directionRow = 0;
+        switch (animData.facing) {
+            case 'down': directionRow = 0; break;
+            case 'up': directionRow = 1; break;
+            case 'left': directionRow = 2; break;
+            case 'right': directionRow = 3; break;
+        }
+        
+        const frameX = animData.walkFrame * frameWidth;
+        const frameY = directionRow * frameHeight;
+        
+        // Update sprite texture region (if using spritesheet)
+        if (animData.sprite.texture.baseTexture) {
+            try {
+                const newTexture = new PIXI.Texture(
+                    animData.sprite.texture.baseTexture,
+                    new PIXI.Rectangle(frameX, frameY, frameWidth, frameHeight)
+                );
+                animData.sprite.texture = newTexture;
+            } catch (error) {
+                // Fallback: just rotate placeholder sprite based on direction
+                if (animData.sprite instanceof PIXI.Graphics) {
+                    let rotation = 0;
+                    switch (animData.facing) {
+                        case 'up': rotation = -Math.PI / 2; break;
+                        case 'down': rotation = Math.PI / 2; break;
+                        case 'left': rotation = Math.PI; break;
+                        case 'right': rotation = 0; break;
+                    }
+                    animData.sprite.rotation = rotation;
+                }
+            }
         }
     }
 
@@ -350,10 +451,11 @@ export class Renderer {
      * @param {string} characterId - Character ID
      */
     removeCharacter(characterId) {
-        const sprite = this.characterSprites.get(characterId);
-        if (sprite) {
-            this.characterLayer.removeChild(sprite);
+        const characterContainer = this.characterSprites.get(characterId);
+        if (characterContainer) {
+            this.characterLayer.removeChild(characterContainer);
             this.characterSprites.delete(characterId);
+            this.characterAnimations.delete(characterId);
         }
     }
 
@@ -362,12 +464,19 @@ export class Renderer {
      */
     update() {
         if (this.app && this.isInitialized) {
+            // Update all character animations
+            this.characterAnimations.forEach((animData, characterId) => {
+                if (animData.isWalking) {
+                    this.updateCharacterAnimation(characterId);
+                }
+            });
+            
             this.app.render();
         }
     }
 
     /**
-     * FIXED: Cleanup with resize listener removal
+     * Cleanup
      */
     destroy() {
         if (this.resizeHandler) {
@@ -378,13 +487,15 @@ export class Renderer {
             this.app.destroy(true);
             this.app = null;
         }
+        
         this.characterSprites.clear();
+        this.characterAnimations.clear();
         this.isInitialized = false;
         console.log('🧹 Renderer destroyed and cleaned up');
     }
 
     /**
-     * FIXED: Get world bounds for camera/movement systems
+     * Get world bounds for camera/movement systems
      */
     getWorldBounds() {
         return {
@@ -404,7 +515,13 @@ export class Renderer {
             characterCount: this.characterSprites.size,
             worldBounds: this.getWorldBounds(),
             canvasSize: `${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`,
-            aspectRatio: '16:9'
+            aspectRatio: '16:9',
+            animationData: Array.from(this.characterAnimations.entries()).map(([id, data]) => ({
+                characterId: id,
+                facing: data.facing,
+                isWalking: data.isWalking,
+                walkFrame: data.walkFrame
+            }))
         };
     }
 }
