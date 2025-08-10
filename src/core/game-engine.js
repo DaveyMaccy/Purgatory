@@ -110,30 +110,44 @@ export class GameEngine {
             this.world.update(deltaTime);
         }
         
-        // STAGE 4 NEW: Update movement system
-        if (this.movementSystem && this.world) {
-            // Get characters from character manager if available
+        // STAGE 4 NEW: Update movement system for all characters
+        if (this.movementSystem && this.characterManager) {
             const characters = this.getCharacters();
             if (characters && characters.length > 0) {
-                this.movementSystem.updateAll(characters, this.world, deltaTime);
+                // Update each character's movement individually
+                characters.forEach(character => {
+                    if (character.path && character.path.length > 0) {
+                        this.movementSystem.moveCharacter(character, this.world, deltaTime);
+                    }
+                });
             }
         }
         
         // Update renderer if available
         if (this.renderer) {
-            this.renderer.update(deltaTime);
+            // Update character positions in renderer
+            const characters = this.getCharacters();
+            characters.forEach(character => {
+                if (character.position) {
+                    this.renderer.updateCharacterPosition(
+                        character.id, 
+                        character.position.x, 
+                        character.position.y
+                    );
+                }
+            });
+            
+            this.renderer.update();
         }
     }
 
     /**
-     * Get characters from the global character manager
-     * This is a temporary solution until we have proper dependency injection
+     * Get characters from the character manager
      * @returns {Array} Array of characters
      */
     getCharacters() {
-        // Access the global character manager through window
-        if (window.characterManager && window.characterManager.characters) {
-            return window.characterManager.characters;
+        if (this.characterManager && this.characterManager.characters) {
+            return this.characterManager.characters;
         }
         return [];
     }
