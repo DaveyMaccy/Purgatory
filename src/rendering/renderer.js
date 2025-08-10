@@ -1,5 +1,5 @@
 /**
- * STAGE 2: Basic Rendering System using PixiJS
+ * STAGE 2 FIXED: Basic Rendering System using PixiJS with proper sprite cropping
  * 
  * This file handles all visual rendering for the game world
  */
@@ -146,11 +146,18 @@ export class Renderer {
         try {
             console.log(`Adding character sprite for ${character.name}`);
 
-            // Load character texture
-            const texture = await PIXI.Texture.fromURL(character.spriteSheet);
+            // Load the full spritesheet texture
+            const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
             
-            // Create sprite
-            const sprite = new PIXI.Sprite(texture);
+            // FIXED: Create a cropped texture to show just one character frame
+            // Character sprites are 48x48, and we want the idle frame (usually first frame)
+            const croppedTexture = new PIXI.Texture(
+                fullTexture.baseTexture,
+                new PIXI.Rectangle(0, 0, 48, 48) // Take just the first 48x48 frame
+            );
+            
+            // Create sprite from cropped texture
+            const sprite = new PIXI.Sprite(croppedTexture);
             
             // Set sprite properties
             sprite.width = this.TILE_SIZE;
