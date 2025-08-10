@@ -1,84 +1,20 @@
-/**
- * STAGE 3 COMPLETE: World Management System
- * 
- * This file handles:
- * - Map data loading from JSON files
- * - Navigation grid generation for character positioning
- * - World object management
- * - Task assignment system
- * - Position validation and pathfinding preparation
- */
+// src/core/world/world.js - Enhanced with NavGrid integration for Stage 4
 
-/**
- * Load map data from JSON file
- * @returns {Promise<Object>} The loaded map data
- */
-export async function loadMapData() {
-    try {
-        console.log('🗺️ Loading map data from assets/maps/purgatorygamemap.json...');
-        
-        const response = await fetch('assets/maps/purgatorygamemap.json');
-        
-        if (!response.ok) {
-            throw new Error(`Failed to load map: HTTP ${response.status}`);
-        }
-        
-        const mapData = await response.json();
-        
-        // Validate that we have the essential map data
-        if (!mapData.width || !mapData.height) {
-            throw new Error('Invalid map data: missing required properties (width, height)');
-        }
-        
-        // Ensure we have layers even if they're empty
-        if (!mapData.layers) {
-            mapData.layers = [];
-            console.warn('⚠️ Map data has no layers, using empty array');
-        }
-        
-        console.log('✅ Map data loaded successfully:', {
-            width: mapData.width,
-            height: mapData.height,
-            layers: mapData.layers.length,
-            tilewidth: mapData.tilewidth || 48,
-            tileheight: mapData.tileheight || 48
-        });
-        
-        return mapData;
-        
-    } catch (error) {
-        console.error('❌ Error loading map data:', error);
-        
-        // Return a default map if loading fails
-        console.log('🔧 Using fallback map data...');
-        return {
-            width: 16,
-            height: 12,
-            tilewidth: 48,
-            tileheight: 48,
-            layers: []
-        };
-    }
-}
+import { NavGrid } from './nav-grid.js';
 
-/**
- * World Class - Manages the game environment
- * Implements world systems from the SSOT documentation (Chapter 4)
- */
 export class World {
     constructor(characterManager, officeLayout) {
         this.characterManager = characterManager;
         this.officeLayout = officeLayout;
-        this.objects = [];
-        this.rooms = [];
-        this.navGrid = [];
-        this.gameTime = 0; // Game time in milliseconds
-        this.officeType = 'corporate';
-        this.taskDictionary = this.createTaskDictionary();
         
-        // TILE_SIZE is now a property of the World class, making it accessible
-        // to other modules like characterManager.js.
-        this.TILE_SIZE = officeLayout?.tilewidth || 48; // Standard tile size from map data
+        // Game time tracking
+        this.gameTime = 0;
+        
+        // STAGE 4: Navigation system
+        this.navGrid = new NavGrid();
+        
+        // World configuration from layout data
+        this.TILE_SIZE = officeLayout?.tilewidth || 48;
         
         // World dimensions
         this.width = officeLayout?.width || 16;
@@ -90,185 +26,140 @@ export class World {
     }
 
     /**
-     * STAGE 2-3 CRITICAL: Generate navigation grid for character movement and positioning
-     * This creates a 2D array representing walkable (0) and non-walkable (1) tiles
+     * STAGE 4 CRITICAL: Generate navigation grid for character movement and pathfinding
      */
     generateNavGrid() {
-        console.log('🗺️ Generating navigation grid...');
+        console.log('🗺️ Generating navigation grid for pathfinding...');
         
         try {
-            // Initialize grid with all walkable tiles
-            this.navGrid = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
+            // Initialize the NavGrid with world dimensions
+            this.navGrid.initialize(this.width, this.height);
             
             // Mark obstacles based on map data or default office layout
             this.markObstacles();
             
             console.log(`✅ Navigation grid generated: ${this.width}x${this.height} tiles`);
-            console.log('📊 Grid sample (first 5 rows):', this.navGrid.slice(0, 5));
+            console.log('📊 Grid sample (first 5 rows):', this.navGrid.grid.slice(0, 5));
             
         } catch (error) {
             console.error('❌ Failed to generate navigation grid:', error);
+            
             // Create a simple fallback grid
-            this.navGrid = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
-            console.log('🔧 Using fallback navigation grid');
+            this.navGrid.initialize(this.width, this.height);
+            console.log('🔧 Using fallback navigation grid with no obstacles');
         }
     }
 
     /**
-     * Mark obstacles in the navigation grid
-     * This creates walls and furniture as non-walkable areas
+     * STAGE 4: Mark obstacles in the navigation grid
+     * Creates walls and furniture as non-walkable areas
      */
     markObstacles() {
+        console.log('🧱 Marking obstacles in navigation grid...');
+        
         // Mark border walls as obstacles
         for (let x = 0; x < this.width; x++) {
-            this.navGrid[0][x] = 1; // Top wall
-            this.navGrid[this.height - 1][x] = 1; // Bottom wall
+            this.navGrid.markObstacle(x, 0); // Top wall
+            this.navGrid.markObstacle(x, this.height - 1); // Bottom wall
         }
         
         for (let y = 0; y < this.height; y++) {
-            this.navGrid[y][0] = 1; // Left wall
-            this.navGrid[y][this.width - 1] = 1; // Right wall
+            this.navGrid.markObstacle(0, y); // Left wall
+            this.navGrid.markObstacle(this.width - 1, y); // Right wall
         }
         
-        // Mark desk areas as obstacles (matching renderer desk positions)
-        const deskPositions = [
-            { x: 2, y: 3, width: 3, height: 1 }, // Desk at (100, 150) in pixels
-            { x: 6, y: 3, width: 3, height: 1 }, // Desk at (300, 150) in pixels
-            { x: 10, y: 3, width: 3, height: 1 }, // Desk at (500, 150) in pixels
-            { x: 2, y: 7, width: 3, height: 1 }, // Desk at (100, 350) in pixels
-            { x: 6, y: 7, width: 3, height: 1 }  // Desk at (300, 350) in pixels
-        ];
+        // Add some office furniture as obstacles (sample layout)
+        this.addOfficeFurniture();
         
-        deskPositions.forEach(desk => {
-            for (let x = desk.x; x < desk.x + desk.width && x < this.width; x++) {
-                for (let y = desk.y; y < desk.y + desk.height && y < this.height; y++) {
-                    if (y >= 0 && y < this.height) {
-                        this.navGrid[y][x] = 1;
-                    }
-                }
+        console.log('✅ Obstacles marked in navigation grid');
+    }
+
+    /**
+     * STAGE 4: Add office furniture obstacles
+     */
+    addOfficeFurniture() {
+        // Conference room table (center-left area)
+        for (let x = 3; x <= 5; x++) {
+            for (let y = 3; y <= 5; y++) {
+                this.navGrid.markObstacle(x, y);
             }
-        });
+        }
         
-        console.log('🚧 Obstacles marked in navigation grid');
-    }
-
-    /**
-     * Create task dictionary for character assignments
-     * Based on SSOT task system design
-     */
-    createTaskDictionary() {
-        return {
-            'Manager': [
-                { displayName: 'Review Reports', requiredLocation: 'desk', duration: 30000 },
-                { displayName: 'Attend Meeting', requiredLocation: 'meeting_room', duration: 45000 },
-                { displayName: 'Plan Strategy', requiredLocation: 'desk', duration: 60000 }
-            ],
-            'Developer': [
-                { displayName: 'Write Code', requiredLocation: 'desk', duration: 120000 },
-                { displayName: 'Debug Issues', requiredLocation: 'desk', duration: 90000 },
-                { displayName: 'Code Review', requiredLocation: 'desk', duration: 60000 }
-            ],
-            'Designer': [
-                { displayName: 'Create Mockups', requiredLocation: 'desk', duration: 90000 },
-                { displayName: 'User Research', requiredLocation: 'desk', duration: 60000 },
-                { displayName: 'Design Review', requiredLocation: 'meeting_room', duration: 45000 }
-            ],
-            'Analyst': [
-                { displayName: 'Analyze Data', requiredLocation: 'desk', duration: 80000 },
-                { displayName: 'Generate Reports', requiredLocation: 'desk', duration: 70000 },
-                { displayName: 'Present Findings', requiredLocation: 'meeting_room', duration: 30000 }
-            ],
-            'Intern': [
-                { displayName: 'Learn Systems', requiredLocation: 'desk', duration: 60000 },
-                { displayName: 'Assist Team', requiredLocation: 'desk', duration: 45000 },
-                { displayName: 'Attend Training', requiredLocation: 'meeting_room', duration: 90000 }
-            ]
-        };
-    }
-
-    /**
-     * Assign tasks to all characters based on their job roles
-     */
-    assignTasksToCharacters() {
-        console.log('📋 Assigning tasks to characters...');
-        
-        this.characterManager.characters.forEach(character => {
-            const tasks = this.taskDictionary[character.jobRole];
-            if (tasks && tasks.length > 0) {
-                const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
-                character.assignedTask = { ...randomTask }; // Clone to avoid reference issues
-                console.log(`📝 Assigned task "${randomTask.displayName}" to ${character.name}`);
-            } else {
-                // Default task if no specific tasks found
-                character.assignedTask = { 
-                    displayName: 'General office work', 
-                    requiredLocation: 'desk',
-                    duration: 60000
-                };
-                console.log(`📝 Assigned default task to ${character.name}`);
+        // Desk clusters (right side)
+        for (let x = 10; x <= 12; x++) {
+            for (let y = 2; y <= 3; y++) {
+                this.navGrid.markObstacle(x, y);
             }
-        });
-    }
-
-    /**
-     * Populate the world with objects (placeholder for future implementation)
-     */
-    populateWorldWithObjects() {
-        console.log('🏢 Populating world with objects...');
-        // Implementation will be completed in later stages
-    }
-
-    /**
-     * Update world state
-     * @param {number} deltaTime - Time since last update in milliseconds
-     */
-    update(deltaTime) {
-        this.gameTime += deltaTime;
+        }
         
-        // Update world systems here
-        // This will be expanded in later stages
+        for (let x = 10; x <= 12; x++) {
+            for (let y = 6; y <= 7; y++) {
+                this.navGrid.markObstacle(x, y);
+            }
+        }
+        
+        // Kitchen area (bottom-left)
+        for (let x = 2; x <= 4; x++) {
+            for (let y = 8; y <= 9; y++) {
+                this.navGrid.markObstacle(x, y);
+            }
+        }
+        
+        console.log('🪑 Office furniture obstacles added');
     }
 
     /**
-     * Check if a position is walkable
+     * STAGE 4: Find path between two positions using A* pathfinding
+     * @param {Object} start - Starting position {x, y} in pixels
+     * @param {Object} end - Target position {x, y} in pixels
+     * @returns {Array} Array of waypoints from start to end
+     */
+    findPath(start, end) {
+        if (!this.navGrid) {
+            console.error('❌ Navigation grid not initialized');
+            return [];
+        }
+        
+        return this.navGrid.findPath(start, end);
+    }
+
+    /**
+     * STAGE 4: Check if a pixel position is walkable
      * @param {number} x - X coordinate in pixels
      * @param {number} y - Y coordinate in pixels
      * @returns {boolean} True if walkable
      */
     isPositionWalkable(x, y) {
+        if (!this.navGrid) {
+            console.warn('⚠️ Navigation grid not available, assuming walkable');
+            return true;
+        }
+        
+        // Convert pixel coordinates to grid coordinates
         const gridX = Math.floor(x / this.TILE_SIZE);
         const gridY = Math.floor(y / this.TILE_SIZE);
         
-        if (!this.navGrid || this.navGrid.length === 0) {
-            return true; // If no nav grid, assume walkable
-        }
-        
-        if (gridX < 0 || gridX >= this.width || 
-            gridY < 0 || gridY >= this.height) {
-            return false; // Outside world bounds
-        }
-        
-        return this.navGrid[gridY][gridX] === 0;
+        return this.navGrid.isWalkable(gridX, gridY);
     }
 
     /**
-     * Get a random walkable position
+     * STAGE 4: Get a random walkable position in pixels
      * @returns {Object} Object with x, y coordinates in pixels
      */
     getRandomWalkablePosition() {
-        const walkablePositions = [];
-        
-        if (!this.navGrid || this.navGrid.length === 0) {
-            // If no nav grid, return default positions
+        if (!this.navGrid || this.navGrid.grid.length === 0) {
+            // Fallback if no nav grid
             const x = 100 + Math.random() * (this.worldWidth - 200);
             const y = 100 + Math.random() * (this.worldHeight - 200);
             return { x, y };
         }
         
+        const walkablePositions = [];
+        
         // Find all walkable tiles
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
-                if (this.navGrid[y][x] === 0) {
+                if (this.navGrid.isWalkable(x, y)) {
                     walkablePositions.push({
                         x: x * this.TILE_SIZE + this.TILE_SIZE / 2,
                         y: y * this.TILE_SIZE + this.TILE_SIZE / 2
@@ -278,11 +169,8 @@ export class World {
         }
         
         if (walkablePositions.length === 0) {
-            console.warn('⚠️ No walkable positions found, using center position');
-            return { 
-                x: this.worldWidth / 2, 
-                y: this.worldHeight / 2 
-            };
+            console.warn('⚠️ No walkable positions found, using fallback');
+            return { x: this.worldWidth / 2, y: this.worldHeight / 2 };
         }
         
         // Return random walkable position
@@ -291,73 +179,22 @@ export class World {
     }
 
     /**
-     * Get world bounds for renderer and systems
-     * @returns {Object} World bounds {width, height}
+     * STAGE 4: Get nearest walkable position to a target
+     * @param {Object} target - Target position {x, y}
+     * @param {number} searchRadius - Search radius in pixels (default: 100)
+     * @returns {Object|null} Nearest walkable position or null
      */
-    getWorldBounds() {
-        return {
-            width: this.worldWidth,
-            height: this.worldHeight,
-            tileWidth: this.width,
-            tileHeight: this.height,
-            tileSize: this.TILE_SIZE
-        };
-    }
-
-    /**
-     * Convert world coordinates to grid coordinates
-     * @param {number} x - X coordinate in pixels
-     * @param {number} y - Y coordinate in pixels
-     * @returns {Object} Grid coordinates {x, y}
-     */
-    worldToGrid(x, y) {
-        return {
-            x: Math.floor(x / this.TILE_SIZE),
-            y: Math.floor(y / this.TILE_SIZE)
-        };
-    }
-
-    /**
-     * Convert grid coordinates to world coordinates
-     * @param {number} gridX - Grid X coordinate
-     * @param {number} gridY - Grid Y coordinate
-     * @returns {Object} World coordinates {x, y} (center of tile)
-     */
-    gridToWorld(gridX, gridY) {
-        return {
-            x: gridX * this.TILE_SIZE + this.TILE_SIZE / 2,
-            y: gridY * this.TILE_SIZE + this.TILE_SIZE / 2
-        };
-    }
-
-    /**
-     * Get world status for debugging
-     * @returns {Object} World status information
-     */
-    getStatus() {
-        return {
-            dimensions: `${this.width}x${this.height} tiles`,
-            pixelSize: `${this.worldWidth}x${this.worldHeight} pixels`,
-            tileSize: this.TILE_SIZE,
-            navGridGenerated: !!this.navGrid && this.navGrid.length > 0,
-            walkableTiles: this.getWalkableTileCount(),
-            gameTime: this.gameTime
-        };
-    }
-
-    /**
-     * Count walkable tiles for debugging
-     * @returns {number} Number of walkable tiles
-     */
-    getWalkableTileCount() {
-        if (!this.navGrid || this.navGrid.length === 0) return 0;
+    getNearestWalkablePosition(target, searchRadius = 100) {
+        if (!this.navGrid) return target;
         
-        let count = 0;
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                if (this.navGrid[y][x] === 0) count++;
-            }
-        }
-        return count;
-    }
-}
+        // Convert search radius to grid units
+        const gridRadius = Math.ceil(searchRadius / this.TILE_SIZE);
+        const centerX = Math.floor(target.x / this.TILE_SIZE);
+        const centerY = Math.floor(target.y / this.TILE_SIZE);
+        
+        // Search in expanding rings
+        for (let radius = 0; radius <= gridRadius; radius++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dy = -radius; dy <= radius; dy++) {
+                    // Only check perimeter of current radius
+                    if (Math
