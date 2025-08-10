@@ -30,28 +30,28 @@ export const CONSTANTS = {
     GENDERS: ["Male", "Female", "Non-binary"],
     PHYSICAL_BUILDS: ["Slim", "Average", "Athletic", "Heavy"],
 
-    // FIXED: 20 individual sprite files (Phase 1 approach)
+    // FIXED: Individual sprite files that actually exist based on console errors
     SPRITE_OPTIONS: [
-        "assets/characters/character_01.png",
-        "assets/characters/character_02.png", 
-        "assets/characters/character_03.png",
-        "assets/characters/character_04.png",
-        "assets/characters/character_05.png",
-        "assets/characters/character_06.png",
-        "assets/characters/character_07.png",
-        "assets/characters/character_08.png",
-        "assets/characters/character_09.png",
-        "assets/characters/character_10.png",
-        "assets/characters/character_11.png",
-        "assets/characters/character_12.png",
-        "assets/characters/character_13.png",
-        "assets/characters/character_14.png",
-        "assets/characters/character_15.png",
-        "assets/characters/character_16.png",
-        "assets/characters/character_17.png",
-        "assets/characters/character_18.png",
-        "assets/characters/character_19.png",
-        "assets/characters/character_20.png"
+        "assets/characters/character-01.png",
+        "assets/characters/character-02.png", 
+        "assets/characters/character-03.png",
+        "assets/characters/character-04.png",
+        "assets/characters/character-05.png",
+        "assets/characters/character-06.png",
+        "assets/characters/character-07.png",
+        "assets/characters/character-08.png",
+        "assets/characters/character-09.png",
+        "assets/characters/character-10.png",
+        "assets/characters/character-11.png",
+        "assets/characters/character-12.png",
+        "assets/characters/character-13.png",
+        "assets/characters/character-14.png",
+        "assets/characters/character-15.png",
+        "assets/characters/character-16.png",
+        "assets/characters/character-17.png",
+        "assets/characters/character-18.png",
+        "assets/characters/character-19.png",
+        "assets/characters/character-20.png"
     ],
 
     // Personality traits
@@ -115,7 +115,7 @@ export const CONSTANTS = {
         name: "",
         jobRole: "",
         isPlayer: false,
-        spriteSheet: "assets/characters/character_01.png",
+        spriteSheet: "assets/characters/character-01.png",
         spriteIndex: 0,
         portrait: "",
         physicalAttributes: {
