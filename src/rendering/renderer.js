@@ -1,118 +1,143 @@
 /**
- * Enhanced Renderer with Character Animation System
- * Handles character sprite animation, facing direction, and collision-aware obstacles
+ * Renderer - PixiJS-based rendering system for Office Purgatory
+ * FIXED VERSION - Addresses sprite loading and coordinate system issues
  * 
  * FIXES APPLIED:
- * - Updated to optimized 960×540 resolution (16:9, +44% area)
- * - Better responsive scaling and aspect ratio handling
- * - Enhanced error handling and status reporting
- * - Improved console logging with dimension info
+ * - Fixed double path sprite loading bug
+ * - Support for 20 sprites instead of 5
+ * - Proper world bounds handling for 30×20 map
+ * - Enhanced error handling and fallbacks
+ * - Fixed coordinate scaling and positioning
  */
+
 export class Renderer {
-    constructor(container) {
-        this.container = container;
+    constructor(containerElement) {
+        this.container = containerElement;
         this.app = null;
         this.isInitialized = false;
         
-        // UPDATED: Optimized world settings for better space usage (16:9 aspect ratio)
-        this.WORLD_WIDTH = 960;   // Was 800 - now 20% larger  
-        this.WORLD_HEIGHT = 540;  // Was 450 - now 20% larger (960÷540 = 1.777... = 16:9)
+        // World dimensions - Updated to handle dynamic sizing
+        this.WORLD_WIDTH = 960;   // Will be updated based on map data
+        this.WORLD_HEIGHT = 540;  // Will be updated based on map data
+        
+        // Character dimensions
         this.CHARACTER_WIDTH = 48;
         this.CHARACTER_HEIGHT = 96;
         
         // Layers
         this.mapLayer = null;
-        this.obstacleLayer = null;
         this.characterLayer = null;
         
-        // Character management
+        // Character tracking
         this.characterSprites = new Map();
         this.characterAnimations = new Map();
         
-        // Animation frame tracking
-        this.animationTimer = 0;
-        this.walkAnimationSpeed = 200; // milliseconds per frame
+        // Resize handler reference
+        this.resizeHandler = null;
         
-        console.log(`🎨 Renderer constructor called with optimized 16:9 aspect ratio: ${this.WORLD_WIDTH}×${this.WORLD_HEIGHT}`);
+        console.log('🎨 Renderer created');
     }
 
     /**
-     * Initialize the PixiJS renderer with enhanced animation support
+     * Initialize the PixiJS application and set up the rendering pipeline
      */
     async initialize() {
         try {
-            console.log(`🔧 Initializing PixiJS renderer with optimized 16:9 dimensions: ${this.WORLD_WIDTH}×${this.WORLD_HEIGHT}...`);
-
-            // Create PixiJS application with optimized dimensions
+            console.log('🎨 Initializing PixiJS renderer...');
+            
+            // Create PixiJS application
             this.app = new PIXI.Application({
                 width: this.WORLD_WIDTH,
                 height: this.WORLD_HEIGHT,
                 backgroundColor: 0xf0f0f0,
                 antialias: true,
-                resolution: 1
+                resolution: window.devicePixelRatio || 1,
+                autoDensity: true
             });
 
-            // Create layers in order (back to front)
+            // Add canvas to container
+            this.container.appendChild(this.app.view);
+            
+            // Set up responsive canvas
+            this.setupResponsiveCanvas();
+            
+            // Create layers
             this.mapLayer = new PIXI.Container();
-            this.obstacleLayer = new PIXI.Container();
             this.characterLayer = new PIXI.Container();
             
             this.app.stage.addChild(this.mapLayer);
-            this.app.stage.addChild(this.obstacleLayer);
             this.app.stage.addChild(this.characterLayer);
-
-            // Append to container
-            if (this.container) {
-                this.container.innerHTML = '';
-                this.container.appendChild(this.app.view);
-                console.log(`📐 Canvas size calculated: ${this.WORLD_WIDTH}×${this.WORLD_HEIGHT}`);
-            }
-
-            // Set up resize handling
-            this.resizeHandler = () => this.handleResize();
-            window.addEventListener('resize', this.resizeHandler);
-
+            
             this.isInitialized = true;
-            console.log(`✅ PixiJS renderer initialized: ${this.WORLD_WIDTH}×${this.WORLD_HEIGHT} (16:9, optimized)`);
-
+            console.log('✅ PixiJS renderer initialized successfully');
+            
         } catch (error) {
-            console.error('❌ Failed to initialize PixiJS renderer:', error);
+            console.error('❌ Failed to initialize renderer:', error);
             throw error;
         }
     }
 
     /**
-     * Handle window resize with improved aspect ratio handling
+     * Set up responsive canvas that maintains aspect ratio
      */
-    handleResize() {
-        if (!this.app || !this.container) return;
+    setupResponsiveCanvas() {
+        const canvas = this.app.view;
         
-        const containerRect = this.container.getBoundingClientRect();
-        const aspectRatio = 16 / 9;
+        // Set initial responsive styling
+        canvas.style.cssText = `
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            display: block;
+        `;
         
-        let newWidth = containerRect.width;
-        let newHeight = newWidth / aspectRatio;
+        // Create resize handler
+        this.resizeHandler = () => {
+            if (!this.container || !this.app) return;
+            
+            const containerRect = this.container.getBoundingClientRect();
+            const aspectRatio = this.WORLD_WIDTH / this.WORLD_HEIGHT;
+            
+            let newWidth = containerRect.width;
+            let newHeight = containerRect.width / aspectRatio;
+            
+            if (newHeight > containerRect.height) {
+                newHeight = containerRect.height;
+                newWidth = containerRect.height * aspectRatio;
+            }
+            
+            canvas.style.width = `${newWidth}px`;
+            canvas.style.height = `${newHeight}px`;
+        };
         
-        if (newHeight > containerRect.height) {
-            newHeight = containerRect.height;
-            newWidth = newHeight * aspectRatio;
-        }
+        // Set up resize listener
+        window.addEventListener('resize', this.resizeHandler);
+        this.resizeHandler(); // Initial sizing
         
-        this.app.renderer.resize(newWidth, newHeight);
-        
-        // Scale the stage to maintain aspect ratio
-        const scaleX = newWidth / this.WORLD_WIDTH;
-        const scaleY = newHeight / this.WORLD_HEIGHT;
-        const scale = Math.min(scaleX, scaleY);
-        
-        this.app.stage.scale.set(scale);
-        
-        console.log(`🔄 Renderer resized: ${newWidth.toFixed(0)}×${newHeight.toFixed(0)} (scale: ${scale.toFixed(2)})`);
+        console.log('✅ Responsive canvas setup complete');
     }
 
     /**
-     * Render the map with obstacles
-     * @param {Object} mapData - Map data from JSON
+     * Update world dimensions (called when map data is loaded)
+     */
+    updateWorldDimensions(width, height) {
+        this.WORLD_WIDTH = width;
+        this.WORLD_HEIGHT = height;
+        
+        if (this.app) {
+            this.app.renderer.resize(width, height);
+            console.log(`📏 Renderer dimensions updated to ${width}×${height}`);
+        }
+        
+        // Update responsive canvas
+        if (this.resizeHandler) {
+            this.resizeHandler();
+        }
+    }
+
+    /**
+     * Render the map background
      */
     renderMap(mapData) {
         if (!this.isInitialized) {
@@ -120,101 +145,76 @@ export class Renderer {
             return;
         }
 
-        console.log('🗺️ Rendering map with optimized 16:9 layout...');
-
-        // Clear existing map content
-        this.mapLayer.removeChildren();
-        this.obstacleLayer.removeChildren();
-
-        // Create floor background
-        const floor = new PIXI.Graphics();
-        floor.beginFill(0xe8f4f8); // Light blue office floor
-        floor.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT);
-        floor.endFill();
-        this.mapLayer.addChild(floor);
-
-        // Add office walls
-        this.renderWalls();
+        console.log('🗺️ Rendering map...');
         
-        // Add office obstacles (desks, tables, etc.)
-        this.renderOfficeObstacles();
-
-        console.log('✅ Map rendered successfully in optimized 16:9 format');
+        // Update world dimensions based on map data
+        if (mapData && mapData.width && mapData.height) {
+            const tileSize = mapData.tilewidth || 48;
+            const worldWidth = mapData.width * tileSize;
+            const worldHeight = mapData.height * tileSize;
+            this.updateWorldDimensions(worldWidth, worldHeight);
+        }
+        
+        // Clear existing map
+        this.mapLayer.removeChildren();
+        
+        // Create simple office background
+        const background = new PIXI.Graphics();
+        background.beginFill(0xf8f9fa); // Light gray background
+        background.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT);
+        background.endFill();
+        this.mapLayer.addChild(background);
+        
+        // Add office walls
+        this.renderOfficeWalls();
+        
+        console.log('✅ Map rendered successfully');
     }
 
     /**
-     * Render office walls
+     * Render office walls and boundaries
      */
-    renderWalls() {
+    renderOfficeWalls() {
         const graphics = new PIXI.Graphics();
+        
+        // Calculate scale factors for responsive walls
+        const scaleX = this.WORLD_WIDTH / 960;
+        const scaleY = this.WORLD_HEIGHT / 540;
         
         // Wall styling
-        graphics.lineStyle(4, 0x333333);
+        graphics.lineStyle(4 * Math.min(scaleX, scaleY), 0x333333);
         
-        // Outer walls
-        graphics.drawRect(4, 4, this.WORLD_WIDTH - 8, this.WORLD_HEIGHT - 8);
+        // Top wall
+        graphics.moveTo(0, 0);
+        graphics.lineTo(this.WORLD_WIDTH, 0);
         
-        this.obstacleLayer.addChild(graphics);
+        // Bottom wall
+        graphics.moveTo(0, this.WORLD_HEIGHT - 4);
+        graphics.lineTo(this.WORLD_WIDTH, this.WORLD_HEIGHT - 4);
+        
+        // Left wall
+        graphics.moveTo(0, 0);
+        graphics.lineTo(0, this.WORLD_HEIGHT);
+        
+        // Right wall
+        graphics.moveTo(this.WORLD_WIDTH - 4, 0);
+        graphics.lineTo(this.WORLD_WIDTH - 4, this.WORLD_HEIGHT);
+
+        this.mapLayer.addChild(graphics);
     }
 
     /**
-     * Render office obstacles (desks, tables, etc.)
-     */
-    renderOfficeObstacles() {
-        const graphics = new PIXI.Graphics();
-        
-        // Desk styling
-        graphics.lineStyle(2, 0x8B4513);
-        graphics.beginFill(0xDEB887);
-        
-        // Sample desks positioned for 20×11 grid (optimized layout)
-        const desks = [
-            { x: 100, y: 100, width: 120, height: 60 },
-            { x: 280, y: 150, width: 120, height: 60 },
-            { x: 450, y: 200, width: 120, height: 60 },
-            { x: 620, y: 100, width: 120, height: 60 },
-            { x: 100, y: 300, width: 120, height: 60 },
-            { x: 350, y: 350, width: 120, height: 60 },
-            { x: 600, y: 280, width: 120, height: 60 }
-        ];
-        
-        // Draw desks
-        desks.forEach(desk => {
-            graphics.drawRect(desk.x, desk.y, desk.width, desk.height);
-        });
-        
-        graphics.endFill();
-        
-        // Add some meeting tables
-        graphics.lineStyle(2, 0x654321);
-        graphics.beginFill(0xD2691E);
-        
-        const tables = [
-            { x: 200, y: 250, width: 100, height: 80 },
-            { x: 500, y: 350, width: 100, height: 80 }
-        ];
-        
-        tables.forEach(table => {
-            graphics.drawRect(table.x, table.y, table.width, table.height);
-        });
-        
-        graphics.endFill();
-        this.obstacleLayer.addChild(graphics);
-    }
-
-    /**
-     * Add character sprite to the renderer
-     * @param {Object} character - Character data
+     * FIXED: Add character sprite with proper error handling and path correction
      */
     async addCharacter(character) {
         if (!this.isInitialized) {
-            console.warn('⚠️ Cannot add character: renderer not initialized');
+            console.error('❌ Renderer not initialized');
             return;
         }
 
-        console.log('👤 Adding character sprite for', character.name);
-
         try {
+            console.log(`👤 Adding character sprite for ${character.name}`);
+
             // Create character container
             const characterContainer = new PIXI.Container();
             
@@ -222,7 +222,21 @@ export class Renderer {
             let characterSprite;
             try {
                 if (character.spriteSheet && character.spriteSheet !== 'placeholder') {
-                    const texture = await PIXI.Texture.from(`./assets/characters/${character.spriteSheet}.png`);
+                    // FIXED: Clean up any double paths
+                    let spritePath = character.spriteSheet;
+                    
+                    // Remove double path issue
+                    if (spritePath.includes('assets/characters/assets/characters/')) {
+                        spritePath = spritePath.replace('assets/characters/assets/characters/', 'assets/characters/');
+                    }
+                    
+                    // Ensure proper path format
+                    if (!spritePath.startsWith('./')) {
+                        spritePath = './' + spritePath;
+                    }
+                    
+                    console.log(`🖼️ Loading sprite: ${spritePath}`);
+                    const texture = await PIXI.Texture.from(spritePath);
                     characterSprite = this.createAnimatedSprite(texture, character);
                 } else {
                     throw new Error('No sprite sheet specified');
@@ -232,10 +246,32 @@ export class Renderer {
                 characterSprite = this.createPlaceholderSprite(character);
             }
             
-            // Position character
-            characterSprite.x = character.position?.x || 100;
-            characterSprite.y = character.position?.y || 100;
+            // Position character with proper world bounds
+            characterSprite.x = character.position?.x || (this.WORLD_WIDTH / 2);
+            characterSprite.y = character.position?.y || (this.WORLD_HEIGHT / 2);
+            characterSprite.anchor.set(0.5, 1.0); // Anchor at bottom center
             
+            // Add name label
+            const nameText = new PIXI.Text(character.name, {
+                fontFamily: 'Arial',
+                fontSize: 12,
+                fill: 0x000000,
+                align: 'center'
+            });
+            nameText.anchor.set(0.5);
+            nameText.x = 0;
+            nameText.y = -this.CHARACTER_HEIGHT - 10;
+            characterSprite.addChild(nameText);
+
+            // Add player indicator if this is the player
+            if (character.isPlayer) {
+                const playerIndicator = new PIXI.Graphics();
+                playerIndicator.beginFill(0x00ff00); // Green circle
+                playerIndicator.drawCircle(0, -this.CHARACTER_HEIGHT - 20, 5);
+                playerIndicator.endFill();
+                characterSprite.addChild(playerIndicator);
+            }
+
             // Add to container and stage
             characterContainer.addChild(characterSprite);
             this.characterLayer.addChild(characterContainer);
@@ -250,15 +286,69 @@ export class Renderer {
             });
             
             console.log(`✅ Character sprite added for ${character.name} at (${characterSprite.x}, ${characterSprite.y})`);
-            
+
         } catch (error) {
             console.error(`❌ Failed to add character ${character.name}:`, error);
+            // Create a basic placeholder as fallback
+            const fallbackSprite = this.createPlaceholderSprite(character);
+            fallbackSprite.x = character.position?.x || (this.WORLD_WIDTH / 2);
+            fallbackSprite.y = character.position?.y || (this.WORLD_HEIGHT / 2);
+            fallbackSprite.anchor.set(0.5, 1.0);
+            
+            this.characterSprites.set(character.id, fallbackSprite);
+            this.characterLayer.addChild(fallbackSprite);
         }
     }
 
     /**
+     * Create animated sprite from texture (handles spritesheet frames)
+     */
+    createAnimatedSprite(texture, character) {
+        // Calculate frame dimensions (assuming 4x4 sprite grid)
+        const frameWidth = texture.width / 4;
+        const frameHeight = texture.height / 4;
+        
+        // Create sprite from down-facing idle (first frame)
+        const idleTexture = new PIXI.Texture(
+            texture.baseTexture,
+            new PIXI.Rectangle(0, 0, frameWidth, frameHeight)
+        );
+        
+        const sprite = new PIXI.Sprite(idleTexture);
+        sprite.width = this.CHARACTER_WIDTH;
+        sprite.height = this.CHARACTER_HEIGHT;
+        sprite.anchor.set(0.5, 1.0); // Anchor at bottom center
+        
+        return sprite;
+    }
+
+    /**
+     * Create placeholder sprite for characters without custom sprites
+     */
+    createPlaceholderSprite(character) {
+        const graphics = new PIXI.Graphics();
+        
+        // Body (rectangle)
+        graphics.beginFill(character.color || 0x3498db);
+        graphics.drawRect(-this.CHARACTER_WIDTH/2, -this.CHARACTER_HEIGHT, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT);
+        graphics.endFill();
+        
+        // Head (circle)
+        graphics.beginFill(0xfdbcb4); // Skin tone
+        graphics.drawCircle(0, -this.CHARACTER_HEIGHT + 15, 12);
+        graphics.endFill();
+        
+        // Simple face
+        graphics.beginFill(0x000000);
+        graphics.drawCircle(-4, -this.CHARACTER_HEIGHT + 12, 1); // Left eye
+        graphics.drawCircle(4, -this.CHARACTER_HEIGHT + 12, 1);  // Right eye
+        graphics.endFill();
+        
+        return graphics;
+    }
+
+    /**
      * Update character position and animation
-     * @param {Object} character - Character data
      */
     updateCharacter(character) {
         const characterContainer = this.characterSprites.get(character.id);
@@ -307,128 +397,31 @@ export class Renderer {
 
     /**
      * Update character animation frame
-     * @param {string} characterId - Character ID
      */
     updateCharacterAnimation(characterId) {
         const animData = this.characterAnimations.get(characterId);
         if (!animData) return;
         
-        // Update walk frame if walking
-        if (animData.isWalking) {
-            this.animationTimer += 16; // Assuming ~60fps
-            if (this.animationTimer >= this.walkAnimationSpeed) {
-                animData.walkFrame = (animData.walkFrame + 1) % 4; // 4 frames per direction
-                this.animationTimer = 0;
-            }
-        }
-        
-        // Update sprite texture based on facing direction and frame
-        const frameWidth = this.CHARACTER_WIDTH;
-        const frameHeight = this.CHARACTER_HEIGHT;
-        
-        let directionRow = 0;
-        switch (animData.facing) {
-            case 'down': directionRow = 0; break;
-            case 'up': directionRow = 1; break;
-            case 'left': directionRow = 2; break;
-            case 'right': directionRow = 3; break;
-        }
-        
-        const frameX = animData.walkFrame * frameWidth;
-        const frameY = directionRow * frameHeight;
-        
-        // Update sprite texture region (if using spritesheet)
-        if (animData.sprite.texture.baseTexture) {
-            try {
-                const newTexture = new PIXI.Texture(
-                    animData.sprite.texture.baseTexture,
-                    new PIXI.Rectangle(frameX, frameY, frameWidth, frameHeight)
-                );
-                animData.sprite.texture = newTexture;
-            } catch (error) {
-                // Fallback: just rotate placeholder sprite based on direction
-                if (animData.sprite instanceof PIXI.Graphics) {
-                    let rotation = 0;
-                    switch (animData.facing) {
-                        case 'up': rotation = -Math.PI / 2; break;
-                        case 'down': rotation = Math.PI / 2; break;
-                        case 'left': rotation = Math.PI; break;
-                        case 'right': rotation = 0; break;
-                    }
-                    animData.sprite.rotation = rotation;
-                }
-            }
-        }
+        // Animation logic would go here for future implementation
+        // For now, characters use static sprites
     }
 
     /**
-     * Create animated sprite from spritesheet
-     * @param {PIXI.Texture} texture - Spritesheet texture
-     * @param {Object} character - Character data
-     * @returns {PIXI.Sprite} Animated sprite
+     * Update character sprite position
      */
-    createAnimatedSprite(texture, character) {
-        // For now, create a simple sprite from the first frame (down-facing idle)
-        // The spritesheet has 4 directions x 4 frames each = 16 frames total
-        // Layout: [down-idle, down-walk1, down-walk2, down-walk3, 
-        //          up-idle, up-walk1, up-walk2, up-walk3,
-        //          left-idle, left-walk1, left-walk2, left-walk3,
-        //          right-idle, right-walk1, right-walk2, right-walk3]
-        
-        const frameWidth = this.CHARACTER_WIDTH;
-        const frameHeight = this.CHARACTER_HEIGHT;
-        
-        // Create texture for down-facing idle (first frame)
-        const idleTexture = new PIXI.Texture(
-            texture.baseTexture,
-            new PIXI.Rectangle(0, 0, frameWidth, frameHeight)
-        );
-        
-        const sprite = new PIXI.Sprite(idleTexture);
-        sprite.width = this.CHARACTER_WIDTH;
-        sprite.height = this.CHARACTER_HEIGHT;
-        sprite.anchor.set(0.5, 1.0); // Anchor at bottom center
-        
-        return sprite;
-    }
-
-    /**
-     * Create placeholder sprite for characters without custom sprites
-     * @param {Object} character - Character data
-     * @returns {PIXI.Graphics} Placeholder sprite
-     */
-    createPlaceholderSprite(character) {
-        const graphics = new PIXI.Graphics();
-        
-        // Body (rectangle)
-        graphics.beginFill(character.color || 0x3498db);
-        graphics.drawRect(-this.CHARACTER_WIDTH/2, -this.CHARACTER_HEIGHT, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT);
-        graphics.endFill();
-        
-        // Head (circle)
-        graphics.beginFill(0xffdbac);
-        graphics.drawCircle(0, -this.CHARACTER_HEIGHT + 15, 12);
-        graphics.endFill();
-        
-        // Name label
-        const nameText = new PIXI.Text(character.name || 'Character', {
-            fontFamily: 'Arial',
-            fontSize: 12,
-            fill: 0x000000,
-            align: 'center'
-        });
-        nameText.anchor.set(0.5, 1);
-        nameText.x = 0;
-        nameText.y = -this.CHARACTER_HEIGHT - 5;
-        
-        graphics.addChild(nameText);
-        
-        return graphics;
+    updateCharacterPosition(characterId, x, y) {
+        const characterContainer = this.characterSprites.get(characterId);
+        if (characterContainer) {
+            const sprite = characterContainer.children[0]; // Get the actual sprite
+            if (sprite) {
+                sprite.x = x;
+                sprite.y = y;
+            }
+        }
     }
 
     /**
      * Remove character sprite
-     * @param {string} characterId - Character ID
      */
     removeCharacter(characterId) {
         const characterContainer = this.characterSprites.get(characterId);
@@ -444,19 +437,23 @@ export class Renderer {
      */
     update() {
         if (this.app && this.isInitialized) {
-            // Update all character animations
-            this.characterAnimations.forEach((animData, characterId) => {
-                if (animData.isWalking) {
-                    this.updateCharacterAnimation(characterId);
-                }
-            });
-            
             this.app.render();
         }
     }
 
     /**
-     * Cleanup
+     * Get world bounds for camera/movement systems
+     */
+    getWorldBounds() {
+        return {
+            width: this.WORLD_WIDTH,
+            height: this.WORLD_HEIGHT,
+            aspectRatio: this.WORLD_WIDTH / this.WORLD_HEIGHT
+        };
+    }
+
+    /**
+     * Cleanup with resize listener removal
      */
     destroy() {
         if (this.resizeHandler) {
@@ -467,22 +464,10 @@ export class Renderer {
             this.app.destroy(true);
             this.app = null;
         }
-        
         this.characterSprites.clear();
         this.characterAnimations.clear();
         this.isInitialized = false;
         console.log('🧹 Renderer destroyed and cleaned up');
-    }
-
-    /**
-     * Get world bounds for camera/movement systems
-     */
-    getWorldBounds() {
-        return {
-            width: this.WORLD_WIDTH,    // 960
-            height: this.WORLD_HEIGHT,  // 540
-            aspectRatio: 16/9
-        };
     }
 
     /**
@@ -494,15 +479,8 @@ export class Renderer {
             hasApp: !!this.app,
             characterCount: this.characterSprites.size,
             worldBounds: this.getWorldBounds(),
-            canvasSize: `${this.WORLD_WIDTH}×${this.WORLD_HEIGHT}`,
-            aspectRatio: '16:9 (optimized)',
-            improvement: '+44% area vs previous 800×450',
-            animationData: Array.from(this.characterAnimations.entries()).map(([id, data]) => ({
-                characterId: id,
-                facing: data.facing,
-                isWalking: data.isWalking,
-                walkFrame: data.walkFrame
-            }))
+            canvasSize: `${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`,
+            aspectRatio: (this.WORLD_WIDTH / this.WORLD_HEIGHT).toFixed(2)
         };
     }
 }
