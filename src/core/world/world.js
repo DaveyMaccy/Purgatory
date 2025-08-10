@@ -298,3 +298,65 @@ export class World {
 
     /**
      * Count walkable tiles for debugging
+     */
+    getWalkableTileCount() {
+        if (!this.rawNavGrid || this.rawNavGrid.length === 0) return 0;
+        
+        let count = 0;
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                if (this.rawNavGrid[y][x] === 0) count++;
+            }
+        }
+        return count;
+    }
+}
+
+/**
+ * Load map data from JSON file
+ * UPDATED: Enhanced error handling and validation
+ */
+export async function loadMapData() {
+    try {
+        console.log('🗺️ Loading map data...');
+        
+        const response = await fetch('./assets/office-layout.json');
+        if (!response.ok) {
+            throw new Error(`Failed to load map: ${response.status} ${response.statusText}`);
+        }
+        
+        const mapData = await response.json();
+        
+        // Validate map data structure
+        if (!mapData.width || !mapData.height || !mapData.layers) {
+            throw new Error('Invalid map data structure');
+        }
+        
+        console.log(`✅ Map data loaded: ${mapData.width}×${mapData.height} tiles`);
+        console.log(`📊 Map details:`, {
+            dimensions: `${mapData.width}×${mapData.height}`,
+            tileSize: `${mapData.tilewidth}×${mapData.tileheight}`,
+            layers: mapData.layers?.length || 0,
+            worldSize: `${mapData.width * (mapData.tilewidth || 48)}×${mapData.height * (mapData.tileheight || 48)} pixels`
+        });
+        
+        return mapData;
+        
+    } catch (error) {
+        console.warn('⚠️ Failed to load map data, using fallback:', error.message);
+        
+        // Return fallback map data for 30×20 tiles
+        return {
+            width: 30,
+            height: 20,
+            tilewidth: 48,
+            tileheight: 48,
+            layers: [{
+                name: 'background',
+                width: 30,
+                height: 20,
+                data: new Array(30 * 20).fill(1) // All tiles walkable by default
+            }]
+        };
+    }
+}
