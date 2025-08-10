@@ -1,409 +1,428 @@
 /**
- * UI Generator Module
+ * Sprite Manager Module
  * 
- * Handles all HTML generation for the character creator interface.
- * Creates tabs, panels, forms, and all visual elements.
+ * Handles all sprite-related functionality including navigation,
+ * portrait generation, custom uploads, and sprite rendering.
  */
 
-import { 
-    JOB_ROLES_BY_OFFICE, 
-    PHYSICAL_BUILDS, 
-    GENDERS, 
-    PERSONALITY_TAGS, 
-    INVENTORY_OPTIONS, 
-    DESK_ITEM_OPTIONS 
-} from './character-data.js';
-import { EventHandlers } from './event-handlers.js';
-import { SpriteManager } from './sprite-manager.js';
+import { SPRITE_OPTIONS } from './character-data.js';
+import { UIGenerator } from './ui-generator.js';
 
-class UIGenerator {
+class SpriteManager {
     /**
-     * Create a character tab
+     * Navigate through available sprites
      */
-    static createCharacterTab(index, character, container) {
-        const tab = document.createElement('div');
-        tab.id = `character-tab-${index}`;
-        tab.className = `character-tab ${index === 0 ? 'active' : ''}`;
-        tab.textContent = `${character.firstName} ${character.lastName}`;
-        tab.onclick = () => window.switchTab(index);
+    static navigateSprite(index, direction, characters) {
+        if (!characters || !characters[index]) return;
         
-        if (container) {
-            container.appendChild(tab);
+        const currentSprite = characters[index].spriteSheet;
+        const currentSpriteIndex = SPRITE_OPTIONS.indexOf(currentSprite);
+        
+        let newIndex = currentSpriteIndex + direction;
+        
+        // Wrap around the sprite options
+        if (newIndex < 0) {
+            newIndex = SPRITE_OPTIONS.length - 1;
+        } else if (newIndex >= SPRITE_OPTIONS.length) {
+            newIndex = 0;
         }
         
-        return tab;
+        const newSprite = SPRITE_OPTIONS[newIndex];
+        characters[index].spriteSheet = newSprite;
+        
+        // Update portrait and sprite info
+        this.updateCharacterPortrait(index, newSprite);
+        
+        console.log(`🔄 Character ${index + 1} sprite changed to: ${newSprite}`);
     }
     
     /**
-     * Create a character panel
+     * Update character portrait from sprite sheet
      */
-    static createCharacterPanel(index, character, container, officeType) {
-        const panel = document.createElement('div');
-        panel.id = `character-panel-${index}`;
-        panel.className = `creator-panel ${index === 0 ? '' : 'hidden'}`;
+    static updateCharacterPortrait(index, spritePath) {
+        const canvas = document.getElementById(`preview-canvas-${index}`);
+        if (!canvas) return;
         
-        panel.innerHTML = this.generatePanelHTML(index, character, officeType);
+        const ctx = canvas.getContext('2d');
         
-        if (container) {
-            container.appendChild(panel);
-        }
-        
-        // Setup event listeners for this panel
-        EventHandlers.setupPanelEventListeners(index);
-        
-        // Initialize sprite and portrait
-        SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
-        
-        return panel;
-    }
-    
-    /**
-     * Generate complete panel HTML
-     */
-    static generatePanelHTML(index, charData, officeType) {
-        const jobRoleOptions = JOB_ROLES_BY_OFFICE[officeType]
-            .map(role => `<option value="${role}" ${role === charData.jobRole ? 'selected' : ''}>${role}</option>`)
-            .join('');
+        if (spritePath) {
+            const img = new Image();
+            img.onload = function() {
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Extract 4th sprite from first row (index 3, since 0-based)
+                const spriteWidth = 48;
+                const spriteHeight = 96;
+                const spriteIndex = 3; // Fourth sprite (idle pose)
+                const sourceX = spriteIndex * spriteWidth;
+                const sourceY = 0; // First row
+                
+                // Draw the specific sprite frame, scaled to fit canvas
+                ctx.drawImage(
+                    img,
+                    sourceX, sourceY, spriteWidth, spriteHeight, // Source rectangle
+                    0, 0, canvas.width, canvas.height // Destination rectangle
+                );
+            };
             
-        const buildOptions = PHYSICAL_BUILDS
-            .map(build => `<option value="${build}" ${build === charData.physicalAttributes.build ? 'selected' : ''}>${build}</option>`)
-            .join('');
+            img.onerror = function() {
+                // Fallback: draw placeholder
+                SpriteManager.drawPlaceholderPortrait(ctx, canvas);
+            };
             
-        const genderOptions = GENDERS
-            .map(gender => `<option value="${gender}" ${gender === charData.physicalAttributes.gender ? 'selected' : ''}>${gender}</option>`)
-            .join('');
-            
-        const tagOptions = PERSONALITY_TAGS
-            .map(tag => `<label class="checkbox-label" style="display: block; margin: 2px 0;">
-                <input type="checkbox" id="tags-${index}-${tag}" value="${tag}" ${charData.personalityTags.includes(tag) ? 'checked' : ''}> 
-                ${tag}
-            </label>`)
-            .join('');
-            
-        const inventoryOptions = INVENTORY_OPTIONS
-            .map(item => `<label class="checkbox-label" style="display: block; margin: 2px 0;">
-                <input type="checkbox" id="inventory-item-${index}-${item}" value="${item}" ${charData.inventory.includes(item) ? 'checked' : ''}> 
-                ${item}
-            </label>`)
-            .join('');
-            
-        const deskItemOptions = DESK_ITEM_OPTIONS
-            .map(item => `<label class="checkbox-label" style="display: block; margin: 2px 0;">
-                <input type="checkbox" id="desk-item-${index}-${item}" value="${item}" ${charData.deskItems.includes(item) ? 'checked' : ''}> 
-                ${item}
-            </label>`)
-            .join('');
-        
-        return `
-            <div class="character-form">
-                <!-- Player Character Badge -->
-                ${charData.isPlayerCharacter ? '<div class="player-badge">👤 PLAYER CHARACTER</div>' : ''}
-                
-                <!-- Basic Information Section -->
-                <div class="form-section">
-                    <h3>Basic Information</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="first-name-${index}">First Name:</label>
-                            <input type="text" id="first-name-${index}" value="${charData.firstName}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="last-name-${index}">Last Name:</label>
-                            <input type="text" id="last-name-${index}" value="${charData.lastName}" />
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="age-${index}">Age: <span id="age-val-${index}">${charData.age}</span></label>
-                            <input type="range" id="age-${index}" min="18" max="65" value="${charData.age}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="job-role-${index}">Job Role:</label>
-                            <select id="job-role-${index}">
-                                ${jobRoleOptions}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Physical Attributes Section -->
-                <div class="form-section">
-                    <h3>Physical Attributes</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="gender-${index}">Gender:</label>
-                            <select id="gender-${index}">
-                                ${genderOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="build-${index}">Build:</label>
-                            <select id="build-${index}">
-                                ${buildOptions}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="height-${index}">Height: <span id="height-val-${index}">${charData.physicalAttributes.height} cm</span></label>
-                            <input type="range" id="height-${index}" min="140" max="210" value="${charData.physicalAttributes.height}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="weight-${index}">Weight: <span id="weight-val-${index}">${charData.physicalAttributes.weight} kg</span></label>
-                            <input type="range" id="weight-${index}" min="40" max="150" value="${charData.physicalAttributes.weight}" />
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="looks-${index}">Looks: <span id="looks-val-${index}">${charData.physicalAttributes.looks}/10</span></label>
-                            <input type="range" id="looks-${index}" min="1" max="10" value="${charData.physicalAttributes.looks}" />
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Skills Section -->
-                <div class="form-section">
-                    <h3>Skills & Abilities</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="competence-${index}">Competence: <span id="competence-val-${index}">${charData.skills.competence}/10</span></label>
-                            <input type="range" id="competence-${index}" min="1" max="10" value="${charData.skills.competence}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="laziness-${index}">Laziness: <span id="laziness-val-${index}">${charData.skills.laziness}/10</span></label>
-                            <input type="range" id="laziness-${index}" min="1" max="10" value="${charData.skills.laziness}" />
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="charisma-${index}">Charisma: <span id="charisma-val-${index}">${charData.skills.charisma}/10</span></label>
-                            <input type="range" id="charisma-${index}" min="1" max="10" value="${charData.skills.charisma}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="leadership-${index}">Leadership: <span id="leadership-val-${index}">${charData.skills.leadership}/10</span></label>
-                            <input type="range" id="leadership-${index}" min="1" max="10" value="${charData.skills.leadership}" />
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Appearance Section -->
-                <div class="form-section">
-                    <h3>Appearance</h3>
-                    <div class="sprite-selector">
-                        <div class="sprite-navigation">
-                            <button type="button" id="sprite-prev-${index}" class="sprite-nav-btn">◀</button>
-                            <div class="sprite-preview">
-                                <canvas id="preview-canvas-${index}" width="96" height="128"></canvas>
-                                <div id="sprite-info-${index}" class="sprite-info">Character ${index + 1}</div>
-                            </div>
-                            <button type="button" id="sprite-next-${index}" class="sprite-nav-btn">▶</button>
-                        </div>
-                        
-                        <!-- Custom Portrait Upload -->
-                        <div class="portrait-upload">
-                            <label for="portrait-upload-${index}">Custom Portrait:</label>
-                            <input type="file" id="portrait-upload-${index}" accept="image/*" />
-                            <button type="button" id="clear-custom-${index}" class="clear-btn">Clear Custom</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Personality Section -->
-                <div class="form-section">
-                    <h3>Personality Tags (Select 2-5)</h3>
-                    <div class="checkbox-grid" style="max-height: 200px; overflow-y: auto;">
-                        ${tagOptions}
-                    </div>
-                </div>
-                
-                <!-- Inventory Section -->
-                <div class="form-section">
-                    <h3>Inventory Items (Select 3-6)</h3>
-                    <div class="checkbox-grid" style="max-height: 150px; overflow-y: auto;">
-                        ${inventoryOptions}
-                    </div>
-                </div>
-                
-                <!-- Desk Items Section -->
-                <div class="form-section">
-                    <h3>Desk Items (Select 3-6)</h3>
-                    <div class="checkbox-grid" style="max-height: 150px; overflow-y: auto;">
-                        ${deskItemOptions}
-                    </div>
-                </div>
-                
-                <!-- Bio Section -->
-                <div class="form-section">
-                    <h3>Biography</h3>
-                    <textarea id="bio-${index}" placeholder="Character background and personality..." rows="4" style="width: 100%;">${charData.bio}</textarea>
-                </div>
-                
-                <!-- API Configuration Section -->
-                <div class="form-section">
-                    <h3>AI Configuration</h3>
-                    <div class="form-group">
-                        <label for="api-key-${index}">API Key (leave empty to use global):</label>
-                        <input type="password" id="api-key-${index}" value="${charData.apiKey}" placeholder="Individual API key override" />
-                    </div>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="form-section">
-                    <div class="action-buttons">
-                        <button type="button" onclick="randomizeCurrentCharacter()" class="randomize-btn">🎲 Randomize All</button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    /**
-     * Update a character tab's display name
-     */
-    static updateTabName(index, firstName, lastName) {
-        const tab = document.getElementById(`character-tab-${index}`);
-        if (tab) {
-            tab.textContent = `${firstName} ${lastName}`;
-        }
-    }
-    
-    /**
-     * Create character management controls HTML
-     */
-    static generateManagementControlsHTML() {
-        return `
-            <div class="character-management">
-                <button id="add-character-btn" type="button" class="management-btn">➕ Add Character</button>
-                <button id="remove-character-btn" type="button" class="management-btn">➖ Remove Character</button>
-                <span class="character-count">Characters: <span id="character-count-display">3</span>/5</span>
-            </div>
-        `;
-    }
-    
-    /**
-     * Update character count display
-     */
-    static updateCharacterCount(count) {
-        const display = document.getElementById('character-count-display');
-        if (display) {
-            display.textContent = count;
-        }
-    }
-    
-    /**
-     * Create global settings HTML
-     */
-    static generateGlobalSettingsHTML() {
-        return `
-            <div class="global-settings">
-                <div class="form-section">
-                    <h3>Global Settings</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="office-type-select">Office Type:</label>
-                            <select id="office-type-select">
-                                <option value="Tech Startup">Tech Startup</option>
-                                <option value="Law Firm">Law Firm</option>
-                                <option value="Medical Practice">Medical Practice</option>
-                                <option value="Accounting Firm">Accounting Firm</option>
-                                <option value="Marketing Agency">Marketing Agency</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="global-api-key">Global API Key:</label>
-                            <input type="password" id="global-api-key" placeholder="Default API key for all characters" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    /**
-     * Show/hide loading state
-     */
-    static setLoadingState(isLoading, message = 'Loading...') {
-        const existingLoader = document.getElementById('character-creator-loader');
-        
-        if (isLoading) {
-            if (!existingLoader) {
-                const loader = document.createElement('div');
-                loader.id = 'character-creator-loader';
-                loader.className = 'loading-overlay';
-                loader.innerHTML = `
-                    <div class="loading-content">
-                        <div class="spinner"></div>
-                        <div class="loading-message">${message}</div>
-                    </div>
-                `;
-                document.body.appendChild(loader);
-            }
+            img.src = spritePath;
         } else {
-            if (existingLoader) {
-                existingLoader.remove();
-            }
+            // Draw placeholder when no sprite
+            this.drawPlaceholderPortrait(ctx, canvas);
+        }
+        
+        // Update sprite info
+        this.updateSpriteInfo(index);
+    }
+    
+    /**
+     * Draw placeholder portrait
+     */
+    static drawPlaceholderPortrait(ctx, canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw placeholder background
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw placeholder figure
+        ctx.fillStyle = '#ccc';
+        
+        // Head
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, canvas.height * 0.25, canvas.width * 0.15, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Body
+        ctx.fillRect(
+            canvas.width * 0.35, 
+            canvas.height * 0.35, 
+            canvas.width * 0.3, 
+            canvas.height * 0.5
+        );
+        
+        // Text
+        ctx.fillStyle = '#999';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('No Sprite', canvas.width / 2, canvas.height * 0.9);
+    }
+    
+    /**
+     * Update sprite information display
+     */
+    static updateSpriteInfo(index) {
+        const spriteInfo = document.getElementById(`sprite-info-${index}`);
+        if (!spriteInfo) return;
+        
+        const spriteFileName = window.characters?.[index]?.spriteSheet;
+        if (spriteFileName) {
+            const fileName = spriteFileName.split('/').pop();
+            const spriteNumber = fileName.replace('character-', '').replace('.png', '');
+            spriteInfo.textContent = `Sprite ${spriteNumber}`;
+        } else {
+            spriteInfo.textContent = `Character ${index + 1}`;
         }
     }
     
     /**
-     * Show error message
+     * Handle custom portrait upload
      */
-    static showError(message, duration = 5000) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.textContent = message;
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #ff4444;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 10000;
-            max-width: 300px;
-            word-wrap: break-word;
-        `;
+    static handleCustomPortraitUpload(index, file, characters) {
+        if (!file || !characters || !characters[index]) return;
         
-        document.body.appendChild(errorDiv);
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            UIGenerator.showError('Please select a valid image file');
+            return;
+        }
         
-        setTimeout(() => {
-            if (errorDiv.parentNode) {
-                errorDiv.parentNode.removeChild(errorDiv);
-            }
-        }, duration);
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            UIGenerator.showError('Image file too large. Please select a file smaller than 5MB');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                // Create a temporary canvas for cropping
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // Calculate square crop dimensions
+                const size = Math.min(img.width, img.height);
+                const offsetX = (img.width - size) / 2;
+                const offsetY = (img.height - size) / 2;
+                
+                // Set canvas size to match preview canvas
+                tempCanvas.width = 96;
+                tempCanvas.height = 128;
+                
+                // Draw cropped and scaled image
+                tempCtx.drawImage(
+                    img,
+                    offsetX, offsetY, size, size, // Source rectangle (square crop)
+                    0, 0, 96, 96 // Destination rectangle (top part of canvas)
+                );
+                
+                // Store as custom portrait
+                const portraitData = tempCanvas.toDataURL('image/jpeg', 0.8);
+                characters[index].customPortrait = portraitData;
+                
+                // Update the preview canvas
+                SpriteManager.displayCustomPortrait(index, portraitData);
+                
+                UIGenerator.showSuccess('Custom portrait uploaded successfully');
+            };
+            
+            img.onerror = function() {
+                UIGenerator.showError('Failed to load image. Please try a different file');
+            };
+            
+            img.src = e.target.result;
+        };
+        
+        reader.onerror = function() {
+            UIGenerator.showError('Failed to read file. Please try again');
+        };
+        
+        reader.readAsDataURL(file);
     }
     
     /**
-     * Show success message
+     * Display custom portrait on canvas
      */
-    static showSuccess(message, duration = 3000) {
-        const successDiv = document.createElement('div');
-        successDiv.className = 'success-message';
-        successDiv.textContent = message;
-        successDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #44aa44;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 10000;
-            max-width: 300px;
-            word-wrap: break-word;
-        `;
+    static displayCustomPortrait(index, portraitData) {
+        const canvas = document.getElementById(`preview-canvas-${index}`);
+        if (!canvas) return;
         
-        document.body.appendChild(successDiv);
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
         
-        setTimeout(() => {
-            if (successDiv.parentNode) {
-                successDiv.parentNode.removeChild(successDiv);
+        img.onload = function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        
+        img.src = portraitData;
+    }
+    
+    /**
+     * Clear custom portrait
+     */
+    static clearCustomPortrait(index, characters) {
+        if (!characters || !characters[index]) return;
+        
+        characters[index].customPortrait = null;
+        
+        // Clear the file input
+        const fileInput = document.getElementById(`portrait-upload-${index}`);
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Restore original sprite portrait
+        this.updateCharacterPortrait(index, characters[index].spriteSheet);
+        
+        UIGenerator.showSuccess('Custom portrait cleared');
+    }
+    
+    /**
+     * Get portrait data for character (custom or generated)
+     */
+    static getCharacterPortrait(index, characters) {
+        if (!characters || !characters[index]) return null;
+        
+        const character = characters[index];
+        
+        // Return custom portrait if available
+        if (character.customPortrait) {
+            return character.customPortrait;
+        }
+        
+        // Generate portrait from sprite sheet
+        if (character.spriteSheet) {
+            return this.generatePortraitFromSprite(character.spriteSheet);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Generate portrait data from sprite sheet
+     */
+    static generatePortraitFromSprite(spritePath) {
+        return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 96;
+            canvas.height = 128;
+            
+            const img = new Image();
+            img.onload = function() {
+                // Extract 4th sprite from first row
+                const spriteWidth = 48;
+                const spriteHeight = 96;
+                const spriteIndex = 3;
+                const sourceX = spriteIndex * spriteWidth;
+                const sourceY = 0;
+                
+                ctx.drawImage(
+                    img,
+                    sourceX, sourceY, spriteWidth, spriteHeight,
+                    0, 0, canvas.width, canvas.height
+                );
+                
+                resolve(canvas.toDataURL());
+            };
+            
+            img.onerror = () => reject(new Error('Failed to load sprite'));
+            img.src = spritePath;
+        });
+    }
+    
+    /**
+     * Validate sprite path
+     */
+    static isValidSpritePath(spritePath) {
+        return SPRITE_OPTIONS.includes(spritePath);
+    }
+    
+    /**
+     * Get sprite index from path
+     */
+    static getSpriteIndex(spritePath) {
+        return SPRITE_OPTIONS.indexOf(spritePath);
+    }
+    
+    /**
+     * Get sprite path from index
+     */
+    static getSpriteFromIndex(index) {
+        if (index >= 0 && index < SPRITE_OPTIONS.length) {
+            return SPRITE_OPTIONS[index];
+        }
+        return SPRITE_OPTIONS[0]; // Default to first sprite
+    }
+    
+    /**
+     * Preload all sprite images for better performance
+     */
+    static preloadSprites() {
+        return Promise.all(
+            SPRITE_OPTIONS.map(spritePath => {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(spritePath);
+                    img.onerror = () => reject(new Error(`Failed to load ${spritePath}`));
+                    img.src = spritePath;
+                });
+            })
+        );
+    }
+    
+    /**
+     * Create sprite preview thumbnail
+     */
+    static createSpriteThumb(spritePath, size = 48) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = size;
+        canvas.height = size * 2; // 2:1 ratio for character sprites
+        
+        const img = new Image();
+        img.onload = function() {
+            // Extract 4th sprite from first row
+            const spriteWidth = 48;
+            const spriteHeight = 96;
+            const spriteIndex = 3;
+            const sourceX = spriteIndex * spriteWidth;
+            const sourceY = 0;
+            
+            ctx.drawImage(
+                img,
+                sourceX, sourceY, spriteWidth, spriteHeight,
+                0, 0, canvas.width, canvas.height
+            );
+        };
+        
+        img.src = spritePath;
+        return canvas;
+    }
+    
+    /**
+     * Export character portraits as a batch
+     */
+    static async exportAllPortraits(characters) {
+        const portraits = {};
+        
+        for (let i = 0; i < characters.length; i++) {
+            const character = characters[i];
+            try {
+                if (character.customPortrait) {
+                    portraits[character.id] = character.customPortrait;
+                } else if (character.spriteSheet) {
+                    portraits[character.id] = await this.generatePortraitFromSprite(character.spriteSheet);
+                }
+            } catch (error) {
+                console.warn(`Failed to export portrait for character ${i}:`, error);
             }
-        }, duration);
+        }
+        
+        return portraits;
+    }
+    
+    /**
+     * Apply color filters to sprite (for future color customization)
+     */
+    static applyColorFilters(canvas, colors) {
+        if (!colors) return;
+        
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // This is a placeholder for color filtering logic
+        // Could be expanded in Phase 2 for full customization
+        
+        ctx.putImageData(imageData, 0, 0);
+    }
+    
+    /**
+     * Get available sprite count
+     */
+    static getSpriteCount() {
+        return SPRITE_OPTIONS.length;
+    }
+    
+    /**
+     * Get sprite filename without path
+     */
+    static getSpriteFilename(spritePath) {
+        return spritePath.split('/').pop();
+    }
+    
+    /**
+     * Initialize sprite manager
+     */
+    static initialize() {
+        console.log(`🎨 Sprite Manager initialized with ${SPRITE_OPTIONS.length} sprites`);
+        
+        // Preload sprites in background for better performance
+        this.preloadSprites()
+            .then(() => console.log('✅ All sprites preloaded'))
+            .catch(error => console.warn('⚠️ Some sprites failed to preload:', error));
     }
 }
 
-export { UIGenerator };
+export { SpriteManager };
 
-console.log('🎨 UI Generator Module loaded');
+console.log('🖼️ Sprite Manager Module loaded');
