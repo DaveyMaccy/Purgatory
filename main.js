@@ -1,22 +1,20 @@
 // main.js
 /**
- * Main Game Initialization File - FIXED VERSION
+ * Main Game Initialization File - RESTORED AND FIXED
  * 
  * CRITICAL FIXES:
  * ✅ Proper initialization sequence
- * ✅ Fixed map loading with fallback
- * ✅ Character creator integration
- * ✅ Error handling and recovery
+ * ✅ Fixed character creator integration
+ * ✅ Restored to work with existing index.html
  * ✅ Clean separation of concerns
+ * ✅ Works with modular character creator
  */
 
-// Import modules
+// Import modules (only the character creator for now)
 import { initializeCharacterCreator } from './character-creator.js';
-import { loadMapData, World } from './src/core/world/world.js';
 
 // Game state
 let gameState = {
-    world: null,
     characters: [],
     officeType: 'Corporate',
     isInitialized: false,
@@ -36,27 +34,13 @@ async function initialize() {
         await initializeCharacterCreator();
         console.log('✅ Character creator ready');
         
-        // Step 2: Load map data with fallback
-        console.log('🗺️ Step 2: Loading map data...');
-        const mapData = await loadMapData();
-        console.log('✅ Map data loaded:', {
-            width: mapData.width,
-            height: mapData.height,
-            tilesize: mapData.tilewidth || 48
-        });
-        
-        // Step 3: Initialize world
-        console.log('🌍 Step 3: Creating game world...');
-        gameState.world = new World(null, mapData);
-        console.log('✅ Game world created');
-        
-        // Step 4: Setup UI
-        console.log('🖥️ Step 4: Setting up UI...');
+        // Step 2: Setup UI
+        console.log('🖥️ Step 2: Setting up UI...');
         setupUI();
         console.log('✅ UI setup complete');
         
-        // Step 5: Enable new game button
-        console.log('🎮 Step 5: Enabling game controls...');
+        // Step 3: Enable new game button
+        console.log('🎮 Step 3: Enabling game controls...');
         enableNewGameButton();
         console.log('✅ Game controls enabled');
         
@@ -76,18 +60,18 @@ async function initialize() {
 function setupUI() {
     // Setup start screen
     const startScreen = document.getElementById('start-screen');
-    const gameContainer = document.getElementById('game-container');
+    const gameContainer = document.getElementById('main-game-ui');
     
     if (startScreen) {
         startScreen.style.display = 'flex';
     }
     
     if (gameContainer) {
-        gameContainer.style.display = 'none';
+        gameContainer.classList.add('hidden');
     }
     
-    // Setup modal close handlers
-    setupModalHandlers();
+    // Setup tab functionality for status panel
+    setupStatusPanelTabs();
     
     // Setup window resize handler
     window.addEventListener('resize', handleWindowResize);
@@ -96,26 +80,24 @@ function setupUI() {
 }
 
 /**
- * Setup modal event handlers
+ * Setup status panel tab functionality
  */
-function setupModalHandlers() {
-    // Character creator modal handlers
-    const characterModal = document.getElementById('character-creator-modal');
-    
-    if (characterModal) {
-        // Close on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && characterModal.style.display === 'flex') {
-                characterModal.style.display = 'none';
+function setupStatusPanelTabs() {
+    // The openTab function is already defined in index.html, just ensure it works
+    if (typeof window.openTab !== 'function') {
+        window.openTab = function(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
             }
-        });
-        
-        // Close on outside click
-        characterModal.addEventListener('click', (e) => {
-            if (e.target === characterModal) {
-                characterModal.style.display = 'none';
+            tablinks = document.getElementsByClassName("tab-link");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
             }
-        });
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        };
     }
 }
 
@@ -157,14 +139,23 @@ window.initializeGame = function(characterData) {
             startScreen.style.display = 'none';
         }
         
+        // Hide character creator
+        const creatorModal = document.getElementById('creator-modal-backdrop');
+        if (creatorModal) {
+            creatorModal.classList.add('hidden');
+        }
+        
         // Show game container
-        const gameContainer = document.getElementById('game-container');
+        const gameContainer = document.getElementById('main-game-ui');
         if (gameContainer) {
-            gameContainer.style.display = 'block';
+            gameContainer.classList.remove('hidden');
         }
         
         // Initialize game systems
         initializeGameSystems();
+        
+        // Initialize status panel with first character
+        initializeStatusPanel();
         
         console.log('✅ Main game initialized successfully');
         
@@ -175,40 +166,27 @@ window.initializeGame = function(characterData) {
 };
 
 /**
- * Initialize game systems (rendering, AI, etc.)
+ * Initialize game systems (basic placeholder for now)
  */
 function initializeGameSystems() {
     console.log('⚙️ Initializing game systems...');
     
-    // For now, just show a basic placeholder
-    // In the future, this will initialize:
-    // - PixiJS renderer
-    // - Character manager
-    // - AI system
-    // - Game loop
-    
-    const gameWorldDiv = document.getElementById('game-world');
+    // For now, show a placeholder in the world canvas container
+    const gameWorldDiv = document.getElementById('world-canvas-container');
     if (gameWorldDiv) {
         gameWorldDiv.innerHTML = `
-            <div style="padding: 20px; text-align: center; background: #f0f0f0; border-radius: 8px; margin: 20px;">
-                <h2>🎮 Game World</h2>
-                <p><strong>Office Type:</strong> ${gameState.officeType}</p>
-                <p><strong>Characters:</strong> ${gameState.characters.length}</p>
-                <div style="margin-top: 20px;">
-                    <h3>Characters:</h3>
-                    ${gameState.characters.map((char, index) => `
-                        <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px; display: inline-block; margin-right: 10px;">
-                            <strong>${char.name || `Character ${index + 1}`}</strong>
-                            ${char.isPlayer ? '👑' : ''}
-                            <br>
-                            <small>${char.jobRole}</small>
-                        </div>
-                    `).join('')}
-                </div>
-                <div style="margin-top: 20px; padding: 15px; background: #fffacd; border-radius: 4px;">
-                    <p><strong>🚧 Development Note:</strong></p>
-                    <p>This is where the full game world will be rendered with PixiJS.<br>
-                    Character sprites, office environment, and interactive elements will appear here.</p>
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #2a2a2a; color: white; text-align: center; padding: 20px;">
+                <div>
+                    <h2 style="margin-bottom: 20px;">🎮 Game World</h2>
+                    <p><strong>Office Type:</strong> ${gameState.officeType}</p>
+                    <p><strong>Characters:</strong> ${gameState.characters.length}</p>
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <p><strong>🚧 Development Status:</strong></p>
+                        <p>Character Creator: ✅ Complete</p>
+                        <p>World Rendering: 🚧 In Progress</p>
+                        <p>Character Movement: 🚧 In Progress</p>
+                        <p>AI System: 🚧 In Progress</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -218,15 +196,185 @@ function initializeGameSystems() {
 }
 
 /**
+ * Initialize the status panel with character data
+ */
+function initializeStatusPanel() {
+    console.log('📊 Initializing status panel...');
+    
+    // Find the player character
+    const playerCharacter = gameState.characters.find(char => char.isPlayer);
+    if (!playerCharacter) {
+        console.warn('⚠️ No player character found');
+        return;
+    }
+    
+    // Update character name and role
+    const nameElement = document.getElementById('character-name');
+    const roleElement = document.getElementById('character-role');
+    
+    if (nameElement) {
+        nameElement.textContent = playerCharacter.name || 'Unknown';
+    }
+    
+    if (roleElement) {
+        roleElement.textContent = playerCharacter.jobRole || 'No Role';
+    }
+    
+    // Update status bars
+    updateStatusBars(playerCharacter);
+    
+    // Update inventory
+    updateInventoryDisplay(playerCharacter);
+    
+    // Update portrait canvas (basic placeholder)
+    updatePortraitCanvas(playerCharacter);
+    
+    // Start clock
+    startClock();
+    
+    console.log('📊 Status panel initialized for:', playerCharacter.name);
+}
+
+/**
+ * Update status bars in the UI
+ */
+function updateStatusBars(character) {
+    const needs = character.needs || {};
+    
+    const statusMappings = [
+        { id: 'energy', value: needs.energy || 0 },
+        { id: 'hunger', value: needs.hunger || 0 },
+        { id: 'social', value: needs.social || 0 },
+        { id: 'stress', value: Math.max(0, 100 - (needs.energy || 0)) } // Inverse of energy for stress
+    ];
+    
+    statusMappings.forEach(({ id, value }) => {
+        const valueElement = document.getElementById(`${id}-value`);
+        const barElement = document.getElementById(`${id}-bar`);
+        
+        if (valueElement) {
+            valueElement.textContent = `${Math.round(value)}%`;
+        }
+        
+        if (barElement) {
+            barElement.style.width = `${Math.round(value)}%`;
+        }
+    });
+}
+
+/**
+ * Update inventory display
+ */
+function updateInventoryDisplay(character) {
+    const inventoryList = document.getElementById('inventory-list');
+    if (!inventoryList) return;
+    
+    inventoryList.innerHTML = '';
+    
+    if (character.inventory && character.inventory.length > 0) {
+        character.inventory.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.textContent = item;
+            listItem.style.cssText = 'padding: 4px 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: 4px;';
+            inventoryList.appendChild(listItem);
+        });
+    } else {
+        const emptyItem = document.createElement('li');
+        emptyItem.textContent = 'No items';
+        emptyItem.style.cssText = 'color: #999; font-style: italic;';
+        inventoryList.appendChild(emptyItem);
+    }
+}
+
+/**
+ * Update portrait canvas with character sprite
+ */
+function updatePortraitCanvas(character) {
+    const canvas = document.getElementById('player-portrait-canvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (character.spriteSheet) {
+        // Try to load and draw the character sprite
+        const img = new Image();
+        img.onload = function() {
+            // Scale and draw the image to fit the canvas
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.onerror = function() {
+            // Fallback: draw a simple placeholder
+            drawPlaceholderPortrait(ctx, canvas, character);
+        };
+        img.src = character.spriteSheet;
+    } else {
+        // Draw placeholder
+        drawPlaceholderPortrait(ctx, canvas, character);
+    }
+}
+
+/**
+ * Draw a placeholder portrait
+ */
+function drawPlaceholderPortrait(ctx, canvas, character) {
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    // Background
+    ctx.fillStyle = '#4a5568';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Head
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY - 5, 15, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // Body
+    ctx.fillStyle = '#cbd5e0';
+    ctx.fillRect(centerX - 10, centerY + 8, 20, 15);
+    
+    // Initial
+    ctx.fillStyle = '#2d3748';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    const initial = (character.name || 'U').charAt(0).toUpperCase();
+    ctx.fillText(initial, centerX, centerY + 2);
+}
+
+/**
+ * Start the real-time clock
+ */
+function startClock() {
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', { 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        const clockElement = document.getElementById('clock-display');
+        if (clockElement) {
+            clockElement.textContent = timeString;
+        }
+    }
+    
+    // Update immediately and then every second
+    updateClock();
+    setInterval(updateClock, 1000);
+}
+
+/**
  * Handle window resize events
  */
 function handleWindowResize() {
-    // Adjust game container size if needed
-    const gameContainer = document.getElementById('game-container');
-    if (gameContainer && gameContainer.style.display !== 'none') {
-        // Future: resize PixiJS canvas here
-        console.log('📐 Window resized, adjusting game view');
-    }
+    // Future: resize game canvas here
+    console.log('📐 Window resized');
 }
 
 /**
