@@ -1,9 +1,8 @@
 /**
- * STAGE 2 FIX: Updated Game Engine with proper error handling and fallbacks
- * 
- * Game Engine - Lightweight coordinator for game systems
+ * Game Engine - Updated with standardized imports and Stage 3 enhancements
+ * Lightweight coordinator for game systems
  */
-import { CharacterManager } from './characters/characterManager.js';
+import { CharacterManager } from './characters/character-manager.js';
 import { World } from './world/world.js';
 
 export class GameEngine {
@@ -33,7 +32,7 @@ export class GameEngine {
     }
 
     /**
-     * STAGE 2 FIX: Simplified initialize with only essential systems
+     * STAGE 3 FIX: Simplified initialize with only essential systems
      */
     initialize(officeLayout) {
         try {
@@ -104,11 +103,11 @@ export class GameEngine {
             
             // Update character positions in renderer
             this.characterManager.characters.forEach(character => {
-                this.renderer.updateCharacterPosition(character.id, character.x, character.y);
+                this.renderer.updateCharacterPosition(character.id, character.position.x, character.position.y);
             });
         }
         
-        // Update UI
+        // Update UI - handled by observer pattern in Stage 3
         if (this.uiUpdater) {
             // UI updates are handled by the observer pattern
         }
@@ -126,85 +125,40 @@ export class GameEngine {
      * Render the game (called by game loop)
      */
     render() {
-        // STAGE 2: Rendering is handled by PixiJS automatically
+        if (this.renderer) {
+            this.renderer.render();
+        }
     }
 
     /**
-     * Add a prompt to the global queue (placeholder for later stages)
+     * Add a prompt to the global queue (for future AI integration)
      * @param {Object} promptData - Prompt data object
      */
     addToPromptQueue(promptData) {
-        console.log('AI queue not implemented yet:', promptData);
-    }
-
-    /**
-     * STAGE 2: Set renderer reference
-     * @param {Renderer} renderer - The renderer instance
-     */
-    setRenderer(renderer) {
-        this.renderer = renderer;
-    }
-
-    /**
-     * STAGE 2: Get game world bounds for movement/camera systems
-     */
-    getWorldBounds() {
-        if (this.renderer) {
-            return this.renderer.getWorldBounds();
+        if (this.aiQueueManager) {
+            this.aiQueueManager.addToPromptQueue(promptData);
         }
-        return { width: 800, height: 600 }; // Default fallback
     }
 
     /**
-     * Pause the game
-     */
-    pause() {
-        this.isRunning = false;
-        if (this.updateLoop) {
-            clearInterval(this.updateLoop);
-        }
-        console.log('Game paused');
-    }
-
-    /**
-     * Resume the game
-     */
-    resume() {
-        this.isRunning = true;
-        this.startSimpleUpdateLoop();
-        console.log('Game resumed');
-    }
-
-    /**
-     * Stop and cleanup the game
+     * Stop the game engine
      */
     stop() {
         this.isRunning = false;
-        
         if (this.updateLoop) {
             clearInterval(this.updateLoop);
             this.updateLoop = null;
         }
-        
-        // Cleanup systems
-        if (this.renderer) {
-            this.renderer.destroy();
-            this.renderer = null;
-        }
-        
-        console.log('Game stopped');
+        console.log('Game engine stopped');
     }
 
     /**
-     * Get game status
+     * Restart the game engine
      */
-    getStatus() {
-        return {
-            isRunning: this.isRunning,
-            gameTime: this.gameTime,
-            characterCount: this.characterManager ? this.characterManager.characters.length : 0,
-            hasRenderer: !!this.renderer,
-            hasWorld: !!this.world
-        };
+    restart() {
+        this.stop();
+        this.startSimpleUpdateLoop();
+        this.isRunning = true;
+        console.log('Game engine restarted');
     }
 }
