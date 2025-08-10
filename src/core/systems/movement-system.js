@@ -85,4 +85,92 @@ export class MovementSystem {
             
             // Notify observers of position change
             if (character.notifyObservers) {
-                character.notifyObser
+                character.notifyObservers('position');
+            }
+            return;
+        }
+        
+        // Move towards the current waypoint
+        const moveDistance = speed * deltaTime;
+        const ratio = moveDistance / distance;
+        
+        // Calculate new position
+        const newX = character.position.x + (dx * ratio);
+        const newY = character.position.y + (dy * ratio);
+        
+        // Update character position
+        character.position.x = newX;
+        character.position.y = newY;
+        
+        // Notify observers of position change
+        if (character.notifyObservers) {
+            character.notifyObservers('position');
+        }
+        
+        // Safety check: if we hit an obstacle, recalculate path
+        if (!world.isPositionWalkable(character.position.x, character.position.y)) {
+            console.warn(`⚠️ ${character.name} hit obstacle, recalculating path`);
+            const destination = character.path[character.path.length - 1];
+            const newPath = world.findPath(character.position, destination);
+            
+            if (newPath.length > 0) {
+                character.path = newPath.slice(1); // Remove current position
+            } else {
+                // Can't find new path, stop movement
+                character.path = [];
+                console.warn(`🚫 ${character.name} stuck, stopping movement`);
+            }
+        }
+    }
+
+    /**
+     * Update all moving characters
+     * @param {Array} characters - Array of all characters
+     * @param {World} world - Game world instance
+     * @param {number} deltaTime - Time since last update in seconds
+     */
+    updateAll(characters, world, deltaTime) {
+        for (const character of characters) {
+            if (character.path && character.path.length > 0) {
+                this.moveCharacter(character, world, deltaTime);
+            }
+        }
+    }
+
+    /**
+     * Stop character movement
+     * @param {Character} character - Character to stop
+     */
+    stopCharacter(character) {
+        if (!character) return;
+        
+        character.path = [];
+        this.movingCharacters.delete(character.id);
+        
+        if (character.setActionState) {
+            character.setActionState('DEFAULT');
+        }
+        
+        console.log(`🛑 Stopped movement for ${character.name}`);
+    }
+
+    /**
+     * Check if character is currently moving
+     * @param {Character} character - Character to check
+     * @returns {boolean} True if character is moving
+     */
+    isCharacterMoving(character) {
+        return character && character.path && character.path.length > 0;
+    }
+
+    /**
+     * Get movement status for debugging
+     * @returns {Object} Movement system status
+     */
+    getStatus() {
+        return {
+            movingCharacters: this.movingCharacters.size,
+            activeMovements: Array.from(this.movingCharacters)
+        };
+    }
+}
