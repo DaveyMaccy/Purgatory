@@ -52,75 +52,183 @@ export class NavGrid {
      * @returns {Array} Array of waypoints from start to end
      */
     findPath(start, end) {
-        // Validate inputs
-        if (!start || !end || 
-            !this.isWalkable(start.x, start.y) || 
-            !this.isWalkable(end.x, end.y)) {
-            console.warn('🚫 Invalid pathfinding request:', { start, end });
+        // Enhanced input validation with better debugging
+        if (!start || !end) {
+            console.warn('🚫 Invalid pathfinding request: missing start or end position', { start, end });
             return [];
+        }
+
+        if (typeof start.x !== 'number' || typeof start.y !== 'number' ||
+            typeof end.x !== 'number' || typeof end.y !== 'number') {
+            console.warn('🚫 Invalid pathfinding request: non-numeric coordinates', { start, end });
+            return [];
+        }
+
+        // Round coordinates to handle floating point issues
+        const startPos = { x: Math.round(start.x), y: Math.round(start.y) };
+        const endPos = { x: Math.round(end.x), y: Math.round(end.y) };
+
+        // Check bounds
+        if (startPos.x < 0 || startPos.x >= this.width || startPos.y < 0 || startPos.y >= this.height ||
+            endPos.x < 0 || endPos.x >= this.width || endPos.y < 0 || endPos.y >= this.height) {
+            console.warn('🚫 Pathfinding coordinates out of bounds:', { 
+                start: startPos, 
+                end: endPos, 
+                gridSize: { width: this.width, height: this.height }
+            });
+            return [];
+        }
+
+        // Check if start position is walkable
+        if (!this.isWalkable(startPos.x, startPos.y)) {
+            console.warn('🚫 Start position is not walkable:', startPos);
+            
+            // Try to find a nearby walkable position for start
+            const nearbyStart = this.findNearbyWalkable(startPos);
+            if (nearbyStart) {
+                console.log('🔧 Using nearby walkable start position:', nearbyStart);
+                startPos.x = nearbyStart.x;
+                startPos.y = nearbyStart.y;
+            } else {
+                return [];
+            }
+        }
+
+        // Check if end position is walkable
+        if (!this.isWalkable(endPos.x, endPos.y)) {
+            console.warn('🚫 End position is not walkable:', endPos);
+            
+            // Try to find a nearby walkable position for end
+            const nearbyEnd = this.findNearbyWalkable(endPos);
+            if (nearbyEnd) {
+                console.log('🔧 Using nearby walkable end position:', nearbyEnd);
+                endPos.x = nearbyEnd.x;
+                endPos.y = nearbyEnd.y;
+            } else {
+                return [];
+            }
         }
 
         // If start and end are the same, return empty path
-        if (start.x === end.x && start.y === end.y) {
+        if (startPos.x === endPos.x && startPos.y === endPos.y) {
             return [];
         }
 
-        const openSet = [start];
+        console.log(`🗺️ A* pathfinding: (${startPos.x},${startPos.y}) → (${endPos.x},${endPos.y})`);
+
+        // A* Algorithm Implementation
+        const openSet = [startPos];
         const closedSet = new Set();
         const cameFrom = new Map();
-        
-        // gScore: cost from start to current node
         const gScore = new Map();
-        gScore.set(this.hashPoint(start), 0);
-        
-        // fScore: estimated total cost from start to end
         const fScore = new Map();
-        fScore.set(this.hashPoint(start), this.heuristic(start, end));
+        
+        const startKey = this.hashPoint(startPos);
+        gScore.set(startKey, 0);
+        fScore.set(startKey, this.heuristic(startPos, endPos));
         
         while (openSet.length > 0) {
-            // Get node with lowest fScore
-            openSet.sort((a, b) => {
-                const scoreA = fScore.get(this.hashPoint(a)) || Infinity;
-                const scoreB = fScore.get(this.hashPoint(b)) || Infinity;
-                return scoreA - scoreB;
-            });
-            const current = openSet.shift();
+            // Find node with lowest fScore
+            let current = openSet[0];
+            let currentIndex = 0;
             
-            // If we reached the end, reconstruct path
-            if (current.x === end.x && current.y === end.y) {
+            for (let i = 1; i < openSet.length; i++) {
+                const currentKey = this.hashPoint(openSet[i]);
+                const bestKey = this.hashPoint(current);
+                if ((fScore.get(currentKey) || Infinity) < (fScore.get(bestKey) || Infinity)) {
+                    current = openSet[i];
+                    currentIndex = i;
+                }
+            }
+            
+            // Remove current from openSet
+            openSet.splice(currentIndex, 1);
+            
+            // Check if we reached the goal
+            if (current.x === endPos.x && current.y === endPos.y) {
                 const path = this.reconstructPath(cameFrom, current);
-                console.log(`🎯 Path found: ${path.length} steps`);
+                console.log(`✅ Path found: ${path.length} waypoints`);
                 return path;
             }
             
+            // Add current to closedSet
             closedSet.add(this.hashPoint(current));
             
-            // Check neighbors
+            // Check all neighbors
             const neighbors = this.getNeighbors(current);
             for (const neighbor of neighbors) {
-                const neighborHash = this.hashPoint(neighbor);
-                if (closedSet.has(neighborHash)) continue;
+                const neighborKey = this.hashPoint(neighbor);
+                
+                if (closedSet.has(neighborKey)) {
+                    continue;
+                }
                 
                 // Calculate tentative gScore
-                const tentativeGScore = (gScore.get(this.hashPoint(current)) || 0) + 1;
+                const currentKey = this.hashPoint(current);
+                const tentativeGScore = (gScore.get(currentKey) || 0) + this.getDistance(current, neighbor);
                 
-                if (!openSet.some(p => p.x === neighbor.x && p.y === neighbor.y) || 
-                    tentativeGScore < (gScore.get(neighborHash) || Infinity)) {
-                    
-                    cameFrom.set(neighborHash, current);
-                    gScore.set(neighborHash, tentativeGScore);
-                    fScore.set(neighborHash, tentativeGScore + this.heuristic(neighbor, end));
-                    
-                    if (!openSet.some(p => p.x === neighbor.x && p.y === neighbor.y)) {
-                        openSet.push(neighbor);
-                    }
+                // Check if this path to neighbor is better
+                if (!openSet.some(p => p.x === neighbor.x && p.y === neighbor.y)) {
+                    openSet.push(neighbor);
+                } else if (tentativeGScore >= (gScore.get(neighborKey) || Infinity)) {
+                    continue;
                 }
+                
+                // This path is the best until now
+                cameFrom.set(neighborKey, current);
+                gScore.set(neighborKey, tentativeGScore);
+                fScore.set(neighborKey, tentativeGScore + this.heuristic(neighbor, endPos));
             }
         }
         
         // No path found
-        console.warn('🚫 No path found between:', start, 'and', end);
+        console.warn('🚫 No path found between:', startPos, 'and', endPos);
         return [];
+    }
+
+    /**
+     * Find a nearby walkable position
+     * @param {Object} position - Position to search around {x, y}
+     * @param {number} maxRadius - Maximum search radius (default: 3)
+     * @returns {Object|null} Nearby walkable position or null
+     */
+    findNearbyWalkable(position, maxRadius = 3) {
+        // Try positions in expanding squares around the target
+        for (let radius = 1; radius <= maxRadius; radius++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dy = -radius; dy <= radius; dy++) {
+                    // Only check the perimeter of the current radius
+                    if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) {
+                        continue;
+                    }
+                    
+                    const testX = position.x + dx;
+                    const testY = position.y + dy;
+                    
+                    if (this.isWalkable(testX, testY)) {
+                        return { x: testX, y: testY };
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get distance between two points (for movement cost calculation)
+     * @param {Object} a - Point A {x, y}
+     * @param {Object} b - Point B {x, y}
+     * @returns {number} Distance
+     */
+    getDistance(a, b) {
+        const dx = Math.abs(a.x - b.x);
+        const dy = Math.abs(a.y - b.y);
+        
+        // Diagonal movement costs more
+        if (dx === 1 && dy === 1) {
+            return 1.4; // sqrt(2) ≈ 1.414
+        }
+        return 1; // Cardinal movement
     }
 
     /**
