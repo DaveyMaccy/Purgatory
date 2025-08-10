@@ -1,6 +1,6 @@
 /**
  * Character Creator - Enhanced for Stage 3: Portrait system and game start integration
- * Complete replacement file with Stage 3 enhancements
+ * Complete replacement file with Stage 3 enhancements and standardized asset names
  */
 
 // Data from design document
@@ -32,12 +32,13 @@ const DESK_ITEM_OPTIONS = [
 
 const PHYSICAL_BUILDS = ["Slim", "Average", "Athletic", "Heavy"];
 
+// UPDATED: Standardized asset naming convention
 const SPRITE_OPTIONS = [
-    "assets/characters/Premade_Character_48x48_01.png",
-    "assets/characters/Premade_Character_48x48_02.png", 
-    "assets/characters/Premade_Character_48x48_03.png",
-    "assets/characters/Premade_Character_48x48_04.png",
-    "assets/characters/Premade_Character_48x48_05.png"
+    "assets/characters/character-01.png",
+    "assets/characters/character-02.png", 
+    "assets/characters/character-03.png",
+    "assets/characters/character-04.png",
+    "assets/characters/character-05.png"
 ];
 
 // Game state variables
