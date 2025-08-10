@@ -1,7 +1,12 @@
 /**
- * STAGE 2 FIXED: Basic Rendering System using PixiJS with proper 48x96 sprite rendering
+ * STAGE 3 COMPLETE: Full Rendering System using PixiJS with proper character integration
  * 
- * This file handles all visual rendering for the game world
+ * This file handles all visual rendering for the game world including:
+ * - PixiJS initialization and canvas management
+ * - Character sprite rendering with proper 48x96 dimensions
+ * - Office map background rendering
+ * - Character positioning and updates
+ * - Proper cleanup and error handling
  */
 
 export class Renderer {
@@ -19,6 +24,8 @@ export class Renderer {
         this.CHARACTER_HEIGHT = 96; // Characters are 48x96 (2 tiles tall)
         this.WORLD_WIDTH = 800;
         this.WORLD_HEIGHT = 600;
+        
+        console.log('🎨 Renderer constructor called');
     }
 
     /**
@@ -26,7 +33,7 @@ export class Renderer {
      */
     async initialize() {
         try {
-            console.log('Initializing PixiJS renderer...');
+            console.log('🔧 Initializing PixiJS renderer...');
             
             // Create PixiJS application
             this.app = new PIXI.Application({
@@ -44,7 +51,7 @@ export class Renderer {
             this.worldContainer = new PIXI.Container();
             this.app.stage.addChild(this.worldContainer);
 
-            // Create layers
+            // Create layers in proper order (bottom to top)
             this.mapLayer = new PIXI.Container();
             this.characterLayer = new PIXI.Container();
             
@@ -52,10 +59,10 @@ export class Renderer {
             this.worldContainer.addChild(this.characterLayer);
 
             this.isInitialized = true;
-            console.log('PixiJS renderer initialized successfully');
+            console.log('✅ PixiJS renderer initialized successfully');
 
         } catch (error) {
-            console.error('Failed to initialize renderer:', error);
+            console.error('❌ Failed to initialize renderer:', error);
             throw error;
         }
     }
@@ -66,18 +73,16 @@ export class Renderer {
      */
     renderMap(mapData) {
         if (!this.isInitialized) {
-            console.error('Renderer not initialized');
+            console.error('❌ Renderer not initialized');
             return;
         }
 
-        console.log('Rendering map...');
+        console.log('🗺️ Rendering map...');
 
         // Clear existing map
         this.mapLayer.removeChildren();
 
         // Create a simple office background for now
-        // In Stage 2, we'll use a basic colored background with some simple shapes
-        
         // Office floor
         const floor = new PIXI.Graphics();
         floor.beginFill(0xf5f5f5); // Light gray floor
@@ -85,10 +90,10 @@ export class Renderer {
         floor.endFill();
         this.mapLayer.addChild(floor);
 
-        // Add some basic office elements as colored rectangles
+        // Add office elements
         this.addOfficeElements();
 
-        console.log('Map rendered successfully');
+        console.log('✅ Map rendered successfully');
     }
 
     /**
@@ -141,33 +146,47 @@ export class Renderer {
      */
     async addCharacter(character) {
         if (!this.isInitialized) {
-            console.error('Renderer not initialized');
+            console.error('❌ Renderer not initialized');
             return;
         }
 
         try {
-            console.log(`Adding character sprite for ${character.name}`);
+            console.log(`👤 Adding character sprite for ${character.name}`);
 
-            // Load the full spritesheet texture
-            const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
+            let sprite;
+
+            // Try to load custom spritesheet first
+            if (character.spriteSheet) {
+                try {
+                    // Load the full spritesheet texture
+                    const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
+                    
+                    // Create a cropped texture for proper 48x96 character
+                    // Character sprites are 48x96, and we want the idle frame (usually first frame)
+                    const croppedTexture = new PIXI.Texture(
+                        fullTexture.baseTexture,
+                        new PIXI.Rectangle(0, 0, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT)
+                    );
+                    
+                    // Create sprite from cropped texture
+                    sprite = new PIXI.Sprite(croppedTexture);
+                    
+                } catch (spriteError) {
+                    console.warn(`⚠️ Failed to load sprite for ${character.name}, using placeholder:`, spriteError);
+                    sprite = this.createPlaceholderSprite(character);
+                }
+            } else {
+                // Create placeholder sprite
+                sprite = this.createPlaceholderSprite(character);
+            }
             
-            // FIXED: Create a cropped texture for proper 48x96 character
-            // Character sprites are 48x96, and we want the idle frame (usually first frame)
-            const croppedTexture = new PIXI.Texture(
-                fullTexture.baseTexture,
-                new PIXI.Rectangle(0, 0, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT) // Take 48x96 frame
-            );
-            
-            // Create sprite from cropped texture
-            const sprite = new PIXI.Sprite(croppedTexture);
-            
-            // FIXED: Set proper sprite dimensions (don't squash to 48x48)
+            // Set proper sprite dimensions and position
             sprite.width = this.CHARACTER_WIDTH;   // 48 pixels wide
             sprite.height = this.CHARACTER_HEIGHT; // 96 pixels tall
-            sprite.x = character.x || 100;
-            sprite.y = character.y || 100;
+            sprite.x = character.position?.x || 100;
+            sprite.y = character.position?.y || 100;
             
-            // FIXED: Anchor at bottom center so character "stands" on the ground
+            // Anchor at bottom center so character "stands" on the ground
             sprite.anchor.set(0.5, 1.0); // Center horizontally, bottom vertically
             
             // Add name label
@@ -193,67 +212,48 @@ export class Renderer {
 
             // Store sprite reference
             this.characterSprites.set(character.id, sprite);
-            
-            // Add to character layer
             this.characterLayer.addChild(sprite);
-
-            console.log(`Character sprite added for ${character.name} at (${sprite.x}, ${sprite.y})`);
+            
+            console.log(`✅ Character sprite added for ${character.name} at (${sprite.x}, ${sprite.y})`);
 
         } catch (error) {
-            console.error(`Failed to add character ${character.name}:`, error);
+            console.error(`❌ Failed to add character ${character.name}:`, error);
+            // Create a basic placeholder as fallback
+            const fallbackSprite = this.createPlaceholderSprite(character);
+            fallbackSprite.x = character.position?.x || 100;
+            fallbackSprite.y = character.position?.y || 100;
+            fallbackSprite.anchor.set(0.5, 1.0);
             
-            // Fallback: create a colored circle if image fails to load
-            this.createFallbackCharacterSprite(character);
+            this.characterSprites.set(character.id, fallbackSprite);
+            this.characterLayer.addChild(fallbackSprite);
         }
     }
 
     /**
-     * Create a fallback sprite if character image fails to load
+     * Create a placeholder sprite for characters without custom sprites
      * @param {Object} character - Character data
+     * @returns {PIXI.Graphics} A placeholder sprite
      */
-    createFallbackCharacterSprite(character) {
-        console.log(`Creating fallback sprite for ${character.name}`);
-
+    createPlaceholderSprite(character) {
         const graphics = new PIXI.Graphics();
         
-        // Different colors for different characters
-        const colors = [0xff6b6b, 0x4ecdc4, 0x45b7d1, 0xf9ca24, 0xf0932b];
-        const colorIndex = parseInt(character.id.replace('char_', '')) % colors.length;
-        
-        graphics.beginFill(colors[colorIndex]);
-        graphics.drawCircle(0, -this.TILE_SIZE/2, this.TILE_SIZE / 2); // Draw circle above ground level
+        // Body (rectangle)
+        graphics.beginFill(character.color || 0x3498db);
+        graphics.drawRect(-this.CHARACTER_WIDTH/2, -this.CHARACTER_HEIGHT, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT);
         graphics.endFill();
         
-        // Add border
-        graphics.lineStyle(2, 0x000000);
-        graphics.drawCircle(0, -this.TILE_SIZE/2, this.TILE_SIZE / 2);
-
-        graphics.x = character.x || 100;
-        graphics.y = character.y || 100;
-
-        // Add name label
-        const nameText = new PIXI.Text(character.name, {
-            fontFamily: 'Arial',
-            fontSize: 12,
-            fill: 0x000000,
-            align: 'center'
-        });
-        nameText.anchor.set(0.5);
-        nameText.x = 0;
-        nameText.y = -this.TILE_SIZE - 20;
-        graphics.addChild(nameText);
-
-        // Add player indicator
-        if (character.isPlayer) {
-            const playerIndicator = new PIXI.Graphics();
-            playerIndicator.beginFill(0x00ff00);
-            playerIndicator.drawCircle(0, -this.TILE_SIZE - 30, 5);
-            playerIndicator.endFill();
-            graphics.addChild(playerIndicator);
-        }
-
-        this.characterSprites.set(character.id, graphics);
-        this.characterLayer.addChild(graphics);
+        // Head (circle)
+        graphics.beginFill(0xfdbcb4); // Skin tone
+        graphics.drawCircle(0, -this.CHARACTER_HEIGHT + 15, 12);
+        graphics.endFill();
+        
+        // Simple face
+        graphics.beginFill(0x000000);
+        graphics.drawCircle(-4, -this.CHARACTER_HEIGHT + 12, 1); // Left eye
+        graphics.drawCircle(4, -this.CHARACTER_HEIGHT + 12, 1);  // Right eye
+        graphics.endFill();
+        
+        return graphics;
     }
 
     /**
@@ -288,6 +288,9 @@ export class Renderer {
     update() {
         // Renderer updates will be added here later
         // For now, PixiJS handles the rendering automatically
+        if (this.app && this.isInitialized) {
+            this.app.render();
+        }
     }
 
     /**
@@ -300,6 +303,7 @@ export class Renderer {
         }
         this.characterSprites.clear();
         this.isInitialized = false;
+        console.log('🧹 Renderer destroyed and cleaned up');
     }
 
     /**
@@ -309,6 +313,18 @@ export class Renderer {
         return {
             width: this.WORLD_WIDTH,
             height: this.WORLD_HEIGHT
+        };
+    }
+
+    /**
+     * Debug method to check renderer status
+     */
+    getStatus() {
+        return {
+            isInitialized: this.isInitialized,
+            hasApp: !!this.app,
+            characterCount: this.characterSprites.size,
+            worldBounds: this.getWorldBounds()
         };
     }
 }
