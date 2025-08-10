@@ -1,8 +1,6 @@
-// src/core/systems/movement-system.js
-
 /**
  * MovementSystem - Handles character movement and pathfinding
- * Stage 4 complete implementation with moveCharacterTo method
+ * Stage 4 complete implementation with moveCharacterTo method and collision detection
  */
 export class MovementSystem {
     constructor() {
@@ -10,12 +8,11 @@ export class MovementSystem {
     }
 
     /**
-     * STAGE 4 NEW: Move character to a specific position
-     * This is called by the click handler in main.js
-     * UPDATED: Now uses proper pathfinding to avoid obstacles
+     * Move character to a specific position
      * @param {Character} character - Character to move
      * @param {Object} targetPosition - Target position {x, y} in canvas coordinates
      * @param {World} world - Game world instance
+     * @returns {boolean} True if movement started successfully
      */
     moveCharacterTo(character, targetPosition, world) {
         if (!character || !targetPosition || !world) {
@@ -28,7 +25,7 @@ export class MovementSystem {
         // Validate target position is within canvas bounds
         if (targetPosition.x < 50 || targetPosition.x > 750 || 
             targetPosition.y < 50 || targetPosition.y > 400) {
-            console.warn(`🚫 Target position outside canvas bounds:`, targetPosition);
+            console.warn('🚫 Target position outside canvas bounds:', targetPosition);
             return false;
         }
 
@@ -54,7 +51,7 @@ export class MovementSystem {
                         nearbyPos.y >= 50 && nearbyPos.y <= 400) {
                         const nearbyPath = world.findPath(character.position, nearbyPos);
                         if (nearbyPath.length > 0) {
-                            character.path = nearbyPath.slice(1); // Remove starting position
+                            character.path = nearbyPath.slice(1);
                             this.movingCharacters.add(character.id);
                             if (character.setActionState) {
                                 character.setActionState('MOVING');
@@ -86,11 +83,6 @@ export class MovementSystem {
             console.warn(`🚫 Pathfinding error for ${character.name}:`, pathError.message);
             return false;
         }
-    }State('MOVING');
-        }
-
-        console.log(`✅ Path set for ${character.name}: ${character.path.length} waypoints`);
-        return true;
     }
 
     /**
@@ -112,7 +104,7 @@ export class MovementSystem {
             return;
         }
         
-        const speed = 150; // pixels per second (increased for more visible movement)
+        const speed = 150; // pixels per second
         const target = character.path[0];
         const dx = target.x - character.position.x;
         const dy = target.y - character.position.y;
@@ -135,7 +127,7 @@ export class MovementSystem {
         }
         
         // If we're close to the current waypoint, snap to it and move to next
-        if (distance < 8) { // Increased threshold for smoother movement
+        if (distance < 8) {
             character.position = { ...target };
             character.path.shift();
             
@@ -150,7 +142,7 @@ export class MovementSystem {
         
         // Move towards the current waypoint
         const moveDistance = speed * deltaTime;
-        const ratio = Math.min(1, moveDistance / distance); // Prevent overshooting
+        const ratio = Math.min(1, moveDistance / distance);
         
         // Calculate new position
         const newX = character.position.x + (dx * ratio);
@@ -165,7 +157,7 @@ export class MovementSystem {
             character.notifyObservers('position');
         }
         
-        // Optional: Add bounds checking
+        // Bounds checking
         if (character.position.x < 50) character.position.x = 50;
         if (character.position.x > 750) character.position.x = 750;
         if (character.position.y < 50) character.position.y = 50;
@@ -196,11 +188,8 @@ export class MovementSystem {
         character.path = [];
         this.movingCharacters.delete(character.id);
         
-        }
-
-        console.log(`✅ Path set for ${character.name}: ${character.path.length} waypoints`);
-        return true;
-    }State('DEFAULT');
+        if (character.setActionState) {
+            character.setActionState('DEFAULT');
         }
         
         console.log(`🛑 Stopped movement for ${character.name}`);
