@@ -96,8 +96,8 @@ function handleNewGameClick() {
         // Show character creator
         showCharacterCreator();
         
-        // Initialize the character creator with Corporate office type
-        initializeCharacterCreator('Corporate');
+        // Initialize the character creator with Game Studio office type
+        initializeCharacterCreator('Game Studio');
         
         console.log('✅ Character creator opened');
         
@@ -426,7 +426,39 @@ window.debugGame = {
         return [];
     },
     testNewGame: handleNewGameClick,
-    startFallback: startGameWithFallbackCharacters
+    startFallback: startGameWithFallbackCharacters,
+    // ADDED: Character testing commands
+    getCharacters: () => {
+        if (characterManager) {
+            return characterManager.characters.map(char => ({
+                name: char.name,
+                needs: char.needs,
+                position: char.position,
+                mood: char.mood,
+                jobRole: char.jobRole
+            }));
+        }
+        return [];
+    },
+    testCharacterNeeds: () => {
+        if (characterManager) {
+            characterManager.characters.forEach(char => {
+                console.log(`${char.name} needs:`, char.needs);
+            });
+        }
+    },
+    adjustCharacterNeed: (characterName, needType, value) => {
+        if (characterManager) {
+            const char = characterManager.getCharacterByName(characterName);
+            if (char && char.needs && char.needs[needType] !== undefined) {
+                char.needs[needType] = Math.max(0, Math.min(10, value));
+                char.notifyObservers('needs');
+                console.log(`Set ${characterName}'s ${needType} to ${value}`);
+            } else {
+                console.log('Character or need type not found');
+            }
+        }
+    }
 };
 
 console.log('🎮 Main.js loaded - Debug functions available as window.debugGame');
