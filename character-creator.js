@@ -603,11 +603,13 @@ function validateCharacters() {
 }
 
 /**
- * ENHANCED: Format characters for game engine with global API key
+ * ENHANCED: Format characters for game engine with custom portrait priority
  */
 function formatCharactersForGame() {
     return characters.map(char => ({
         ...char,
+        // FIXED: Use custom portrait if available, otherwise use sprite portrait
+        portrait: char.customPortrait || char.portrait,
         // Use individual API key if set, otherwise use global for NPCs
         apiKey: char.apiKey || (char.isPlayer ? '' : globalAPIKey),
         // Game engine required fields
@@ -673,13 +675,12 @@ console.log('🎭 Enhanced character creator loaded and ready');/**
  * - Enhanced form layout
  */
 
-// ENHANCED CONSTANTS
+// ENHANCED CONSTANTS - FIXED: Better job roles for office types
 const JOB_ROLES_BY_OFFICE = {
     "Game Studio": ["Lead Developer", "Game Designer", "3D Artist", "Sound Engineer", "QA Tester", "Producer"],
-    "Corporate": ["Senior Coder", "Junior Coder", "Team Lead", "QA Specialist", "DevOps"],
-    "Creative": ["Art Director", "Graphic Designer", "Copywriter", "UX Designer", "Creative Producer"],
-    "Healthcare": ["Nurse", "Admin", "Doctor", "Technician", "Receptionist"],
-    "Education": ["Teacher", "Principal", "Counselor", "Librarian", "Admin"]
+    "Corporate": ["IT Specialist", "Admin Assistant", "Business Analyst", "HR Manager", "Project Manager", "Accountant"],
+    "PR Agency": ["Account Manager", "Creative Director", "Social Media Manager", "Copywriter", "Media Planner", "Brand Strategist"],
+    "Newspaper": ["Reporter", "Editor", "Photographer", "Layout Designer", "Copy Editor", "Columnist"]
 };
 
 const PERSONALITY_TAGS = [
