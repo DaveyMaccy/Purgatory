@@ -103,6 +103,7 @@ function initializeUIElements() {
 
 /**
  * STAGE 4 COMPLETE: Handle clicks on the game world for character movement
+ * FIXED: Proper coordinate handling for 800x450 canvas
  */
 function handleWorldClick(event) {
     if (!gameEngine || !gameEngine.world || !movementSystem || !characterManager) {
@@ -112,10 +113,10 @@ function handleWorldClick(event) {
 
     // Get click coordinates relative to the canvas
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    const canvasX = event.clientX - rect.left;
+    const canvasY = event.clientY - rect.top;
     
-    console.log('🖱️ World clicked at:', { x, y });
+    console.log('🖱️ World clicked at:', { x: canvasX, y: canvasY });
 
     // Get the focused character (player character)
     const focusCharacter = characterManager.getCharacter(focusTargetId);
@@ -124,9 +125,14 @@ function handleWorldClick(event) {
         return;
     }
 
-    // Convert canvas coordinates to world coordinates if needed
-    // For now, assuming 1:1 mapping
-    const targetPosition = { x, y };
+    // Convert canvas coordinates to world coordinates
+    // The world uses 48x32 tiles with 48px tile size, but we need canvas coordinates
+    const targetPosition = { 
+        x: Math.max(50, Math.min(750, canvasX)), // Clamp to canvas bounds
+        y: Math.max(50, Math.min(400, canvasY))  // Clamp to canvas bounds
+    };
+
+    console.log(`🎯 Converted target position: (${targetPosition.x}, ${targetPosition.y})`);
 
     // Move the character to the clicked position
     const success = movementSystem.moveCharacterTo(focusCharacter, targetPosition, gameEngine.world);
@@ -135,6 +141,27 @@ function handleWorldClick(event) {
         console.log(`✅ ${focusCharacter.name} moving to:`, targetPosition);
     } else {
         console.warn(`🚫 Could not move ${focusCharacter.name} to:`, targetPosition);
+        
+        // Try a nearby position if the exact click failed
+        const nearbyPositions = [
+            { x: targetPosition.x + 20, y: targetPosition.y },
+            { x: targetPosition.x - 20, y: targetPosition.y },
+            { x: targetPosition.x, y: targetPosition.y + 20 },
+            { x: targetPosition.x, y: targetPosition.y - 20 }
+        ];
+        
+        for (const nearbyPos of nearbyPositions) {
+            if (nearbyPos.x >= 50 && nearbyPos.x <= 750 && 
+                nearbyPos.y >= 50 && nearbyPos.y <= 400) {
+                const retrySuccess = movementSystem.moveCharacterTo(focusCharacter, nearbyPos, gameEngine.world);
+                if (retrySuccess) {
+                    console.log(`✅ ${focusCharacter.name} moving to nearby position:`, nearbyPos);
+                    return;
+                }
+            }
+        }
+        
+        console.warn(`🚫 No valid nearby position found for movement`);
     }
 }
 
