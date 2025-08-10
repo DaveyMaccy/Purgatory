@@ -1,194 +1,188 @@
 /**
- * Character Manager - Manages game characters
- * Updated with standardized naming and Stage 3 enhancements
+ * STAGE 3 COMPLETE: Character Manager - Handles character lifecycle and positioning
+ * 
+ * Handles all character-related operations including:
+ * - Loading characters from character creator
+ * - Character initialization and positioning
+ * - Character updates and state management
+ * - Integration with world navigation grid
+ * - Player character identification
  */
+
 import { Character } from './character.js';
 
 export class CharacterManager {
     constructor() {
         this.characters = [];
         this.playerCharacter = null;
+        
+        console.log('👥 CharacterManager initialized');
     }
 
     /**
-     * STAGE 3 FIXED: Load characters from character creator data with proper name handling
-     * @param {Array} characterDataArray - Array of character data from character creator
+     * Load characters from the character creator data
+     * @param {Array} charactersData - Array of character data from character creator
      */
-    loadCharacters(characterDataArray) {
-        console.log('Loading characters into CharacterManager:', characterDataArray);
+    loadCharacters(charactersData) {
+        console.log('📝 Loading characters from character creator:', charactersData);
         
-        // Clear any existing characters
+        // Clear existing characters
         this.characters = [];
         this.playerCharacter = null;
         
-        // Create Character instances from the data
-        characterDataArray.forEach((charData, index) => {
+        // Convert character creator data to Character instances
+        charactersData.forEach((charData, index) => {
             try {
-                // Create new Character instance with proper data structure
+                // Create Character instance
                 const character = new Character(charData);
+                
+                // Set as player character if it's the first one or explicitly marked
+                if (index === 0 || charData.isPlayer) {
+                    character.isPlayer = true;
+                    this.playerCharacter = character;
+                    console.log(`🎯 Set ${character.name} as player character`);
+                }
                 
                 // Add to characters array
                 this.characters.push(character);
-                
-                // Set as player character if marked as such
-                if (charData.isPlayer) {
-                    this.playerCharacter = character;
-                    console.log('Set player character:', character.name);
-                }
-                
-                console.log(`Loaded character: ${character.name} (${character.jobRole})`);
+                console.log(`✅ Created character: ${character.name} (${character.jobRole})`);
                 
             } catch (error) {
-                console.error(`Failed to create character ${charData.name}:`, error);
+                console.error(`❌ Failed to create character from data:`, charData, error);
             }
         });
         
-        console.log(`Successfully loaded ${this.characters.length} characters`);
-        
-        // Ensure we have a player character
-        if (!this.playerCharacter && this.characters.length > 0) {
-            console.warn('No player character found, setting first character as player');
-            this.characters[0].isPlayer = true;
-            this.playerCharacter = this.characters[0];
-        }
+        console.log(`📋 Loaded ${this.characters.length} characters total`);
     }
 
     /**
-     * Initialize characters - now checks if characters already loaded
+     * Initialize all characters - called after world is set up
      */
     initializeCharacters() {
-        // Only create default characters if none have been loaded
-        if (this.characters.length === 0) {
-            console.log('No characters loaded, creating default characters...');
-            // This is a fallback for when the game starts without character creator
-            this.createDefaultCharacters();
-        } else {
-            console.log('Characters already loaded, skipping default creation');
-        }
-    }
-
-    /**
-     * UPDATED: Create default characters with standardized asset naming (fallback method)
-     */
-    createDefaultCharacters() {
-        console.log('Creating default characters...');
+        console.log('🔧 Initializing characters...');
         
-        // Example default character creation with updated naming
-        const defaultCharData = {
-            id: 'default_char_1',
-            name: 'Default Character',
-            isPlayer: true,
-            jobRole: 'Senior Coder',
-            physicalAttributes: { age: 30, height: 175, weight: 70, build: 'Average', looks: 5 },
-            skills: { competence: 5, laziness: 5, charisma: 5, leadership: 5 },
-            personalityTags: ['Friendly'],
-            inventory: ['Coffee'],
-            deskItems: ['Plant'],
-            spriteSheet: 'assets/characters/character-01.png', // UPDATED: Standardized naming
-            position: { x: 100, y: 100 },
-            needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 },
-            relationships: {}
-        };
-        
-        const defaultChar = new Character(defaultCharData);
-        
-        this.characters.push(defaultChar);
-        this.playerCharacter = defaultChar;
-        
-        console.log('Created default character:', defaultChar.name);
-    }
-
-    addCharacter(character) {
-        // Ensure we are adding a proper Character instance
-        if (!(character instanceof Character)) {
-            const characterInstance = new Character(character);
-            this.characters.push(characterInstance);
-            if (characterInstance.isPlayer) {
-                this.playerCharacter = characterInstance;
+        this.characters.forEach(character => {
+            try {
+                // Initialize character systems
+                character.initializeNeeds();
+                
+                // Set initial action state
+                if (!character.actionState) {
+                    character.setActionState('idle');
+                }
+                
+                console.log(`✅ Initialized character: ${character.name}`);
+                
+            } catch (error) {
+                console.error(`❌ Failed to initialize character ${character.name}:`, error);
             }
-            console.log(`Added character: ${characterInstance.name}`);
-        } else {
-            this.characters.push(character);
-            if (character.isPlayer) {
-                this.playerCharacter = character;
-            }
-            console.log(`Added character: ${character.name}`);
-        }
-    }
-
-    getCharacter(id) {
-        return this.characters.find(char => char.id === id);
-    }
-
-    getPlayerCharacter() {
-        return this.characters.find(char => char.isPlayer);
-    }
-    
-    /**
-     * BILO_FIX: This function no longer loads hardcoded characters.
-     * It now accepts an array of characters created by the user and adds them.
-     * This is the core fix for the "character data overwriting" bug.
-     * @param {Array<Object>} createdCharacters - The array of character data from the creator.
-     */
-    loadCharacters(createdCharacters) {
-        console.log('Loading characters from creator...');
-        this.characters.length = 0; // Clear any default/placeholder characters
-        this.playerCharacter = null;
-
-        if (createdCharacters && createdCharacters.length > 0) {
-            createdCharacters.forEach(data => this.addCharacter(data));
-        }
-    }
-
-    removeCharacter(id) {
-        this.characters = this.characters.filter(char => char.id !== id);
+        });
     }
 
     /**
-     * BILO_FIX: This function was missing, causing the original crash.
+     * STAGE 2-3 CRITICAL: Initialize character positions using world navigation grid
+     * This method is essential for proper character placement in the game world.
      * It sets the initial x and y positions for all characters by finding
      * a random walkable tile on the navigation grid for each one.
      * @param {World} world - The game world instance, containing the navGrid.
      */
     initializeCharacterPositions(world) {
-        if (!world || !world.navGrid || !world.TILE_SIZE) {
-            console.error("Cannot initialize character positions: world, navGrid, or TILE_SIZE is not available.");
+        if (!world) {
+            console.error("❌ Cannot initialize character positions: world is not available.");
             return;
         }
 
-        console.log('Initializing character positions...');
+        console.log('📍 Initializing character positions...');
         
         this.characters.forEach((character, index) => {
-            // Find a random walkable position
-            let attempts = 0;
-            let x, y;
+            let position;
             
-            do {
-                // Generate random grid coordinates
-                const gridX = Math.floor(Math.random() * world.navGrid.length);
-                const gridY = Math.floor(Math.random() * world.navGrid[0].length);
-                
-                // Check if tile is walkable (assuming 1 = walkable, 0 = blocked)
-                if (world.navGrid[gridX] && world.navGrid[gridX][gridY] === 1) {
-                    // Convert grid coordinates to world coordinates
-                    x = gridX * world.TILE_SIZE + (world.TILE_SIZE / 2);
-                    y = gridY * world.TILE_SIZE + (world.TILE_SIZE / 2);
-                    break;
+            // Try to get a random walkable position from the world
+            if (world.getRandomWalkablePosition) {
+                try {
+                    position = world.getRandomWalkablePosition();
+                    console.log(`🎯 Found walkable position for ${character.name}: (${position.x}, ${position.y})`);
+                } catch (error) {
+                    console.warn(`⚠️ Failed to get walkable position for ${character.name}:`, error);
+                    position = null;
                 }
-                
-                attempts++;
-            } while (attempts < 100); // Prevent infinite loop
+            }
             
-            // Fallback position if no walkable tile found
-            if (attempts >= 100) {
-                x = 100 + (index * 60);
-                y = 100 + (index * 60);
-                console.warn(`Could not find walkable position for ${character.name}, using fallback`);
+            // Fallback position calculation if world positioning fails
+            if (!position) {
+                const fallbackX = 100 + (index * 100) % 600; // Spread characters across width
+                const fallbackY = 200 + (index * 80) % 300;  // Spread characters across height
+                position = { x: fallbackX, y: fallbackY };
+                console.warn(`⚠️ Using fallback position for ${character.name}: (${position.x}, ${position.y})`);
             }
             
             // Set character position
-            character.position = { x, y };
-            console.log(`Positioned ${character.name} at (${x}, ${y})`);
+            character.setPosition(position);
+            console.log(`✅ Positioned ${character.name} at (${position.x}, ${position.y})`);
+        });
+        
+        console.log('📍 Character positioning complete');
+    }
+
+    /**
+     * Get the player character
+     * @returns {Character|null} The player character or null if not found
+     */
+    getPlayerCharacter() {
+        return this.playerCharacter;
+    }
+
+    /**
+     * Get character by ID
+     * @param {string} id - Character ID
+     * @returns {Character|null} Character or null if not found
+     */
+    getCharacter(id) {
+        return this.characters.find(char => char.id === id) || null;
+    }
+
+    /**
+     * Get character by name
+     * @param {string} name - Character name
+     * @returns {Character|null} Character or null if not found
+     */
+    getCharacterByName(name) {
+        return this.characters.find(char => char.name === name) || null;
+    }
+
+    /**
+     * Get all NPCs (non-player characters)
+     * @returns {Array<Character>} Array of NPC characters
+     */
+    getNPCs() {
+        return this.characters.filter(char => !char.isPlayer);
+    }
+
+    /**
+     * Get characters by job role
+     * @param {string} jobRole - Job role to filter by
+     * @returns {Array<Character>} Array of characters with the specified job role
+     */
+    getCharactersByJobRole(jobRole) {
+        return this.characters.filter(char => char.jobRole === jobRole);
+    }
+
+    /**
+     * Get characters within a certain distance of a position
+     * @param {Object} position - {x, y} position
+     * @param {number} radius - Search radius
+     * @returns {Array<Character>} Array of characters within radius
+     */
+    getCharactersNearPosition(position, radius = 100) {
+        return this.characters.filter(char => {
+            if (!char.position) return false;
+            
+            const distance = Math.sqrt(
+                Math.pow(char.position.x - position.x, 2) + 
+                Math.pow(char.position.y - position.y, 2)
+            );
+            
+            return distance <= radius;
         });
     }
 
@@ -198,7 +192,83 @@ export class CharacterManager {
      */
     update(deltaTime) {
         this.characters.forEach(character => {
-            character.update(deltaTime);
+            try {
+                character.update(deltaTime);
+            } catch (error) {
+                console.error(`❌ Error updating character ${character.name}:`, error);
+            }
         });
+    }
+
+    /**
+     * Add a new character to the game
+     * @param {Object} characterData - Character data
+     * @returns {Character} The created character
+     */
+    addCharacter(characterData) {
+        const character = new Character(characterData);
+        this.characters.push(character);
+        console.log(`➕ Added new character: ${character.name}`);
+        return character;
+    }
+
+    /**
+     * Remove a character from the game
+     * @param {string} characterId - Character ID to remove
+     * @returns {boolean} True if character was removed
+     */
+    removeCharacter(characterId) {
+        const index = this.characters.findIndex(char => char.id === characterId);
+        if (index !== -1) {
+            const character = this.characters[index];
+            this.characters.splice(index, 1);
+            
+            // Clear player reference if this was the player
+            if (this.playerCharacter && this.playerCharacter.id === characterId) {
+                this.playerCharacter = null;
+            }
+            
+            console.log(`➖ Removed character: ${character.name}`);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get comprehensive status for debugging
+     * @returns {Object} Status information
+     */
+    getStatus() {
+        return {
+            totalCharacters: this.characters.length,
+            playerCharacter: this.playerCharacter ? this.playerCharacter.name : 'None',
+            npcCount: this.getNPCs().length,
+            charactersWithPositions: this.characters.filter(char => char.position).length,
+            characterNames: this.characters.map(char => char.name)
+        };
+    }
+
+    /**
+     * Get all character positions for renderer updates
+     * @returns {Array} Array of {id, name, x, y, isPlayer} objects
+     */
+    getCharacterPositions() {
+        return this.characters.map(char => ({
+            id: char.id,
+            name: char.name,
+            x: char.position?.x || 0,
+            y: char.position?.y || 0,
+            isPlayer: char.isPlayer
+        }));
+    }
+
+    /**
+     * Force all characters to notify their observers (useful for debugging)
+     */
+    forceNotifyObservers() {
+        this.characters.forEach(character => {
+            character.notifyObservers('debug_update');
+        });
+        console.log('🔄 Forced observer notifications for all characters');
     }
 }
