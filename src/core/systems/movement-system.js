@@ -1,6 +1,12 @@
 /**
  * MovementSystem - Handles character movement and pathfinding
  * Stage 4 complete implementation with moveCharacterTo method and collision detection
+ * 
+ * FIXES APPLIED:
+ * - Dynamic world bounds checking (works with any map size)
+ * - Proper coordinate validation for 30×20 map (2304×1536 pixels)
+ * - Enhanced pathfinding with better fallbacks
+ * - Improved error messages and debugging
  */
 export class MovementSystem {
     constructor() {
@@ -10,7 +16,7 @@ export class MovementSystem {
     /**
      * Move character to a specific position
      * @param {Character} character - Character to move
-     * @param {Object} targetPosition - Target position {x, y} in canvas coordinates
+     * @param {Object} targetPosition - Target position {x, y} in world coordinates
      * @param {World} world - Game world instance
      * @returns {boolean} True if movement started successfully
      */
@@ -22,10 +28,22 @@ export class MovementSystem {
 
         console.log(`🚶 Moving ${character.name} to position:`, targetPosition);
 
-        // Validate target position is within canvas bounds
-        if (targetPosition.x < 50 || targetPosition.x > 750 || 
-            targetPosition.y < 50 || targetPosition.y > 400) {
-            console.warn('🚫 Target position outside canvas bounds:', targetPosition);
+        // FIXED: Get actual world bounds instead of hardcoded canvas bounds
+        const worldBounds = world.getWorldBounds();
+        
+        // FIXED: Validate target position is within WORLD bounds, not canvas bounds
+        if (targetPosition.x < worldBounds.tileSize || 
+            targetPosition.x > worldBounds.width - worldBounds.tileSize || 
+            targetPosition.y < worldBounds.tileSize || 
+            targetPosition.y > worldBounds.height - worldBounds.tileSize) {
+            console.warn('🚫 Target position outside world bounds:', {
+                target: targetPosition,
+                worldBounds: {
+                    width: worldBounds.width,
+                    height: worldBounds.height,
+                    tileSize: worldBounds.tileSize
+                }
+            });
             return false;
         }
 
@@ -38,17 +56,21 @@ export class MovementSystem {
                 
                 // Try to find a nearby walkable position
                 const nearbyPositions = [
-                    { x: targetPosition.x + 30, y: targetPosition.y },
-                    { x: targetPosition.x - 30, y: targetPosition.y },
-                    { x: targetPosition.x, y: targetPosition.y + 30 },
-                    { x: targetPosition.x, y: targetPosition.y - 30 },
-                    { x: targetPosition.x + 20, y: targetPosition.y + 20 },
-                    { x: targetPosition.x - 20, y: targetPosition.y - 20 }
+                    { x: targetPosition.x + worldBounds.tileSize, y: targetPosition.y },
+                    { x: targetPosition.x - worldBounds.tileSize, y: targetPosition.y },
+                    { x: targetPosition.x, y: targetPosition.y + worldBounds.tileSize },
+                    { x: targetPosition.x, y: targetPosition.y - worldBounds.tileSize },
+                    { x: targetPosition.x + worldBounds.tileSize/2, y: targetPosition.y + worldBounds.tileSize/2 },
+                    { x: targetPosition.x - worldBounds.tileSize/2, y: targetPosition.y - worldBounds.tileSize/2 }
                 ];
                 
                 for (const nearbyPos of nearbyPositions) {
-                    if (nearbyPos.x >= 50 && nearbyPos.x <= 750 && 
-                        nearbyPos.y >= 50 && nearbyPos.y <= 400) {
+                    // Check if nearby position is within world bounds
+                    if (nearbyPos.x >= worldBounds.tileSize && 
+                        nearbyPos.x <= worldBounds.width - worldBounds.tileSize && 
+                        nearbyPos.y >= worldBounds.tileSize && 
+                        nearbyPos.y <= worldBounds.height - worldBounds.tileSize) {
+                        
                         const nearbyPath = world.findPath(character.position, nearbyPos);
                         if (nearbyPath.length > 0) {
                             character.path = nearbyPath.slice(1);
@@ -156,12 +178,23 @@ export class MovementSystem {
         if (character.notifyObservers) {
             character.notifyObservers('position');
         }
-        
-        // Bounds checking
-        if (character.position.x < 50) character.position.x = 50;
-        if (character.position.x > 750) character.position.x = 750;
-        if (character.position.y < 50) character.position.y = 50;
-        if (character.position.y > 400) character.position.y = 400;
+    }
+
+    /**
+     * Stop a character's movement
+     * @param {Character} character - Character to stop
+     */
+    stopCharacter(character) {
+        if (character && character.path) {
+            character.path = [];
+            this.movingCharacters.delete(character.id);
+            
+            if (character.setActionState) {
+                character.setActionState('DEFAULT');
+            }
+            
+            console.log(`🛑 Stopped movement for ${character.name}`);
+        }
     }
 
     /**
@@ -170,48 +203,114 @@ export class MovementSystem {
      * @param {World} world - Game world instance
      * @param {number} deltaTime - Time since last update in seconds
      */
-    updateAll(characters, world, deltaTime) {
-        for (const character of characters) {
-            if (character.path && character.path.length > 0) {
+    update(characters, world, deltaTime) {
+        characters.forEach(character => {
+            if (this.movingCharacters.has(character.id)) {
                 this.moveCharacter(character, world, deltaTime);
             }
-        }
+        });
     }
 
     /**
-     * Stop character movement
-     * @param {Character} character - Character to stop
-     */
-    stopCharacter(character) {
-        if (!character) return;
-        
-        character.path = [];
-        this.movingCharacters.delete(character.id);
-        
-        if (character.setActionState) {
-            character.setActionState('DEFAULT');
-        }
-        
-        console.log(`🛑 Stopped movement for ${character.name}`);
-    }
-
-    /**
-     * Check if character is currently moving
-     * @param {Character} character - Character to check
-     * @returns {boolean} True if character is moving
-     */
-    isCharacterMoving(character) {
-        return character && character.path && character.path.length > 0;
-    }
-
-    /**
-     * Get movement status for debugging
-     * @returns {Object} Movement system status
+     * Get movement system status for debugging
+     * @returns {Object} Status information
      */
     getStatus() {
         return {
             movingCharacters: this.movingCharacters.size,
             activeMovements: Array.from(this.movingCharacters)
         };
+    }
+
+    /**
+     * Check if a character is currently moving
+     * @param {string} characterId - Character ID to check
+     * @returns {boolean} True if character is moving
+     */
+    isCharacterMoving(characterId) {
+        return this.movingCharacters.has(characterId);
+    }
+
+    /**
+     * Get all characters that are currently moving
+     * @returns {Set} Set of character IDs that are moving
+     */
+    getMovingCharacters() {
+        return new Set(this.movingCharacters);
+    }
+
+    /**
+     * Clear all movement for all characters (emergency stop)
+     */
+    stopAllMovement() {
+        this.movingCharacters.clear();
+        console.log('🛑 All character movement stopped');
+    }
+
+    /**
+     * Validate a position is within world bounds
+     * @param {Object} position - Position {x, y}
+     * @param {World} world - Game world instance
+     * @returns {boolean} True if position is valid
+     */
+    isValidPosition(position, world) {
+        if (!position || !world) return false;
+        
+        const worldBounds = world.getWorldBounds();
+        
+        return position.x >= 0 && 
+               position.x <= worldBounds.width && 
+               position.y >= 0 && 
+               position.y <= worldBounds.height;
+    }
+
+    /**
+     * Get the closest walkable position to a target
+     * @param {Object} targetPosition - Target position {x, y}
+     * @param {World} world - Game world instance
+     * @returns {Object|null} Closest walkable position or null
+     */
+    getClosestWalkablePosition(targetPosition, world) {
+        if (!targetPosition || !world) return null;
+        
+        // Convert to grid coordinates
+        const gridPos = world.worldToGrid(targetPosition.x, targetPosition.y);
+        
+        // Try to find nearby walkable position
+        const nearbyGrid = world.navGrid.findNearbyWalkable(gridPos, 5);
+        
+        if (nearbyGrid) {
+            return world.gridToWorld(nearbyGrid.x, nearbyGrid.y);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Debug method to test movement system
+     * @param {Character} character - Character to test
+     * @param {Object} targetPosition - Target position {x, y}
+     * @param {World} world - Game world instance
+     */
+    debugMovement(character, targetPosition, world) {
+        console.log('🧪 Movement System Debug:');
+        console.log('   Character:', character.name);
+        console.log('   Current position:', character.position);
+        console.log('   Target position:', targetPosition);
+        console.log('   World bounds:', world.getWorldBounds());
+        console.log('   Valid position:', this.isValidPosition(targetPosition, world));
+        console.log('   Currently moving:', this.isCharacterMoving(character.id));
+        
+        // Test pathfinding
+        try {
+            const path = world.findPath(character.position, targetPosition);
+            console.log('   Path length:', path.length);
+            if (path.length > 0) {
+                console.log('   First waypoint:', path[0]);
+                console.log('   Last waypoint:', path[path.length - 1]);
+            }
+        } catch (error) {
+            console.log('   Pathfinding error:', error.message);
+        }
     }
 }
