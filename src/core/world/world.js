@@ -1,4 +1,43 @@
 /**
+ * STAGE 1 FIX: Added loadMapData function to world.js
+ * 
+ * Load map data from JSON file
+ * @returns {Promise<Object>} The loaded map data
+ */
+export async function loadMapData() {
+    try {
+        console.log('Loading map data from assets/maps/purgatorygamemap.json...');
+        
+        const response = await fetch('assets/maps/purgatorygamemap.json');
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load map: HTTP ${response.status}`);
+        }
+        
+        const mapData = await response.json();
+        
+        // Validate that we have the essential map data
+        if (!mapData.width || !mapData.height || !mapData.layers) {
+            throw new Error('Invalid map data: missing required properties (width, height, layers)');
+        }
+        
+        console.log('Map data loaded successfully:', {
+            width: mapData.width,
+            height: mapData.height,
+            layers: mapData.layers.length,
+            tilewidth: mapData.tilewidth,
+            tileheight: mapData.tileheight
+        });
+        
+        return mapData;
+        
+    } catch (error) {
+        console.error('Error loading map data:', error);
+        throw error;
+    }
+}
+
+/**
  * World Class - Manages the game environment
  * Implements world systems from the SSOT documentation (Chapter 4)
  */
@@ -62,60 +101,97 @@ export class World {
             return;
         }
 
-        // Mark impassable cells based on the collision layer data
-        collisionLayer.chunks.forEach(chunk => {
-            for (let y = 0; y < chunk.height; y++) {
-                for (let x = 0; x < chunk.width; x++) {
-                    const tileIndex = x + y * chunk.width;
-                    const tileId = chunk.data[tileIndex];
-                    if (tileId > 0) { // Any tile ID > 0 in this layer is considered a wall
-                        const worldX = chunk.x + x;
-                        const worldY = chunk.y + y;
-                        if (this.navGrid[worldY] && this.navGrid[worldY][worldX] !== undefined) {
-                            this.navGrid[worldY][worldX] = 1; // 1 represents an impassable wall
-                        }
-                    }
-                }
+        // Parse the collision data to mark walls and obstacles
+        const { data } = collisionLayer;
+        for (let y = 0; y < gridHeight; y++) {
+            for (let x = 0; x < gridWidth; x++) {
+                const index = y * gridWidth + x;
+                const tileId = data[index];
+                
+                // Mark as walkable (0) or blocked (1)
+                // Tile ID of 0 means empty/walkable, any other value means blocked
+                this.navGrid[y][x] = tileId === 0 ? 0 : 1;
+            }
+        }
+
+        console.log(`Generated navigation grid: ${gridWidth}x${gridHeight}`);
+    }
+
+    /**
+     * Assign tasks to characters based on their job roles
+     */
+    assignTasksToCharacters() {
+        this.characterManager.characters.forEach(character => {
+            const tasks = this.taskDictionary[this.officeType]?.[character.jobRole];
+            if (tasks && tasks.length > 0) {
+                const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
+                character.assignedTask = randomTask;
+                console.log(`Assigned task "${randomTask.displayName}" to ${character.name}`);
             }
         });
-        
-        console.log('Navigation grid generated successfully.');
     }
 
     /**
-     * Populate the world with objects
-     * Based on SSOT Chapter 4.2
-     * @param {Array} characters - Array of characters to place desk items for
+     * Populate the world with objects (placeholder for now)
      */
-    populateWorldWithObjects(characters) {
+    populateWorldWithObjects() {
         // Implementation remains the same...
+        // This will be completed in later stages
+        console.log('Populating world with objects...');
     }
 
-    // ... other methods from your original file ...
-    
     /**
-     * Update the world state
-     * @param {number} deltaTime - Time passed in milliseconds
+     * Update world state
+     * @param {number} deltaTime - Time since last update in milliseconds
      */
     update(deltaTime) {
         this.gameTime += deltaTime;
         
-        this.characterManager.characters.forEach(character => {
-            if (!character.isPlayer && character.isEnabled && 
-                !character.assignedTask && !character.currentAction) {
-                this.assignTask(character);
-            }
-        });
+        // Update world systems here
+        // This will be expanded in later stages
     }
-    
-    assignTask(character) {
-        if (character.assignedTask) return;
+
+    /**
+     * Check if a position is walkable
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @returns {boolean} True if walkable
+     */
+    isPositionWalkable(x, y) {
+        const gridX = Math.floor(x / this.TILE_SIZE);
+        const gridY = Math.floor(y / this.TILE_SIZE);
         
-        const tasks = this.taskDictionary[this.officeType][character.jobRole];
-        if (tasks && tasks.length > 0) {
-            const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
-            character.assignedTask = { ...randomTask, progress: 0 }; // Ensure progress is initialized
-            console.log(`Assigned task to ${character.name}: ${character.assignedTask.displayName}`);
+        if (gridX < 0 || gridX >= this.navGrid[0]?.length || 
+            gridY < 0 || gridY >= this.navGrid.length) {
+            return false;
         }
+        
+        return this.navGrid[gridY][gridX] === 0;
+    }
+
+    /**
+     * Get a random walkable position
+     * @returns {Object} Object with x, y coordinates
+     */
+    getRandomWalkablePosition() {
+        const walkablePositions = [];
+        
+        for (let y = 0; y < this.navGrid.length; y++) {
+            for (let x = 0; x < this.navGrid[y].length; x++) {
+                if (this.navGrid[y][x] === 0) {
+                    walkablePositions.push({
+                        x: x * this.TILE_SIZE + this.TILE_SIZE / 2,
+                        y: y * this.TILE_SIZE + this.TILE_SIZE / 2
+                    });
+                }
+            }
+        }
+        
+        if (walkablePositions.length === 0) {
+            console.warn('No walkable positions found, using default');
+            return { x: 100, y: 100 };
+        }
+        
+        return walkablePositions[Math.floor(Math.random() * walkablePositions.length)];
     }
 }
