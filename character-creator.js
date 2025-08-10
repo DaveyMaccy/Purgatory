@@ -673,8 +673,9 @@ console.log('🎭 Enhanced character creator loaded and ready');/**
  * - Enhanced form layout
  */
 
-// EXPANDED CONSTANTS
+// ENHANCED CONSTANTS
 const JOB_ROLES_BY_OFFICE = {
+    "Game Studio": ["Lead Developer", "Game Designer", "3D Artist", "Sound Engineer", "QA Tester", "Producer"],
     "Corporate": ["Senior Coder", "Junior Coder", "Team Lead", "QA Specialist", "DevOps"],
     "Creative": ["Art Director", "Graphic Designer", "Copywriter", "UX Designer", "Creative Producer"],
     "Healthcare": ["Nurse", "Admin", "Doctor", "Technician", "Receptionist"],
@@ -734,7 +735,7 @@ const NAMES_BY_GENDER = {
 // GAME STATE
 let characters = [];
 let currentCharacterIndex = 0;
-let officeType = 'Corporate';
+let officeType = 'Game Studio'; // FIXED: Default to Game Studio
 let currentSpriteIndex = 0; // For arrow navigation
 let globalAPIKey = 'sk-placeholder-key-for-development-testing-only';
 
@@ -745,7 +746,7 @@ const MAX_CHARACTERS = 5;
 /**
  * Main initialization function called from main.js
  */
-export function initializeCharacterCreator(selectedOfficeType = 'Corporate') {
+export function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
     console.log('🎭 Initializing enhanced character creator...');
     
     try {
@@ -761,6 +762,9 @@ export function initializeCharacterCreator(selectedOfficeType = 'Corporate') {
         
         // Create global API key section
         createGlobalAPIKeySection();
+        
+        // FIXED: Create office type selector
+        createOfficeTypeSelector();
         
         // Clear containers
         tabsContainer.innerHTML = '';
@@ -790,8 +794,74 @@ export function initializeCharacterCreator(selectedOfficeType = 'Corporate') {
 }
 
 /**
- * Create global API key section at the top
+ * FIXED: Create office type selector
  */
+function createOfficeTypeSelector() {
+    const creatorHeader = document.querySelector('.creator-header');
+    if (!creatorHeader) return;
+    
+    const officeSection = document.createElement('div');
+    officeSection.style.cssText = 'margin-top: 10px; padding: 10px; background: #e8f4f8; border-radius: 4px; border: 1px solid #b8daff;';
+    
+    const officeTypes = Object.keys(JOB_ROLES_BY_OFFICE);
+    const officeOptions = officeTypes
+        .map(type => `<option value="${type}" ${type === officeType ? 'selected' : ''}>${type}</option>`)
+        .join('');
+    
+    officeSection.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <label style="font-weight: bold; color: #495057;">Office Type:</label>
+            <select id="office-type-selector" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-weight: bold;">
+                ${officeOptions}
+            </select>
+            <span style="font-size: 12px; color: #6c757d;">Determines available job roles and tasks</span>
+        </div>
+    `;
+    
+    // Insert before API key section
+    const apiSection = creatorHeader.querySelector('div[style*="background: #f8f9fa"]');
+    if (apiSection) {
+        creatorHeader.insertBefore(officeSection, apiSection);
+    } else {
+        creatorHeader.appendChild(officeSection);
+    }
+    
+    // Add event listener
+    const officeSelector = document.getElementById('office-type-selector');
+    if (officeSelector) {
+        officeSelector.addEventListener('change', function() {
+            officeType = this.value;
+            console.log(`🏢 Office type changed to: ${officeType}`);
+            
+            // Update all characters' job roles to match new office type
+            updateAllCharacterJobRoles();
+        });
+    }
+}
+
+/**
+ * Update all character job roles when office type changes
+ */
+function updateAllCharacterJobRoles() {
+    const availableRoles = JOB_ROLES_BY_OFFICE[officeType];
+    
+    characters.forEach((character, index) => {
+        // Set to first available role for new office type
+        character.jobRole = availableRoles[0];
+        
+        // Update the dropdown if panel exists
+        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
+        if (jobRoleSelect) {
+            // Rebuild options
+            jobRoleSelect.innerHTML = availableRoles
+                .map(role => `<option value="${role}">${role}</option>`)
+                .join('');
+            jobRoleSelect.value = character.jobRole;
+        }
+    });
+    
+    console.log(`📋 Updated all character job roles for ${officeType} office`);
+}
 function createGlobalAPIKeySection() {
     const creatorHeader = document.querySelector('.creator-header');
     if (!creatorHeader) return;
