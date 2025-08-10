@@ -14,35 +14,36 @@ import { NavGrid } from './nav-grid.js';
  * - Improved obstacle placement for larger world
  */
 export class World {
-    constructor(mapData = null) {
-        console.log('🌍 Creating game world...');
-        
-        // Extract office layout from map data
-        const officeLayout = mapData?.layers?.[0];
-        
-        // UPDATED: World configuration to match optimized canvas dimensions
-        this.TILE_SIZE = officeLayout?.tilewidth || 48; // Standard tile size from map data
-        
-        // UPDATED: World dimensions for optimized 960×540 canvas (16:9)
-        this.width = officeLayout?.width || 20;   // Was 16 - now 20 tiles wide
-        this.height = officeLayout?.height || 11; // Was 12 - now 11 tiles tall (better 16:9)
-        this.worldWidth = this.width * this.TILE_SIZE;     // 20 * 48 = 960 pixels
-        this.worldHeight = this.height * this.TILE_SIZE;   // 11 * 48 = 528 pixels
+  constructor(mapData = null) {
+    console.log('🌍 Creating game world...');
+    
+    // Extract office layout from map data
+    const officeLayout = mapData?.layers?.[0];
+    
+    // FIXED: Use actual map data dimensions if available
+    this.TILE_SIZE = mapData?.tilewidth || 48;
+    
+    // FIXED: Use map dimensions or fall back to optimized defaults
+    this.width = mapData?.width || 20;   
+    this.height = mapData?.height || 11; 
+    this.worldWidth = this.width * this.TILE_SIZE;
+    this.worldHeight = this.height * this.TILE_SIZE;
 
-        // Navigation system - STAGE 4 INTEGRATION
-        this.navGrid = new NavGrid(); // Create NavGrid instance instead of just array
-        this.rawNavGrid = null; // Keep raw grid for backwards compatibility
-        
-        // Game time tracking
-        this.gameTime = 0;
-        
-        // Initialize the world
-        this.generateNavGrid();
-        this.populateWorldWithObjects();
+    console.log(`🌍 Using map dimensions: ${this.width}×${this.height} tiles (${this.worldWidth}×${this.worldHeight} pixels)`);
 
-        console.log(`🌍 World created: ${this.width}×${this.height} tiles (${this.worldWidth}×${this.worldHeight} pixels)`);
-        console.log(`📊 Optimized for 16:9 aspect ratio with ${((this.worldWidth * this.worldHeight) / (800 * 450) * 100 - 100).toFixed(0)}% more area`);
-    }
+    // Navigation system - STAGE 4 INTEGRATION
+    this.navGrid = new NavGrid();
+    this.rawNavGrid = null;
+    
+    // Game time tracking
+    this.gameTime = 0;
+    
+    // Initialize the world
+    this.generateNavGrid();
+    this.populateWorldWithObjects();
+
+    console.log(`🌍 World created: ${this.width}×${this.height} tiles (${this.worldWidth}×${this.worldHeight} pixels)`);
+}
 
     /**
      * STAGE 2-3 CRITICAL: Generate navigation grid for character movement and positioning
@@ -380,3 +381,4 @@ export async function loadMapData(mapPath = './assets/maps/purgatorygamemap.json
         };
     }
 }
+
