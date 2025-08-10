@@ -1,17 +1,10 @@
 /**
- * STAGE 2 FIX: Updated Game Engine with rendering support
+ * STAGE 2 FIX: Updated Game Engine with proper error handling and fallbacks
  * 
  * Game Engine - Lightweight coordinator for game systems
  */
 import { CharacterManager } from './characters/characterManager.js';
 import { World } from './world/world.js';
-import { InteractionSystem } from './systems/interactionSystem.js';
-import { MovementSystem } from './systems/movementSystem.js';
-import { PerceptionSystem } from './systems/perceptionSystem.js';
-import { EventSystem } from './world/eventSystem.js';
-import { ConversationSystem } from './engine/conversationSystem.js';
-import { AIQueueManager } from './engine/aiQueueManager.js';
-import { GameLoop } from './engine/gameLoop.js';
 
 export class GameEngine {
     constructor() {
@@ -19,17 +12,16 @@ export class GameEngine {
         this.characterManager = new CharacterManager();
         // World will be initialized after map data is loaded
         this.world = null;
-        this.interactionSystem = new InteractionSystem(this.characterManager, this.world);
-        this.movementSystem = new MovementSystem(this.characterManager, this.world);
-        this.perceptionSystem = new PerceptionSystem(this.characterManager, this.world);
-        this.eventSystem = new EventSystem(this.characterManager);
         
-        // New subsystems
-        this.conversationSystem = new ConversationSystem(this);
-        this.aiQueueManager = new AIQueueManager(this);
-        
-        // Game loop
-        this.gameLoop = new GameLoop(this);
+        // STAGE 2: Only initialize systems that exist
+        // Other systems will be added in later stages
+        this.interactionSystem = null;
+        this.movementSystem = null;
+        this.perceptionSystem = null;
+        this.eventSystem = null;
+        this.conversationSystem = null;
+        this.aiQueueManager = null;
+        this.gameLoop = null;
         
         // STAGE 2: Rendering system reference
         this.renderer = null;
@@ -41,7 +33,7 @@ export class GameEngine {
     }
 
     /**
-     * STAGE 2 FIX: Updated initialize with proper error handling
+     * STAGE 2 FIX: Simplified initialize with only essential systems
      */
     initialize(officeLayout) {
         try {
@@ -54,11 +46,6 @@ export class GameEngine {
             // Initialize world with map data
             this.world = new World(this.characterManager, officeLayout);
             
-            // Update system references to world
-            this.interactionSystem = new InteractionSystem(this.characterManager, this.world);
-            this.movementSystem = new MovementSystem(this.characterManager, this.world);
-            this.perceptionSystem = new PerceptionSystem(this.characterManager, this.world);
-            
             // Generate navigation grid
             this.world.generateNavGrid();
             
@@ -70,8 +57,8 @@ export class GameEngine {
                 this.characterManager.initializeCharacterPositions(this.world);
             }
             
-            // Start game loop
-            this.gameLoop.start();
+            // STAGE 2: Simple update loop instead of complex game loop
+            this.startSimpleUpdateLoop();
             this.isRunning = true;
             
             console.log('Game engine initialized successfully');
@@ -83,7 +70,20 @@ export class GameEngine {
     }
 
     /**
-     * Update game state (called by game loop)
+     * STAGE 2: Simple update loop for basic functionality
+     */
+    startSimpleUpdateLoop() {
+        const updateInterval = 1000 / 60; // 60 FPS
+        
+        this.updateLoop = setInterval(() => {
+            this.update(updateInterval);
+        }, updateInterval);
+        
+        console.log('Simple update loop started');
+    }
+
+    /**
+     * Update game state (called by update loop)
      * @param {number} deltaTime - Time in milliseconds since last update
      */
     update(deltaTime) {
@@ -91,15 +91,12 @@ export class GameEngine {
         
         this.gameTime += deltaTime;
         
-        // Update systems
-        this.movementSystem.update(deltaTime);
-        this.perceptionSystem.update();
-        this.interactionSystem.update();
-        this.eventSystem.update();
-        this.conversationSystem.updateActiveConversations();
+        // STAGE 2: Basic updates only
         
         // Update characters
-        this.characterManager.update(deltaTime);
+        if (this.characterManager) {
+            this.characterManager.update(deltaTime);
+        }
         
         // STAGE 2: Update renderer if available
         if (this.renderer) {
@@ -114,7 +111,6 @@ export class GameEngine {
         // Update UI
         if (this.uiUpdater) {
             // UI updates are handled by the observer pattern
-            // But we could add additional UI updates here if needed
         }
     }
 
@@ -131,15 +127,14 @@ export class GameEngine {
      */
     render() {
         // STAGE 2: Rendering is handled by PixiJS automatically
-        // We could add additional rendering logic here if needed
     }
 
     /**
-     * Add a prompt to the global queue
+     * Add a prompt to the global queue (placeholder for later stages)
      * @param {Object} promptData - Prompt data object
      */
     addToPromptQueue(promptData) {
-        this.aiQueueManager.addToPromptQueue(promptData);
+        console.log('AI queue not implemented yet:', promptData);
     }
 
     /**
@@ -165,8 +160,8 @@ export class GameEngine {
      */
     pause() {
         this.isRunning = false;
-        if (this.gameLoop) {
-            this.gameLoop.stop();
+        if (this.updateLoop) {
+            clearInterval(this.updateLoop);
         }
         console.log('Game paused');
     }
@@ -176,9 +171,7 @@ export class GameEngine {
      */
     resume() {
         this.isRunning = true;
-        if (this.gameLoop) {
-            this.gameLoop.start();
-        }
+        this.startSimpleUpdateLoop();
         console.log('Game resumed');
     }
 
@@ -188,8 +181,9 @@ export class GameEngine {
     stop() {
         this.isRunning = false;
         
-        if (this.gameLoop) {
-            this.gameLoop.stop();
+        if (this.updateLoop) {
+            clearInterval(this.updateLoop);
+            this.updateLoop = null;
         }
         
         // Cleanup systems
