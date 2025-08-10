@@ -1,5 +1,5 @@
 /**
- * STAGE 1 FIX: Updated character-creator.js with proper callback system
+ * STAGE 2 COMPLETE: Updated character-creator.js with proper callback system and event listeners
  * 
  * Character Creator - Manages character creation UI and flow
  */
@@ -57,7 +57,7 @@ let officeType = 'Default';
 let startGameCallback = null;
 
 /**
- * STAGE 1 FIX: Initialize character creator with proper callback
+ * Initialize character creator with proper callback
  * @param {Function} onComplete - The callback to run when creation is done.
  * @param {string} selectedOfficeType - The office type chosen by the user.
  */
@@ -131,50 +131,48 @@ function createPanel(index) {
 
 function setupPanelEventListeners(index) {
     // Player toggle - FIXED: Only one player character allowed
-document.getElementById(`isPlayer-${index}`).addEventListener('change', (e) => {
-    if (e.target.checked) {
-        // Uncheck all other player checkboxes
-        characters.forEach((char, i) => {
-            if (i !== index) {
-                char.isPlayer = false;
-                const otherCheckbox = document.getElementById(`isPlayer-${i}`);
-                if (otherCheckbox) otherCheckbox.checked = false;
-                
-                // Show API key field for former player (now NPC)
-                const otherApiField = document.getElementById(`api-key-field-${i}`);
-                if (otherApiField) otherApiField.style.display = 'block';
-                
-                // Set mock API key for former player
-                const otherApiInput = document.getElementById(`api-key-${i}`);
-                if (otherApiInput) otherApiInput.value = MOCK_API_KEY;
-                char.apiKey = MOCK_API_KEY;
-            }
-        });
-        
-        // Set this character as player
-        characters[index].isPlayer = true;
-        characters[index].apiKey = ''; // Player doesn't need API key
-        
-        // Hide API key field for player
-        const apiField = document.getElementById(`api-key-field-${index}`);
-        if (apiField) apiField.style.display = 'none';
-    } else {
-        // If unchecking, this becomes an NPC
-        characters[index].isPlayer = false;
-        characters[index].apiKey = MOCK_API_KEY;
-        
-        // Show API key field and set mock key
-        const apiField = document.getElementById(`api-key-field-${index}`);
-        if (apiField) apiField.style.display = 'block';
-        
-        const apiInput = document.getElementById(`api-key-${index}`);
-        if (apiInput) apiInput.value = MOCK_API_KEY;
-    }
-});
-
+    document.getElementById(`isPlayer-${index}`).addEventListener('change', (e) => {
+        if (e.target.checked) {
+            // Uncheck all other player checkboxes
+            characters.forEach((char, i) => {
+                if (i !== index) {
+                    char.isPlayer = false;
+                    const otherCheckbox = document.getElementById(`isPlayer-${i}`);
+                    if (otherCheckbox) otherCheckbox.checked = false;
+                    
+                    // Show API key field for former player (now NPC)
+                    const otherApiField = document.getElementById(`api-key-field-${i}`);
+                    if (otherApiField) otherApiField.style.display = 'block';
+                    
+                    // Set mock API key for former player
+                    const otherApiInput = document.getElementById(`api-key-${i}`);
+                    if (otherApiInput) otherApiInput.value = MOCK_API_KEY;
+                    char.apiKey = MOCK_API_KEY;
+                }
+            });
+            
+            // Set this character as player
+            characters[index].isPlayer = true;
+            characters[index].apiKey = ''; // Player doesn't need API key
+            
+            // Hide API key field for player
+            const apiField = document.getElementById(`api-key-field-${index}`);
+            if (apiField) apiField.style.display = 'none';
+        } else {
+            // If unchecking, this becomes an NPC
+            characters[index].isPlayer = false;
+            characters[index].apiKey = MOCK_API_KEY;
+            
+            // Show API key field and set mock key
+            const apiField = document.getElementById(`api-key-field-${index}`);
+            if (apiField) apiField.style.display = 'block';
+            
+            const apiInput = document.getElementById(`api-key-${index}`);
+            if (apiInput) apiInput.value = MOCK_API_KEY;
+        }
     });
 
-    // Name input event listener - ADD THIS HERE
+    // Name input event listener
     const nameInput = document.getElementById(`name-${index}`);
     if (nameInput) {
         nameInput.addEventListener('input', (e) => {
@@ -183,7 +181,7 @@ document.getElementById(`isPlayer-${index}`).addEventListener('change', (e) => {
         });
     }
 
-    // Job role select event listener - ADD THIS HERE  
+    // Job role select event listener  
     const jobRoleSelect = document.getElementById(`jobRole-${index}`);
     if (jobRoleSelect) {
         jobRoleSelect.addEventListener('change', (e) => {
@@ -192,7 +190,7 @@ document.getElementById(`isPlayer-${index}`).addEventListener('change', (e) => {
         });
     }
 
-    // Build select event listener - ADD THIS HERE
+    // Build select event listener
     const buildSelect = document.getElementById(`build-${index}`);
     if (buildSelect) {
         buildSelect.addEventListener('change', (e) => {
@@ -200,9 +198,6 @@ document.getElementById(`isPlayer-${index}`).addEventListener('change', (e) => {
             console.log(`Updated character ${index} build to: ${e.target.value}`);
         });
     }
-
-    // Skill range inputs
-    ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
 
     // Skill range inputs
     ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
@@ -524,7 +519,7 @@ function updateUIFromCharacterData(index, char) {
 }
 
 /**
- * STAGE 1 FIX: Fixed startSimulation function - properly validates and calls callback
+ * Fixed startSimulation function - properly validates and calls callback
  */
 function startSimulation() {
     console.log('Starting simulation...');
@@ -543,16 +538,16 @@ function startSimulation() {
     }
     
     // FIXED: Validate API keys for NPC characters (not player characters)
-const npcChars = characters.filter(char => !char.isPlayer);
-for (const npcChar of npcChars) {
-    const npcIndex = characters.indexOf(npcChar);
-    const apiKeyInput = document.getElementById(`api-key-${npcIndex}`);
-    const apiKey = apiKeyInput ? apiKeyInput.value : npcChar.apiKey;
-    if (!apiKey || apiKey.trim() === '') {
-        showCustomAlert(`NPC character "${npcChar.name}" needs an API key for AI behavior.`);
-        return;
+    const npcChars = characters.filter(char => !char.isPlayer);
+    for (const npcChar of npcChars) {
+        const npcIndex = characters.indexOf(npcChar);
+        const apiKeyInput = document.getElementById(`api-key-${npcIndex}`);
+        const apiKey = apiKeyInput ? apiKeyInput.value : npcChar.apiKey;
+        if (!apiKey || apiKey.trim() === '') {
+            showCustomAlert(`NPC character "${npcChar.name}" needs an API key for AI behavior.`);
+            return;
+        }
     }
-}
     
     // Collect all current character data from the UI
     const finalCharacterData = characters.map((char, index) => {
@@ -571,7 +566,7 @@ for (const npcChar of npcChars) {
 }
 
 /**
- * STAGE 1 FIX: Collect current character data from a specific panel
+ * Collect current character data from a specific panel
  * @param {number} index - Character panel index
  * @returns {Object} Character data object
  */
@@ -656,5 +651,3 @@ function collectCharacterDataFromPanel(index) {
 function showCustomAlert(message) {
     alert(message);
 }
-
-
