@@ -447,18 +447,6 @@ class InputManager {
             this.focusOnTarget();
         }
         
-    /**
-     * Set focus target
-     */
-    setFocusTarget(targetId) {
-        if (targetId === 'none' || targetId === '') {
-            this.focusTargetId = null;
-            this.stopCameraMovement();
-        } else {
-            this.focusTargetId = targetId;
-            this.focusOnTarget();
-        }
-        
         // Update UI
         const focusSelect = document.getElementById('focus-target');
         if (focusSelect && focusSelect.value !== targetId) {
@@ -799,7 +787,7 @@ class InputManager {
      */
     updateDebugInfo() {
         const debugPanel = document.getElementById('debug-input-info');
-        if (debugPanel && window.gameStateManager?.getSetting('showDebugInfo')) {
+        if (debugPanel && window.gameStateManager && window.gameStateManager.getSetting('showDebugInfo')) {
             debugPanel.innerHTML = `
                 <strong>Input State:</strong><br>
                 Mode: ${this.inputMode}<br>
