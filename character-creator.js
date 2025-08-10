@@ -104,35 +104,43 @@ function setupEnhancedPanelEventListeners(index) {
         }
     });
 
-    // Personality tags (max 6)
+    // Personality tags (max 6) - FIXED: Add greying out
     PERSONALITY_TAGS.forEach(tag => {
         const checkbox = document.getElementById(`tags-${index}-${tag}`);
         if (checkbox) {
             checkbox.addEventListener('change', function() {
                 updateCharacterTags(index, 'personalityTags', 6);
+                updateCheckboxStates(index, 'personalityTags', 6);
             });
         }
     });
 
-    // Inventory items (max 3)
+    // Inventory items (max 3) - FIXED: Add greying out
     INVENTORY_OPTIONS.forEach(item => {
         const checkbox = document.getElementById(`inventory-item-${index}-${item}`);
         if (checkbox) {
             checkbox.addEventListener('change', function() {
                 updateCharacterItems(index, 'inventory', 3);
+                updateCheckboxStates(index, 'inventory', 3);
             });
         }
     });
 
-    // Desk items (max 2)
+    // Desk items (max 2) - FIXED: Add greying out
     DESK_ITEM_OPTIONS.forEach(item => {
         const checkbox = document.getElementById(`desk-item-${index}-${item}`);
         if (checkbox) {
             checkbox.addEventListener('change', function() {
                 updateCharacterItems(index, 'deskItems', 2);
+                updateCheckboxStates(index, 'deskItems', 2);
             });
         }
     });
+    
+    // FIXED: Initialize checkbox states
+    updateCheckboxStates(index, 'personalityTags', 6);
+    updateCheckboxStates(index, 'inventory', 3);
+    updateCheckboxStates(index, 'deskItems', 2);
 }
 
 /**
@@ -223,6 +231,43 @@ function clearCustomPortrait(index) {
         ctx.textAlign = 'center';
         ctx.fillText('No Custom', canvas.width / 2, canvas.height / 2);
     }
+}
+
+/**
+ * FIXED: Update checkbox states - grey out when max reached
+ */
+function updateCheckboxStates(index, itemType, maxLimit) {
+    let prefix, selectedCount;
+    
+    if (itemType === 'personalityTags') {
+        prefix = 'tags';
+        selectedCount = characters[index].personalityTags.length;
+    } else if (itemType === 'inventory') {
+        prefix = 'inventory-item';
+        selectedCount = characters[index].inventory.length;
+    } else if (itemType === 'deskItems') {
+        prefix = 'desk-item';
+        selectedCount = characters[index].deskItems.length;
+    }
+    
+    const allCheckboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]`);
+    
+    allCheckboxes.forEach(checkbox => {
+        const isChecked = checkbox.checked;
+        const isMaxReached = selectedCount >= maxLimit;
+        
+        if (isMaxReached && !isChecked) {
+            // Grey out unchecked boxes when max reached
+            checkbox.disabled = true;
+            checkbox.parentElement.style.color = '#9ca3af';
+            checkbox.parentElement.style.opacity = '0.6';
+        } else {
+            // Enable all boxes when under max
+            checkbox.disabled = false;
+            checkbox.parentElement.style.color = '';
+            checkbox.parentElement.style.opacity = '';
+        }
+    });
 }
 
 /**
@@ -374,7 +419,7 @@ function updateCharactersFromForms() {
 }
 
 /**
- * ENHANCED: Handle randomize with checkbox option
+ * FIXED: Enhanced randomize handling with proper checkbox separation
  */
 function handleRandomize() {
     const randomizeAllCheckbox = document.getElementById('randomize-all-checkbox');
@@ -384,7 +429,7 @@ function handleRandomize() {
         console.log('🎲 Randomizing all characters...');
         characters.forEach((char, index) => {
             const wasPlayer = char.isPlayer;
-            characters[index] = createRandomCharacter(index);
+            characters[index] = createCompleteRandomCharacter(index);
             characters[index].isPlayer = wasPlayer; // Preserve player status
             refreshSingleCharacterPanel(index);
         });
@@ -396,13 +441,13 @@ function handleRandomize() {
 }
 
 /**
- * Randomize current character only
+ * FIXED: Randomize current character only
  */
 function randomizeCurrentCharacter() {
     try {
         if (currentCharacterIndex >= 0 && currentCharacterIndex < characters.length) {
             const wasPlayer = characters[currentCharacterIndex].isPlayer;
-            characters[currentCharacterIndex] = createRandomCharacter(currentCharacterIndex);
+            characters[currentCharacterIndex] = createCompleteRandomCharacter(currentCharacterIndex);
             characters[currentCharacterIndex].isPlayer = wasPlayer; // Preserve player status
             
             // Refresh the current panel
@@ -417,20 +462,24 @@ function randomizeCurrentCharacter() {
 }
 
 /**
- * Create randomized character with full data
+ * FIXED: Create complete randomized character with all essential fields
  */
-function createRandomCharacter(index) {
+function createCompleteRandomCharacter(index) {
     const gender = getRandomItem(GENDERS);
     const randomTags = getRandomItems(PERSONALITY_TAGS, 3, 6);
     const randomInventory = getRandomItems(INVENTORY_OPTIONS, 1, 3);
     const randomDeskItems = getRandomItems(DESK_ITEM_OPTIONS, 1, 2);
     
+    // FIXED: Ensure sprite index is valid and sprite sheet exists
+    const validSpriteIndex = Math.floor(Math.random() * 5); // Only use first 5 sprites that exist
+    const spriteSheet = SPRITE_OPTIONS[validSpriteIndex];
+    
     return {
         id: `char_${index}`,
         name: generateNameByGender(gender),
-        isPlayer: index === 0, // Preserve player status for first character
-        spriteSheet: getRandomItem(SPRITE_OPTIONS),
-        spriteIndex: Math.floor(Math.random() * SPRITE_OPTIONS.length),
+        isPlayer: false, // Will be set correctly by caller
+        spriteSheet: spriteSheet,
+        spriteIndex: validSpriteIndex,
         portrait: null, // Will be generated
         customPortrait: null,
         apiKey: '',
@@ -465,7 +514,7 @@ function createRandomCharacter(index) {
 }
 
 /**
- * Refresh a single character panel
+ * FIXED: Refresh a single character panel
  */
 function refreshSingleCharacterPanel(index) {
     const panel = document.getElementById(`character-panel-${index}`);
@@ -475,6 +524,13 @@ function refreshSingleCharacterPanel(index) {
         setupEnhancedPanelEventListeners(index);
         updateCharacterPortrait(index, character.spriteSheet);
         clearCustomPortrait(index); // Reset custom portrait display
+        
+        // FIXED: Update all checkbox states after refresh
+        setTimeout(() => {
+            updateCheckboxStates(index, 'personalityTags', 6);
+            updateCheckboxStates(index, 'inventory', 3);
+            updateCheckboxStates(index, 'deskItems', 2);
+        }, 50);
     }
 }
 
@@ -778,21 +834,28 @@ function initializeCharacterCreatorButtons() {
         console.log('✅ Start Simulation button connected');
     }
     
-    // ENHANCED: Randomize button with checkbox
+    // FIXED: Separate randomize button and checkbox
     const randomizeButton = document.getElementById('randomize-btn');
     if (randomizeButton) {
-        // Update button text and add checkbox
-        randomizeButton.innerHTML = `
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="randomize-all-checkbox" style="margin: 0;">
-                <span>Randomize ${characters.length > 1 ? 'Current/All' : 'Character'}</span>
-            </label>
-        `;
+        // Reset button to just say "Randomize"
+        randomizeButton.textContent = 'Randomize';
         
         const newRandomizeButton = randomizeButton.cloneNode(true);
         randomizeButton.parentNode.replaceChild(newRandomizeButton, randomizeButton);
         newRandomizeButton.addEventListener('click', handleRandomize);
-        console.log('✅ Enhanced Randomize button connected');
+        
+        // Add separate checkbox next to button
+        const checkboxContainer = document.createElement('label');
+        checkboxContainer.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-left: 15px; cursor: pointer;';
+        checkboxContainer.innerHTML = `
+            <input type="checkbox" id="randomize-all-checkbox" style="margin: 0;">
+            <span>Randomize All</span>
+        `;
+        
+        // Insert after the randomize button
+        newRandomizeButton.parentNode.insertBefore(checkboxContainer, newRandomizeButton.nextSibling);
+        
+        console.log('✅ Enhanced Randomize button and checkbox connected');
     }
     
     // Character count controls
@@ -1147,28 +1210,34 @@ function generateEnhancedPanelHTML(index, charData) {
             <!-- Right Column: Portraits and Settings -->
             <div class="w-80" style="width: 320px;">
                 <div class="space-y-4">
-                    <!-- Character Portrait with Sprite Navigation -->
+                    <!-- Character Portrait with Sprite Navigation - FIXED: Centered layout -->
                     <div class="form-group">
                         <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Character Portrait</h3>
                         <div style="text-align: center;">
-                            <canvas id="preview-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f0f0f0;"></canvas>
-                            
                             <!-- Sprite Navigation Arrows -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <button type="button" id="sprite-prev-${index}" style="padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">◀ Prev</button>
                                 <span id="sprite-info-${index}" style="font-size: 12px; color: #6c757d;">Sprite 1 of ${SPRITE_OPTIONS.length}</span>
                                 <button type="button" id="sprite-next-${index}" style="padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Next ▶</button>
                             </div>
+                            
+                            <!-- FIXED: Centered portrait canvas -->
+                            <div style="display: flex; justify-content: center;">
+                                <canvas id="preview-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f0f0f0;"></canvas>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Custom Portrait Upload -->
+                    <!-- Custom Portrait Upload - FIXED: Centered layout -->
                     <div class="form-group">
                         <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Custom Portrait</h3>
                         <div style="text-align: center;">
-                            <canvas id="custom-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f8f9fa; margin-bottom: 10px;"></canvas>
-                            <input type="file" id="portrait-upload-${index}" accept="image/*" style="width: 100%; padding: 4px; font-size: 12px;">
-                            <button type="button" id="clear-custom-${index}" style="margin-top: 5px; padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear Custom</button>
+                            <!-- FIXED: Centered custom canvas -->
+                            <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                                <canvas id="custom-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f8f9fa;"></canvas>
+                            </div>
+                            <input type="file" id="portrait-upload-${index}" accept="image/*" style="width: 100%; padding: 4px; font-size: 12px; margin-bottom: 5px;">
+                            <button type="button" id="clear-custom-${index}" style="padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear Custom</button>
                         </div>
                     </div>
 
