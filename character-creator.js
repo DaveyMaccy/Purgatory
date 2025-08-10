@@ -150,6 +150,33 @@ document.getElementById(`isPlayer-${index}`).addEventListener('change', (e) => {
                 char.apiKey = MOCK_API_KEY;
             }
         });
+
+        // Name input event listener - ADD THIS
+const nameInput = document.getElementById(`name-${index}`);
+if (nameInput) {
+    nameInput.addEventListener('input', (e) => {
+        characters[index].name = e.target.value;
+        console.log(`Updated character ${index} name to: ${e.target.value}`);
+    });
+}
+
+// Job role select event listener - ADD THIS  
+const jobRoleSelect = document.getElementById(`jobRole-${index}`);
+if (jobRoleSelect) {
+    jobRoleSelect.addEventListener('change', (e) => {
+        characters[index].jobRole = e.target.value;
+        console.log(`Updated character ${index} job role to: ${e.target.value}`);
+    });
+}
+
+// Build select event listener - ADD THIS
+const buildSelect = document.getElementById(`build-${index}`);
+if (buildSelect) {
+    buildSelect.addEventListener('change', (e) => {
+        characters[index].physicalAttributes.build = e.target.value;
+        console.log(`Updated character ${index} build to: ${e.target.value}`);
+    });
+}
         
         // Set this character as player
         characters[index].isPlayer = true;
@@ -624,6 +651,7 @@ function collectCharacterDataFromPanel(index) {
 function showCustomAlert(message) {
     alert(message);
 }
+
 
 
 
