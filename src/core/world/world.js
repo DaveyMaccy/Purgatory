@@ -4,46 +4,44 @@ import { NavGrid } from './nav-grid.js';
 
 /**
  * World class - Manages the game world, navigation grid, and world state
- * Combines Stage 3 functionality with Stage 4 pathfinding integration
+ * FIXED VERSION - Updated for actual map dimensions (30×20 tiles)
  * 
  * FIXES APPLIED:
- * - Updated to optimized 960×540 world dimensions (20×11 tiles)
+ * - Updated to use actual map data dimensions (30×20 = 2304×1536 pixels)
  * - Fixed coordinate conversion between world and grid systems
  * - Enhanced pathfinding integration with proper bounds checking
  * - Better error handling and status reporting
  * - Improved obstacle placement for larger world
  */
 export class World {
-  constructor(mapData = null) {
-    console.log('🌍 Creating game world...');
-    
-    // Extract office layout from map data
-    const officeLayout = mapData?.layers?.[0];
-    
-    // FIXED: Use actual map data dimensions if available
-    this.TILE_SIZE = mapData?.tilewidth || 48;
-    
-    // FIXED: Use map dimensions or fall back to optimized defaults
-    this.width = mapData?.width || 20;   
-    this.height = mapData?.height || 11; 
-    this.worldWidth = this.width * this.TILE_SIZE;
-    this.worldHeight = this.height * this.TILE_SIZE;
+    constructor(mapData = null) {
+        console.log('🌍 Creating game world...');
+        
+        // Extract office layout from map data
+        const officeLayout = mapData?.layers?.[0];
+        
+        // FIXED: Use actual map data dimensions
+        this.TILE_SIZE = mapData?.tilewidth || 48;
+        this.width = mapData?.width || 30;        // UPDATED: Use actual map width (30 tiles)
+        this.height = mapData?.height || 20;      // UPDATED: Use actual map height (20 tiles)
+        this.worldWidth = this.width * this.TILE_SIZE;   // 2304 pixels
+        this.worldHeight = this.height * this.TILE_SIZE; // 1536 pixels
 
-    console.log(`🌍 Using map dimensions: ${this.width}×${this.height} tiles (${this.worldWidth}×${this.worldHeight} pixels)`);
+        console.log(`🌍 Using ACTUAL map dimensions: ${this.width}×${this.height} tiles (${this.worldWidth}×${this.worldHeight} pixels)`);
 
-    // Navigation system - STAGE 4 INTEGRATION
-    this.navGrid = new NavGrid();
-    this.rawNavGrid = null;
-    
-    // Game time tracking
-    this.gameTime = 0;
-    
-    // Initialize the world
-    this.generateNavGrid();
-    this.populateWorldWithObjects();
+        // Navigation system - STAGE 4 INTEGRATION
+        this.navGrid = new NavGrid();
+        this.rawNavGrid = null;
+        
+        // Game time tracking
+        this.gameTime = 0;
+        
+        // Initialize the world
+        this.generateNavGrid();
+        this.populateWorldWithObjects();
 
-    console.log(`🌍 World created: ${this.width}×${this.height} tiles (${this.worldWidth}×${this.worldHeight} pixels)`);
-}
+        console.log(`🌍 World created: ${this.width}×${this.height} tiles (${this.worldWidth}×${this.worldHeight} pixels)`);
+    }
 
     /**
      * STAGE 2-3 CRITICAL: Generate navigation grid for character movement and positioning
@@ -73,33 +71,52 @@ export class World {
 
     /**
      * Mark obstacles in the navigation grid based on office layout
+     * UPDATED: Enhanced for larger 30×20 world
      */
     markObstacles() {
-        // Enhanced office layout for larger 20×11 world
+        // Enhanced office layout for larger 30×20 grid (2304×1536 pixels)
         const obstacles = [
             // Outer walls (border)
             ...this.generateBorderWalls(),
             
-            // Office desks - positioned for 20×11 grid
-            { x: 96, y: 96, width: 144, height: 72 },     // Desk 1 (2×1.5 tiles)
-            { x: 288, y: 144, width: 144, height: 72 },   // Desk 2
-            { x: 480, y: 192, width: 144, height: 72 },   // Desk 3
-            { x: 672, y: 96, width: 144, height: 72 },    // Desk 4
-            { x: 96, y: 288, width: 144, height: 72 },    // Desk 5
-            { x: 384, y: 336, width: 144, height: 72 },   // Desk 6
-            { x: 624, y: 288, width: 144, height: 72 },   // Desk 7
+            // Office desks - positioned for 30×20 grid
+            { x: 144, y: 144, width: 144, height: 72 },     // Desk 1 (3×1.5 tiles)
+            { x: 432, y: 192, width: 144, height: 72 },     // Desk 2
+            { x: 720, y: 240, width: 144, height: 72 },     // Desk 3
+            { x: 1008, y: 144, width: 144, height: 72 },    // Desk 4
+            { x: 1296, y: 192, width: 144, height: 72 },    // Desk 5
+            { x: 1584, y: 240, width: 144, height: 72 },    // Desk 6
+            { x: 1872, y: 144, width: 144, height: 72 },    // Desk 7
             
-            // Meeting tables
-            { x: 240, y: 240, width: 120, height: 96 },   // Meeting table 1
-            { x: 528, y: 384, width: 120, height: 96 },   // Meeting table 2
+            // Second row of desks
+            { x: 144, y: 432, width: 144, height: 72 },     // Desk 8
+            { x: 432, y: 480, width: 144, height: 72 },     // Desk 9
+            { x: 720, y: 528, width: 144, height: 72 },     // Desk 10
+            { x: 1008, y: 432, width: 144, height: 72 },    // Desk 11
+            { x: 1296, y: 480, width: 144, height: 72 },    // Desk 12
+            { x: 1584, y: 528, width: 144, height: 72 },    // Desk 13
+            { x: 1872, y: 432, width: 144, height: 72 },    // Desk 14
             
-            // Office equipment
-            { x: 48, y: 192, width: 48, height: 48 },     // Printer/copier
-            { x: 864, y: 144, width: 48, height: 48 },    // Water cooler
+            // Meeting rooms and larger areas
+            { x: 360, y: 720, width: 240, height: 192 },    // Large meeting room
+            { x: 960, y: 864, width: 240, height: 192 },    // Second meeting room
+            { x: 1440, y: 720, width: 240, height: 192 },   // Third meeting room
             
-            // Internal walls/partitions
-            { x: 432, y: 48, width: 96, height: 24 },     // Partition 1
-            { x: 192, y: 456, width: 96, height: 24 }     // Partition 2
+            // Kitchen/break areas
+            { x: 96, y: 960, width: 192, height: 144 },     // Kitchen area
+            { x: 1920, y: 960, width: 192, height: 144 },   // Break area
+            
+            // Office equipment and fixtures
+            { x: 48, y: 288, width: 48, height: 48 },       // Printer/copier 1
+            { x: 2160, y: 336, width: 48, height: 48 },     // Water cooler
+            { x: 1152, y: 96, width: 48, height: 48 },      // Printer/copier 2
+            { x: 1152, y: 1200, width: 48, height: 48 },    // Supply cabinet
+            
+            // Internal walls/partitions - more for larger space
+            { x: 648, y: 48, width: 144, height: 24 },      // Partition 1
+            { x: 1296, y: 48, width: 144, height: 24 },     // Partition 2
+            { x: 576, y: 1440, width: 144, height: 24 },    // Partition 3
+            { x: 1440, y: 1440, width: 144, height: 24 }    // Partition 4
         ];
         
         // Mark each obstacle area as non-walkable
@@ -111,118 +128,100 @@ export class World {
             
             for (let gridY = startGridY; gridY < endGridY && gridY < this.height; gridY++) {
                 for (let gridX = startGridX; gridX < endGridX && gridX < this.width; gridX++) {
-                    if (gridX >= 0 && gridY >= 0) {
-                        this.markObstacle(gridX, gridY);
+                    if (gridY >= 0 && gridX >= 0) {
+                        this.rawNavGrid[gridY][gridX] = 1; // Mark as obstacle
+                        this.navGrid.setWalkable(gridX, gridY, false);
                     }
                 }
             }
         });
         
-        console.log('🏢 Office layout obstacles marked in navigation grid');
+        console.log(`🚧 Marked ${obstacles.length} obstacle areas in navigation grid`);
     }
 
     /**
-     * Generate border walls for the world
-     * @returns {Array} Array of wall obstacles
+     * Generate border walls for the world boundaries
      */
     generateBorderWalls() {
-        const wallThickness = 24;
-        return [
-            // Top wall
-            { x: 0, y: 0, width: this.worldWidth, height: wallThickness },
-            // Bottom wall  
-            { x: 0, y: this.worldHeight - wallThickness, width: this.worldWidth, height: wallThickness },
-            // Left wall
-            { x: 0, y: 0, width: wallThickness, height: this.worldHeight },
-            // Right wall
-            { x: this.worldWidth - wallThickness, y: 0, width: wallThickness, height: this.worldHeight }
-        ];
+        const walls = [];
+        const wallThickness = this.TILE_SIZE;
+        
+        // Top wall
+        walls.push({ x: 0, y: 0, width: this.worldWidth, height: wallThickness });
+        
+        // Bottom wall
+        walls.push({ x: 0, y: this.worldHeight - wallThickness, width: this.worldWidth, height: wallThickness });
+        
+        // Left wall
+        walls.push({ x: 0, y: 0, width: wallThickness, height: this.worldHeight });
+        
+        // Right wall
+        walls.push({ x: this.worldWidth - wallThickness, y: 0, width: wallThickness, height: this.worldHeight });
+        
+        return walls;
     }
 
     /**
-     * Mark a single obstacle in both navigation grids
-     * @param {number} x - Grid X coordinate
-     * @param {number} y - Grid Y coordinate
-     */
-    markObstacle(x, y) {
-        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
-            this.navGrid.markObstacle(x, y);
-            if (this.rawNavGrid) {
-                this.rawNavGrid[y][x] = 1;
-            }
-        }
-    }
-
-    /**
-     * STAGE 4 NEW: Find path between two points using A* pathfinding
-     * @param {Object} start - Start position {x, y} in pixels
-     * @param {Object} end - End position {x, y} in pixels
-     * @returns {Array} Array of waypoints in pixel coordinates
-     */
-    findPath(start, end) {
-        // Convert pixel coordinates to grid coordinates
-        const startGrid = this.worldToGrid(start.x, start.y);
-        const endGrid = this.worldToGrid(end.x, end.y);
-        
-        // Get path in grid coordinates
-        const gridPath = this.navGrid.findPath(startGrid, endGrid);
-        
-        // Convert back to pixel coordinates
-        const pixelPath = gridPath.map(point => this.gridToWorld(point.x, point.y));
-        
-        console.log(`🗺️ Path found: ${gridPath.length} waypoints`);
-        return pixelPath;
-    }
-
-    /**
-     * Populate world with objects (placeholder for now)
+     * Populate world with interactive objects and furniture
      */
     populateWorldWithObjects() {
-        console.log('🏢 Populating world with objects...');
-        // Implementation will be completed in later stages
-        // For now, just log that the world is ready for objects
-        console.log('✅ World ready for object population');
+        console.log('🏢 Populating world with office objects...');
+        
+        // This will be implemented in future stages
+        // For now, obstacles serve as the primary world objects
+        
+        console.log('✅ World population complete');
     }
 
     /**
-     * Update world state
-     * @param {number} deltaTime - Time since last update in milliseconds
+     * STAGE 4: Find path between two points using A* pathfinding
      */
-    update(deltaTime) {
-        this.gameTime += deltaTime;
+    findPath(startPos, endPos) {
+        if (!this.navGrid) {
+            throw new Error('Navigation grid not initialized');
+        }
         
-        // Update world systems here
-        // This will be expanded in later stages
+        // Convert world coordinates to grid coordinates
+        const startGrid = this.worldToGrid(startPos.x, startPos.y);
+        const endGrid = this.worldToGrid(endPos.x, endPos.y);
+        
+        console.log(`🔍 Finding path from (${startGrid.x}, ${startGrid.y}) to (${endGrid.x}, ${endGrid.y})`);
+        
+        // Use NavGrid's A* pathfinding
+        const gridPath = this.navGrid.findPath(startGrid, endGrid);
+        
+        if (gridPath.length === 0) {
+            console.warn('🚫 No path found');
+            return [];
+        }
+        
+        // Convert grid path back to world coordinates
+        const worldPath = gridPath.map(gridPos => this.gridToWorld(gridPos.x, gridPos.y));
+        
+        console.log(`✅ Path found with ${worldPath.length} waypoints`);
+        return worldPath;
     }
 
     /**
      * Check if a position is walkable
-     * @param {number} x - X coordinate in pixels
-     * @param {number} y - Y coordinate in pixels
-     * @returns {boolean} True if walkable
      */
-    isPositionWalkable(x, y) {
-        const gridX = Math.floor(x / this.TILE_SIZE);
-        const gridY = Math.floor(y / this.TILE_SIZE);
-        
-        return this.navGrid.isWalkable(gridX, gridY);
+    isWalkable(x, y) {
+        const gridPos = this.worldToGrid(x, y);
+        return this.navGrid.isWalkable(gridPos.x, gridPos.y);
     }
 
     /**
-     * Get a random walkable position
-     * @returns {Object} Object with x, y coordinates in pixels
+     * Get a random walkable position in the world
      */
     getRandomWalkablePosition() {
         const walkablePositions = [];
         
-        // Find all walkable tiles
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
+        // Sample positions across the grid (every 2 tiles to improve performance)
+        for (let y = 1; y < this.height - 1; y += 2) {
+            for (let x = 1; x < this.width - 1; x += 2) {
                 if (this.navGrid.isWalkable(x, y)) {
-                    walkablePositions.push({
-                        x: x * this.TILE_SIZE + this.TILE_SIZE / 2,
-                        y: y * this.TILE_SIZE + this.TILE_SIZE / 2
-                    });
+                    const worldPos = this.gridToWorld(x, y);
+                    walkablePositions.push(worldPos);
                 }
             }
         }
@@ -242,23 +241,20 @@ export class World {
 
     /**
      * Get world bounds for renderer and systems
-     * @returns {Object} World bounds {width, height}
+     * FIXED: Returns actual world dimensions
      */
     getWorldBounds() {
         return {
-            width: this.worldWidth,     // 960 pixels
-            height: this.worldHeight,   // 528 pixels
-            tileWidth: this.width,      // 20 tiles
-            tileHeight: this.height,    // 11 tiles
+            width: this.worldWidth,     // 2304 pixels for 30×20 map
+            height: this.worldHeight,   // 1536 pixels for 30×20 map
+            tileWidth: this.width,      // 30 tiles
+            tileHeight: this.height,    // 20 tiles
             tileSize: this.TILE_SIZE    // 48 pixels
         };
     }
 
     /**
      * Convert world coordinates to grid coordinates
-     * @param {number} x - X coordinate in pixels
-     * @param {number} y - Y coordinate in pixels
-     * @returns {Object} Grid coordinates {x, y}
      */
     worldToGrid(x, y) {
         return {
@@ -269,9 +265,6 @@ export class World {
 
     /**
      * Convert grid coordinates to world coordinates
-     * @param {number} gridX - Grid X coordinate
-     * @param {number} gridY - Grid Y coordinate
-     * @returns {Object} World coordinates {x, y} (center of tile)
      */
     gridToWorld(gridX, gridY) {
         return {
@@ -281,104 +274,27 @@ export class World {
     }
 
     /**
+     * Update world state (called each frame)
+     */
+    update(deltaTime) {
+        this.gameTime += deltaTime;
+        
+        // Future: Update dynamic world elements, time-based events, etc.
+    }
+
+    /**
      * Get world status for debugging
-     * @returns {Object} World status information
      */
     getStatus() {
         return {
             dimensions: `${this.width}×${this.height} tiles`,
             pixelSize: `${this.worldWidth}×${this.worldHeight} pixels`,
             tileSize: this.TILE_SIZE,
-            navGridGenerated: !!this.navGrid && this.navGrid.width > 0,
+            navGridGenerated: !!this.navGrid && this.navGrid.grid && this.navGrid.grid.length > 0,
             walkableTiles: this.getWalkableTileCount(),
-            gameTime: this.gameTime,
-            aspectRatio: (this.worldWidth / this.worldHeight).toFixed(3),
-            optimization: `+${((this.worldWidth * this.worldHeight) / (800 * 450) * 100 - 100).toFixed(0)}% area vs 800×450`
+            gameTime: this.gameTime.toFixed(1)
         };
     }
 
     /**
      * Count walkable tiles for debugging
-     * @returns {number} Number of walkable tiles
-     */
-    getWalkableTileCount() {
-        let count = 0;
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                if (this.navGrid.isWalkable(x, y)) count++;
-            }
-        }
-        return count;
-    }
-
-    /**
-     * Get nearby walkable positions around a point
-     * @param {number} centerX - Center X in pixels
-     * @param {number} centerY - Center Y in pixels
-     * @param {number} radius - Search radius in tiles
-     * @returns {Array} Array of walkable positions
-     */
-    getNearbyWalkablePositions(centerX, centerY, radius = 2) {
-        const centerGrid = this.worldToGrid(centerX, centerY);
-        const walkablePositions = [];
-        
-        for (let dy = -radius; dy <= radius; dy++) {
-            for (let dx = -radius; dx <= radius; dx++) {
-                const gridX = centerGrid.x + dx;
-                const gridY = centerGrid.y + dy;
-                
-                if (this.navGrid.isWalkable(gridX, gridY)) {
-                    const worldPos = this.gridToWorld(gridX, gridY);
-                    walkablePositions.push(worldPos);
-                }
-            }
-        }
-        
-        return walkablePositions;
-    }
-}
-
-/**
- * Load map data from file
- * @param {string} mapPath - Path to map file
- * @returns {Promise<Object>} Map data object
- */
-export async function loadMapData(mapPath = './assets/maps/purgatorygamemap.json') {
-    try {
-        console.log('🗺️ Loading map data from:', mapPath);
-        const response = await fetch(mapPath);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const mapData = await response.json();
-        console.log('✅ Map data loaded successfully');
-        console.log('📊 Map info:', {
-            width: mapData.width,
-            height: mapData.height,
-            tilewidth: mapData.tilewidth,
-            tileheight: mapData.tileheight,
-            layers: mapData.layers?.length || 0
-        });
-        
-        return mapData;
-        
-    } catch (error) {
-        console.warn('⚠️ Failed to load map data, using optimized default:', error.message);
-        // UPDATED: Return optimized default map data
-        return {
-            width: 20,      // Was 16 - now optimized
-            height: 11,     // Was 12 - now optimized for 16:9
-            tilewidth: 48,
-            tileheight: 48,
-            layers: [{
-                width: 20,  // Updated
-                height: 11, // Updated  
-                tilewidth: 48,
-                tileheight: 48
-            }]
-        };
-    }
-}
-
