@@ -1,24 +1,24 @@
 /**
  * MovementSystem - Handles character movement and pathfinding
- * Stage 4 complete implementation with moveCharacterTo method and collision detection
+ * FIXED VERSION - Updated for dynamic world bounds and proper coordinate handling
  * 
  * FIXES APPLIED:
  * - Dynamic world bounds checking (works with any map size)
  * - Proper coordinate validation for 30×20 map (2304×1536 pixels)
  * - Enhanced pathfinding with better fallbacks
  * - Improved error messages and debugging
+ * - Fixed bounds checking to use actual world dimensions
  */
 export class MovementSystem {
     constructor() {
         this.movingCharacters = new Set();
+        this.MOVEMENT_SPEED = 120; // pixels per second
+        console.log('🚶 Movement system initialized');
     }
 
     /**
      * Move character to a specific position
-     * @param {Character} character - Character to move
-     * @param {Object} targetPosition - Target position {x, y} in world coordinates
-     * @param {World} world - Game world instance
-     * @returns {boolean} True if movement started successfully
+     * FIXED: Uses dynamic world bounds instead of hardcoded canvas bounds
      */
     moveCharacterTo(character, targetPosition, world) {
         if (!character || !targetPosition || !world) {
@@ -28,20 +28,31 @@ export class MovementSystem {
 
         console.log(`🚶 Moving ${character.name} to position:`, targetPosition);
 
-        // FIXED: Get actual world bounds instead of hardcoded canvas bounds
+        // FIXED: Get actual world bounds dynamically
         const worldBounds = world.getWorldBounds();
         
-        // FIXED: Validate target position is within WORLD bounds, not canvas bounds
+        console.log(`📊 World bounds check:`, {
+            target: targetPosition,
+            worldBounds: {
+                width: worldBounds.width,      // Should be 2304 for 30×20 map
+                height: worldBounds.height,    // Should be 1536 for 30×20 map
+                tileSize: worldBounds.tileSize // Should be 48
+            }
+        });
+        
+        // FIXED: Validate target position is within ACTUAL world bounds
         if (targetPosition.x < worldBounds.tileSize || 
             targetPosition.x > worldBounds.width - worldBounds.tileSize || 
             targetPosition.y < worldBounds.tileSize || 
             targetPosition.y > worldBounds.height - worldBounds.tileSize) {
+            
             console.warn('🚫 Target position outside world bounds:', {
                 target: targetPosition,
-                worldBounds: {
-                    width: worldBounds.width,
-                    height: worldBounds.height,
-                    tileSize: worldBounds.tileSize
+                worldSize: `${worldBounds.width}×${worldBounds.height}`,
+                tileSize: worldBounds.tileSize,
+                validRange: {
+                    x: `${worldBounds.tileSize} - ${worldBounds.width - worldBounds.tileSize}`,
+                    y: `${worldBounds.tileSize} - ${worldBounds.height - worldBounds.tileSize}`
                 }
             });
             return false;
@@ -51,207 +62,112 @@ export class MovementSystem {
         try {
             const path = world.findPath(character.position, targetPosition);
             
-            if (path.length === 0) {
-                console.warn(`🚫 No path found for ${character.name} to reach target`);
+            if (path.length > 0) {
+                character.path = path;
+                this.movingCharacters.add(character.id);
+                console.log(`✅ Path found with ${path.length} waypoints for ${character.name}`);
+                console.log(`🎯 First waypoint: (${path[0].x.toFixed(1)}, ${path[0].y.toFixed(1)})`);
+                return true;
+            } else {
+                console.warn(`🚫 No path found for ${character.name} to (${targetPosition.x}, ${targetPosition.y})`);
                 
-                // Try to find a nearby walkable position
-                const nearbyPositions = [
-                    { x: targetPosition.x + worldBounds.tileSize, y: targetPosition.y },
-                    { x: targetPosition.x - worldBounds.tileSize, y: targetPosition.y },
-                    { x: targetPosition.x, y: targetPosition.y + worldBounds.tileSize },
-                    { x: targetPosition.x, y: targetPosition.y - worldBounds.tileSize },
-                    { x: targetPosition.x + worldBounds.tileSize/2, y: targetPosition.y + worldBounds.tileSize/2 },
-                    { x: targetPosition.x - worldBounds.tileSize/2, y: targetPosition.y - worldBounds.tileSize/2 }
-                ];
-                
-                for (const nearbyPos of nearbyPositions) {
-                    // Check if nearby position is within world bounds
-                    if (nearbyPos.x >= worldBounds.tileSize && 
-                        nearbyPos.x <= worldBounds.width - worldBounds.tileSize && 
-                        nearbyPos.y >= worldBounds.tileSize && 
-                        nearbyPos.y <= worldBounds.height - worldBounds.tileSize) {
-                        
-                        const nearbyPath = world.findPath(character.position, nearbyPos);
-                        if (nearbyPath.length > 0) {
-                            character.path = nearbyPath.slice(1);
-                            this.movingCharacters.add(character.id);
-                            if (character.setActionState) {
-                                character.setActionState('MOVING');
-                            }
-                            console.log(`✅ Found alternative path for ${character.name}: ${character.path.length} waypoints`);
-                            return true;
-                        }
+                // Try to find closest walkable position
+                const closestWalkable = this.getClosestWalkablePosition(targetPosition, world);
+                if (closestWalkable) {
+                    console.log(`🔄 Trying closest walkable position: (${closestWalkable.x}, ${closestWalkable.y})`);
+                    const fallbackPath = world.findPath(character.position, closestWalkable);
+                    if (fallbackPath.length > 0) {
+                        character.path = fallbackPath;
+                        this.movingCharacters.add(character.id);
+                        console.log(`✅ Fallback path found with ${fallbackPath.length} waypoints`);
+                        return true;
                     }
                 }
-                
                 return false;
             }
             
-            // Set the character's path (remove first point as it's current position)
-            character.path = path.slice(1);
-            
-            // Mark character as moving
-            this.movingCharacters.add(character.id);
-            
-            // Update character action state
-            if (character.setActionState) {
-                character.setActionState('MOVING');
-            }
-
-            console.log(`✅ Path set for ${character.name}: ${character.path.length} waypoints`);
-            return true;
-            
-        } catch (pathError) {
-            console.warn(`🚫 Pathfinding error for ${character.name}:`, pathError.message);
+        } catch (error) {
+            console.error(`❌ Pathfinding failed for ${character.name}:`, error);
             return false;
         }
     }
 
     /**
-     * Update character movement - called each frame
-     * @param {Character} character - Character to update
-     * @param {World} world - Game world instance
-     * @param {number} deltaTime - Time since last update in seconds
+     * Update movement for all moving characters
      */
-    moveCharacter(character, world, deltaTime) {
-        if (!character.path || character.path.length === 0) {
-            // Character has reached destination
-            if (this.movingCharacters.has(character.id)) {
-                this.movingCharacters.delete(character.id);
-                if (character.setActionState) {
-                    character.setActionState('DEFAULT');
-                }
-                console.log(`🎯 ${character.name} reached destination`);
-            }
-            return;
-        }
-        
-        const speed = 150; // pixels per second
-        const target = character.path[0];
-        const dx = target.x - character.position.x;
-        const dy = target.y - character.position.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // Update facing angle based on movement direction
-        if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-            // Calculate angle in degrees (0 = right, 90 = down, 180 = left, 270 = up)
-            let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-            if (angle < 0) angle += 360;
-            
-            // Update character's facing angle
-            const oldAngle = character.facingAngle;
-            character.facingAngle = angle;
-            
-            // Notify observers if facing direction changed significantly
-            if (Math.abs(oldAngle - angle) > 10) {
-                character.notifyObservers('facingAngle');
-            }
-        }
-        
-        // If we're close to the current waypoint, snap to it and move to next
-        if (distance < 8) {
-            character.position = { ...target };
-            character.path.shift();
-            
-            // Notify observers of position change
-            if (character.notifyObservers) {
-                character.notifyObservers('position');
-            }
-            
-            console.log(`📍 ${character.name} reached waypoint, ${character.path.length} waypoints remaining`);
-            return;
-        }
-        
-        // Move towards the current waypoint
-        const moveDistance = speed * deltaTime;
-        const ratio = Math.min(1, moveDistance / distance);
-        
-        // Calculate new position
-        const newX = character.position.x + (dx * ratio);
-        const newY = character.position.y + (dy * ratio);
-        
-        // Update character position
-        character.position.x = newX;
-        character.position.y = newY;
-        
-        // Notify observers of position change
-        if (character.notifyObservers) {
-            character.notifyObservers('position');
-        }
-    }
+    update(deltaTime, characters, world) {
+        if (!characters || !world) return;
 
-    /**
-     * Stop a character's movement
-     * @param {Character} character - Character to stop
-     */
-    stopCharacter(character) {
-        if (character && character.path) {
-            character.path = [];
-            this.movingCharacters.delete(character.id);
-            
-            if (character.setActionState) {
-                character.setActionState('DEFAULT');
-            }
-            
-            console.log(`🛑 Stopped movement for ${character.name}`);
-        }
-    }
+        const charactersToUpdate = characters.filter(char => 
+            this.movingCharacters.has(char.id) && char.path && char.path.length > 0
+        );
 
-    /**
-     * Update all moving characters
-     * @param {Array} characters - Array of all characters
-     * @param {World} world - Game world instance
-     * @param {number} deltaTime - Time since last update in seconds
-     */
-    update(characters, world, deltaTime) {
-        characters.forEach(character => {
-            if (this.movingCharacters.has(character.id)) {
-                this.moveCharacter(character, world, deltaTime);
-            }
+        charactersToUpdate.forEach(character => {
+            this.updateCharacterMovement(character, deltaTime, world);
         });
     }
 
     /**
-     * Get movement system status for debugging
-     * @returns {Object} Status information
+     * Update movement for a single character
      */
-    getStatus() {
-        return {
-            movingCharacters: this.movingCharacters.size,
-            activeMovements: Array.from(this.movingCharacters)
-        };
+    updateCharacterMovement(character, deltaTime, world) {
+        if (!character.path || character.path.length === 0) {
+            this.movingCharacters.delete(character.id);
+            return;
+        }
+
+        const currentTarget = character.path[0];
+        const currentPos = character.position;
+        
+        // Calculate movement distance this frame
+        const moveDistance = this.MOVEMENT_SPEED * deltaTime;
+        
+        // Calculate direction to target
+        const dx = currentTarget.x - currentPos.x;
+        const dy = currentTarget.y - currentPos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance <= moveDistance) {
+            // Reached current waypoint
+            character.position.x = currentTarget.x;
+            character.position.y = currentTarget.y;
+            character.path.shift(); // Remove reached waypoint
+            
+            if (character.path.length === 0) {
+                // Reached final destination
+                this.movingCharacters.delete(character.id);
+                console.log(`🎯 ${character.name} reached destination: (${character.position.x.toFixed(1)}, ${character.position.y.toFixed(1)})`);
+            }
+        } else {
+            // Move towards target
+            const moveX = (dx / distance) * moveDistance;
+            const moveY = (dy / distance) * moveDistance;
+            
+            character.position.x += moveX;
+            character.position.y += moveY;
+        }
     }
 
     /**
-     * Check if a character is currently moving
-     * @param {string} characterId - Character ID to check
-     * @returns {boolean} True if character is moving
+     * Check if character is currently moving
      */
     isCharacterMoving(characterId) {
         return this.movingCharacters.has(characterId);
     }
 
     /**
-     * Get all characters that are currently moving
-     * @returns {Set} Set of character IDs that are moving
+     * Stop character movement
      */
-    getMovingCharacters() {
-        return new Set(this.movingCharacters);
+    stopCharacter(character) {
+        if (character.path) {
+            character.path = [];
+        }
+        this.movingCharacters.delete(character.id);
+        console.log(`⏹️ ${character.name} movement stopped`);
     }
 
     /**
-     * Clear all movement for all characters (emergency stop)
-     */
-    stopAllMovement() {
-        this.movingCharacters.clear();
-        console.log('🛑 All character movement stopped');
-    }
-
-    /**
-     * Validate a position is within world bounds
-     * @param {Object} position - Position {x, y}
-     * @param {World} world - Game world instance
-     * @returns {boolean} True if position is valid
+     * FIXED: Validate position is within world bounds
      */
     isValidPosition(position, world) {
         if (!position || !world) return false;
@@ -259,16 +175,13 @@ export class MovementSystem {
         const worldBounds = world.getWorldBounds();
         
         return position.x >= 0 && 
-               position.x <= worldBounds.width && 
                position.y >= 0 && 
+               position.x <= worldBounds.width && 
                position.y <= worldBounds.height;
     }
 
     /**
      * Get the closest walkable position to a target
-     * @param {Object} targetPosition - Target position {x, y}
-     * @param {World} world - Game world instance
-     * @returns {Object|null} Closest walkable position or null
      */
     getClosestWalkablePosition(targetPosition, world) {
         if (!targetPosition || !world) return null;
@@ -276,21 +189,41 @@ export class MovementSystem {
         // Convert to grid coordinates
         const gridPos = world.worldToGrid(targetPosition.x, targetPosition.y);
         
-        // Try to find nearby walkable position
-        const nearbyGrid = world.navGrid.findNearbyWalkable(gridPos, 5);
-        
-        if (nearbyGrid) {
-            return world.gridToWorld(nearbyGrid.x, nearbyGrid.y);
+        // Try to find nearby walkable position in expanding radius
+        for (let radius = 1; radius <= 5; radius++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dy = -radius; dy <= radius; dy++) {
+                    if (Math.abs(dx) === radius || Math.abs(dy) === radius) {
+                        const testGridX = gridPos.x + dx;
+                        const testGridY = gridPos.y + dy;
+                        
+                        if (testGridX >= 0 && testGridX < world.width && 
+                            testGridY >= 0 && testGridY < world.height) {
+                            
+                            if (world.navGrid.isWalkable(testGridX, testGridY)) {
+                                return world.gridToWorld(testGridX, testGridY);
+                            }
+                        }
+                    }
+                }
+            }
         }
         
         return null;
     }
 
     /**
+     * Get movement status for all characters
+     */
+    getMovementStatus() {
+        return {
+            movingCharacterCount: this.movingCharacters.size,
+            movingCharacterIds: Array.from(this.movingCharacters)
+        };
+    }
+
+    /**
      * Debug method to test movement system
-     * @param {Character} character - Character to test
-     * @param {Object} targetPosition - Target position {x, y}
-     * @param {World} world - Game world instance
      */
     debugMovement(character, targetPosition, world) {
         console.log('🧪 Movement System Debug:');
@@ -312,5 +245,27 @@ export class MovementSystem {
         } catch (error) {
             console.log('   Pathfinding error:', error.message);
         }
+    }
+
+    /**
+     * Force move character to position (bypasses pathfinding)
+     */
+    teleportCharacter(character, position) {
+        character.position.x = position.x;
+        character.position.y = position.y;
+        character.path = [];
+        this.movingCharacters.delete(character.id);
+        console.log(`⚡ ${character.name} teleported to (${position.x}, ${position.y})`);
+    }
+
+    /**
+     * Get movement system status
+     */
+    getStatus() {
+        return {
+            movingCharacters: this.movingCharacters.size,
+            movementSpeed: this.MOVEMENT_SPEED,
+            activeCharacterIds: Array.from(this.movingCharacters)
+        };
     }
 }
