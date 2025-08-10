@@ -1,21 +1,21 @@
 /**
  * Main.js - Game initialization and coordination
+ * FIXED VERSION - Addresses character creator connection and coordinate system issues
+ * 
+ * FIXES APPLIED:
+ * - Proper character creator connection and data flow
+ * - Dynamic coordinate system handling for 30×20 map
+ * - Enhanced error handling and recovery
+ * - Fixed click-to-move with actual world bounds
+ * - Better game state management
  * 
  * This file handles:
  * 1. Game system initialization (game engine, renderer, UI, etc.)
  * 2. DOM ready events and button setup
  * 3. Game start sequence coordination
  * 4. UI state management
- * 5. STAGE 4: Movement system integration and click handling
- * 
- * Character creator functionality is in separate character-creator.js
- * 
- * FIXES APPLIED:
- * - Works with actual 30×20 map (2304×1536 pixels)
- * - Fixed coordinate transformation for any world/canvas size
- * - Fixed button and modal ID matching
- * - Dynamic canvas sizing and aspect ratio handling
- * - Enhanced error handling
+ * 5. Character creator integration
+ * 6. Click-to-move functionality
  */
 
 import { GameEngine } from './src/core/game-engine.js';
@@ -24,7 +24,7 @@ import { UIUpdater } from './src/ui/ui-updater.js';
 import { MovementSystem } from './src/core/systems/movement-system.js';
 import { loadMapData } from './src/core/world/world.js';
 
-// Global game state for Stage 3 + Stage 4
+// Global game state
 let gameEngine = null;
 let characterManager = null;
 let uiUpdater = null;
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize UI elements
         initializeUIElements();
         
-        // Setup the New Game button - FIXED to use correct ID
+        // Setup the New Game button
         setupNewGameButton();
         
         // Load character creator dynamically
@@ -91,14 +91,63 @@ async function loadCharacterCreator() {
 }
 
 /**
- * Update loading status message
+ * Enhanced New Game button setup with character creator connection
  */
-function updateLoadingStatus(message) {
-    const statusElement = document.getElementById('loading-status');
-    if (statusElement) {
-        statusElement.textContent = message;
+function setupNewGameButton() {
+    const newGameBtn = document.getElementById('new-game-btn');
+    if (newGameBtn) {
+        newGameBtn.addEventListener('click', function() {
+            console.log('🎮 New Game button clicked');
+            
+            // Check if character creator is loaded
+            if (!characterCreatorLoaded) {
+                console.warn('⚠️ Character creator not loaded yet, trying to load...');
+                loadCharacterCreator().then(() => {
+                    if (characterCreatorLoaded) {
+                        openCharacterCreator();
+                    } else {
+                        console.error('❌ Failed to load character creator');
+                        alert('Character creator failed to load. Please refresh the page.');
+                    }
+                });
+                return;
+            }
+            
+            // Open character creator
+            openCharacterCreator();
+        });
+        
+        console.log('✅ New Game button configured');
+    } else {
+        console.error('❌ New Game button not found');
     }
-    console.log(`📢 Status: ${message}`);
+}
+
+/**
+ * Open character creator modal
+ */
+function openCharacterCreator() {
+    try {
+        const modal = document.getElementById('character-creator-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('✅ Character creator modal opened');
+            
+            // Initialize character creator if function exists
+            if (typeof window.initializeCharacterCreator === 'function') {
+                window.initializeCharacterCreator();
+                console.log('✅ Character creator initialized');
+            } else {
+                console.warn('⚠️ Character creator initialization function not found');
+            }
+        } else {
+            console.error('❌ Character creator modal not found');
+            alert('Character creator interface not found. Please refresh the page.');
+        }
+    } catch (error) {
+        console.error('❌ Failed to open character creator:', error);
+        alert('Failed to open character creator. Please refresh the page.');
+    }
 }
 
 /**
@@ -108,7 +157,7 @@ function initializeUIElements() {
     // Add proper tab styling
     addTabCSS();
     
-    // Set up game world click handlers (STAGE 4 UPDATE)
+    // Set up game world click handlers
     const worldContainer = document.getElementById('world-canvas-container');
     if (worldContainer) {
         worldContainer.addEventListener('click', handleWorldClick);
@@ -132,219 +181,268 @@ function initializeUIElements() {
             position: relative;
         `;
         
-        // Add responsive canvas styling
-        const canvasStyle = document.createElement('style');
-        canvasStyle.textContent = `
-            #world-canvas-container canvas {
-                max-width: 100%;
-                max-height: 100%;
-                width: auto;
-                height: auto;
-                object-fit: contain;
-                border-radius: 4px;
-                display: block;
-            }
-        `;
-        document.head.appendChild(canvasStyle);
+        console.log('✅ World container configured for click handling');
     }
-    
-    // Set up tab switching in the status panel
-    setupStatusPanelTabs();
     
     console.log('✅ UI elements initialized');
 }
 
 /**
- * Setup New Game button - FIXED to use correct ID from HTML
+ * Add CSS for character tabs
  */
-function setupNewGameButton() {
-    console.log('🔧 Setting up New Game button...');
-    
-    // Use the actual ID from index.html
-    const newGameButton = document.getElementById('new-game-button');
-    
-    if (newGameButton) {
-        // Remove any existing event listeners by cloning
-        const newButton = newGameButton.cloneNode(true);
-        newGameButton.parentNode.replaceChild(newButton, newGameButton);
-        
-        // Enable and add event listener
-        newButton.disabled = false;
-        newButton.textContent = 'New Game';
-        newButton.style.opacity = '1';
-        newButton.style.cursor = 'pointer';
-        newButton.addEventListener('click', handleNewGameClick);
-        
-        console.log('✅ New Game button enabled and connected');
-    } else {
-        console.warn('⚠️ New Game button not found - debugging...');
-        
-        // Debug: log all buttons to see what's available
-        const allButtons = document.querySelectorAll('button');
-        console.log('🔍 Available buttons:', Array.from(allButtons).map(btn => ({
-            id: btn.id,
-            text: btn.textContent?.trim(),
-            classes: btn.className,
-            disabled: btn.disabled
-        })));
-        
-        // Try to find button by text content as fallback
-        const fallbackButton = Array.from(allButtons).find(btn => 
-            btn.textContent && (
-                btn.textContent.toLowerCase().includes('new game') || 
-                btn.textContent.toLowerCase().includes('start')
-            )
-        );
-        
-        if (fallbackButton) {
-            console.log('✅ Found fallback button:', fallbackButton.textContent);
-            fallbackButton.disabled = false;
-            fallbackButton.addEventListener('click', handleNewGameClick);
-        } else {
-            console.error('❌ No suitable button found for New Game');
+function addTabCSS() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .character-tab {
+            padding: 8px 16px;
+            margin: 2px;
+            border: 1px solid #ddd;
+            background: #f8f9fa;
+            cursor: pointer;
+            border-radius: 4px;
         }
-    }
+        .character-tab.active {
+            background: #007bff;
+            color: white;
+        }
+        .character-tab.player-character {
+            border-color: #28a745;
+            font-weight: bold;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 /**
- * Handle New Game button click - FIXED with better validation
+ * CRITICAL: Start game with characters from character creator
  */
-function handleNewGameClick() {
-    console.log('🎭 New Game clicked - Opening character creator...');
-    
-    if (!characterCreatorLoaded) {
-        console.warn('⚠️ Character creator not loaded yet, please wait...');
-        showErrorMessage('Character creator is still loading, please wait a moment and try again.');
-        return;
-    }
-    
+window.startGameWithCharacters = async function(charactersFromCreator) {
     try {
-        // Hide start screen first
-        hideStartScreen();
+        console.log('🎮 Starting Office Purgatory with characters from creator...');
         
-        // Show character creator modal
-        showCharacterCreator();
-        
-        // Initialize the character creator - FIXED to check function exists
-        if (typeof window.initializeCharacterCreator === 'function') {
-            window.initializeCharacterCreator('Game Studio');
-            console.log('✅ Character creator initialized and opened');
+        // Validate characters from creator
+        let characters;
+        if (charactersFromCreator && Array.isArray(charactersFromCreator) && charactersFromCreator.length > 0) {
+            console.log(`✅ Received ${charactersFromCreator.length} characters from creator`);
+            characters = charactersFromCreator;
+            
+            // Log each character for debugging
+            characters.forEach((char, i) => {
+                console.log(`   ${i + 1}. ${char.name} ${char.isPlayer ? '(PLAYER)' : ''}`);
+                console.log(`      Job: ${char.jobRole}`);
+                console.log(`      Sprite: ${char.spriteSheet}`);
+            });
         } else {
-            throw new Error('Character creator initialization function not available');
+            console.warn('⚠️ Invalid or missing characters from creator, generating defaults');
+            characters = generateDefaultCharacters();
         }
+        
+        // Ensure we have a player character
+        let playerCharacter = characters.find(char => char.isPlayer);
+        if (!playerCharacter && characters.length > 0) {
+            console.log('🤔 No player character found, setting first character as player');
+            characters[0].isPlayer = true;
+            playerCharacter = characters[0];
+        }
+        
+        // Set focus target for camera and controls
+        focusTargetId = playerCharacter?.id || (characters.length > 0 ? characters[0].id : null);
+        console.log(`👑 Player character: ${playerCharacter?.name} (ID: ${focusTargetId})`);
+        
+        // Initialize core game systems
+        gameEngine = new GameEngine();
+        characterManager = new CharacterManager();
+        uiUpdater = new UIUpdater();
+        movementSystem = new MovementSystem();
+        
+        console.log('🎯 Core systems initialized');
+        
+        // Load map data first
+        console.log('🗺️ Loading map data...');
+        const mapData = await loadMapData();
+        console.log(`📊 Map loaded: ${mapData.width}×${mapData.height} tiles`);
+        
+        // Initialize world with map data
+        console.log('🌍 Initializing world...');
+        const { World } = await import('./src/core/world/world.js');
+        gameEngine.world = new World(mapData);
+        console.log('✅ World initialized with actual map dimensions');
+        
+        // Generate character positions
+        console.log('📍 Positioning characters...');
+        characters.forEach(character => {
+            if (!character.position || character.position.x === 0 || character.position.y === 0) {
+                const randomPos = gameEngine.world.getRandomWalkablePosition();
+                character.position = randomPos;
+                console.log(`📍 ${character.name} positioned at (${randomPos.x.toFixed(1)}, ${randomPos.y.toFixed(1)})`);
+            }
+        });
+        
+        // Add characters to the character manager
+        console.log('👤 Adding characters to manager...');
+        for (const character of characters) {
+            characterManager.addCharacter(character);
+        }
+        console.log(`✅ ${characters.length} characters added to manager`);
+        
+        // Initialize renderer
+        console.log('🎨 Initializing renderer...');
+        const worldContainer = document.getElementById('world-canvas-container');
+        if (!worldContainer) {
+            throw new Error('World canvas container not found in DOM');
+        }
+        
+        try {
+            const { Renderer } = await import('./src/rendering/renderer.js');
+            renderer = new Renderer(worldContainer);
+            await renderer.initialize();
+            gameEngine.setRenderer(renderer);
+            console.log('✅ Renderer initialized');
+            
+            // Render the map
+            renderer.renderMap(mapData);
+            console.log('🏢 Map rendered');
+            
+            // Add characters to renderer
+            console.log('👥 Adding characters to renderer...');
+            for (const character of characters) {
+                await renderer.addCharacter(character);
+            }
+            console.log('✅ Characters added to renderer');
+            
+        } catch (rendererError) {
+            console.error('❌ Renderer failed to initialize:', rendererError);
+            // Create fallback placeholder
+            createRendererFallback(worldContainer, gameEngine.world.getWorldBounds());
+        }
+        
+        // Initialize UI updater
+        console.log('🖥️ Initializing UI...');
+        if (uiUpdater && playerCharacter) {
+            uiUpdater.setFocusCharacter(playerCharacter);
+            uiUpdater.updateAll();
+        }
+        
+        // Start game loop
+        console.log('🔄 Starting game loop...');
+        gameEngine.setCharacterManager(characterManager);
+        gameEngine.setMovementSystem(movementSystem);
+        gameEngine.start();
+        
+        console.log('🎉 Game started successfully!');
+        
+        // Update loading status
+        updateLoadingStatus('Game loaded successfully!');
         
     } catch (error) {
-        console.error('❌ Failed to open character creator:', error);
-        showErrorMessage('Failed to open character creator: ' + error.message);
-        
-        // Show start screen again on error
-        showStartScreen();
+        console.error('❌ Failed to start game with characters:', error);
+        updateLoadingStatus('Failed to start game', true);
+        showErrorMessage('Failed to start game. Please refresh and try again.');
     }
-}
+};
 
 /**
- * Show character creator modal - FIXED to use correct ID from HTML
+ * Create fallback renderer when PixiJS fails
  */
-function showCharacterCreator() {
-    // Use the actual ID from index.html
-    const modal = document.getElementById('creator-modal-backdrop');
+function createRendererFallback(container, worldBounds) {
+    console.log('📦 Creating fallback renderer...');
     
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.remove('hidden');
-        console.log('📝 Character creator modal shown');
-    } else {
-        console.error('❌ Character creator modal not found');
-        
-        // Debug: check what modal elements exist
-        const allModals = document.querySelectorAll('[id*="modal"], [class*="modal"]');
-        console.log('🔍 Available modal elements:', Array.from(allModals).map(el => ({
-            id: el.id,
-            classes: el.className,
-            tagName: el.tagName
-        })));
-        
-        throw new Error('Character creator modal not found');
-    }
+    const fallback = document.createElement('div');
+    fallback.style.cssText = `
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: #2c3e50;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        border-radius: 8px;
+    `;
+    
+    fallback.innerHTML = `
+        <h3>🏢 Office Purgatory</h3>
+        <p>World Size: ${worldBounds.width}×${worldBounds.height} pixels</p>
+        <p>Click anywhere to test movement</p>
+        <p style="font-size: 12px; color: #7f8c8d;">
+            Note: Visual renderer failed to load, but game systems are active
+        </p>
+    `;
+    
+    container.innerHTML = '';
+    container.appendChild(fallback);
 }
 
 /**
- * Hide character creator modal - FIXED to use correct ID
+ * FALLBACK: Generate default characters if creator fails
  */
-function hideCharacterCreator() {
-    const modal = document.getElementById('creator-modal-backdrop');
+function generateDefaultCharacters() {
+    console.log('🎭 Generating default characters...');
     
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.add('hidden');
-        console.log('📝 Character creator modal hidden');
-    }
+    const defaults = [
+        {
+            id: 'char_0',
+            name: 'Alex Thompson',
+            isPlayer: true,
+            jobRole: 'IT Specialist',
+            spriteSheet: './assets/characters/character-01.png',
+            spriteIndex: 0,
+            gender: 'Male',
+            office: 'Corporate',
+            position: { x: 200, y: 200 },
+            physicalAttributes: { age: 28, height: 175, weight: 70, looks: 7 },
+            skillAttributes: { competence: 75, laziness: 30, charisma: 60, leadership: 50 },
+            personalityTags: ['Analytical', 'Introverted', 'Detail-oriented'],
+            inventory: ['Coffee Mug', 'Smartphone'],
+            deskItems: ['Family Photo', 'Plant']
+        },
+        {
+            id: 'char_1',
+            name: 'Sarah Chen',
+            isPlayer: false,
+            jobRole: 'Project Manager',
+            spriteSheet: './assets/characters/character-02.png',
+            spriteIndex: 1,
+            gender: 'Female',
+            office: 'Corporate',
+            position: { x: 400, y: 300 },
+            physicalAttributes: { age: 32, height: 165, weight: 60, looks: 8 },
+            skillAttributes: { competence: 85, laziness: 20, charisma: 80, leadership: 90 },
+            personalityTags: ['Organized', 'Extroverted', 'Leadership'],
+            inventory: ['Notebook', 'Pen'],
+            deskItems: ['Calendar', 'Award Trophy']
+        }
+    ];
+    
+    // Add required fields for game engine
+    return defaults.map(char => ({
+        ...char,
+        actionState: 'idle',
+        mood: 'Neutral',
+        facingAngle: 90,
+        maxSightRange: 250,
+        isBusy: false,
+        currentAction: null,
+        path: [],
+        relationships: {}
+    }));
 }
 
 /**
- * Show start screen - FIXED to use correct ID from HTML
- */
-function showStartScreen() {
-    const startScreen = document.getElementById('start-screen-backdrop');
-    
-    if (startScreen) {
-        startScreen.style.display = 'flex';
-        startScreen.classList.remove('hidden');
-        console.log('🏠 Start screen shown');
-    }
-}
-
-/**
- * Hide start screen - FIXED to use correct ID
- */
-function hideStartScreen() {
-    const startScreen = document.getElementById('start-screen-backdrop');
-    
-    if (startScreen) {
-        startScreen.style.display = 'none';
-        startScreen.classList.add('hidden');
-        console.log('🏠 Start screen hidden');
-    }
-}
-
-/**
- * Show main game world - FIXED to use correct ID from HTML
- */
-function showGameWorld() {
-    const gameView = document.getElementById('main-game-ui');
-    
-    if (gameView) {
-        gameView.style.display = 'flex';
-        gameView.classList.remove('hidden');
-        console.log('🌍 Game world shown');
-    } else {
-        console.error('❌ Game view container not found');
-        
-        // Debug: check what containers exist
-        const containers = document.querySelectorAll('[id*="game"], [id*="main"]');
-        console.log('🔍 Available game containers:', Array.from(containers).map(el => ({
-            id: el.id,
-            classes: el.className
-        })));
-    }
-}
-
-/**
- * STAGE 4 COMPLETE: Handle clicks on the game world for character movement
- * FIXED: Dynamic coordinate transformation that works with any world/canvas size
+ * FIXED: Handle world click with dynamic coordinate conversion
  */
 function handleWorldClick(event) {
-    if (!gameEngine || !gameEngine.world || !movementSystem || !characterManager) {
+    if (!gameEngine || !characterManager || !movementSystem) {
         console.warn('🚫 Game systems not ready for movement');
         return;
     }
 
-    // Get click coordinates relative to the canvas
-    const rect = event.currentTarget.getBoundingClientRect();
-    
-    // Find the actual canvas element within the container
-    const canvas = event.currentTarget.querySelector('canvas') || event.currentTarget;
-    const canvasRect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : rect;
+    // Get click coordinates relative to canvas
+    const canvasRect = event.target.getBoundingClientRect ? 
+        event.target.getBoundingClientRect() : 
+        event.currentTarget.getBoundingClientRect();
     
     const canvasX = event.clientX - canvasRect.left;
     const canvasY = event.clientY - canvasRect.top;
@@ -384,554 +482,417 @@ function handleWorldClick(event) {
         console.log(`✅ ${focusCharacter.name} moving to:`, targetPosition);
     } else {
         console.warn(`🚫 Could not move ${focusCharacter.name} to:`, targetPosition);
-        
-        // Try nearby positions with proper world coordinate scaling
-        const tileSize = worldBounds.tileSize;
-        const nearbyPositions = [
-            { x: targetPosition.x + tileSize, y: targetPosition.y },
-            { x: targetPosition.x - tileSize, y: targetPosition.y },
-            { x: targetPosition.x, y: targetPosition.y + tileSize },
-            { x: targetPosition.x, y: targetPosition.y - tileSize },
-            { x: targetPosition.x + tileSize/2, y: targetPosition.y + tileSize/2 },
-            { x: targetPosition.x - tileSize/2, y: targetPosition.y - tileSize/2 }
-        ];
-        
-        for (const nearbyPos of nearbyPositions) {
-            // Ensure nearby position is within world bounds
-            if (nearbyPos.x >= tileSize && nearbyPos.x <= worldBounds.width - tileSize && 
-                nearbyPos.y >= tileSize && nearbyPos.y <= worldBounds.height - tileSize) {
-                
-                const nearbySuccess = movementSystem.moveCharacterTo(focusCharacter, nearbyPos, gameEngine.world);
-                if (nearbySuccess) {
-                    console.log(`✅ Found alternative position for ${focusCharacter.name}:`, nearbyPos);
-                    return;
-                }
-            }
-        }
-        
-        console.log('🚫 No valid nearby position found for movement');
     }
 }
 
 /**
- * Handle right-clicks on the game world to stop movement
+ * Handle right-click to stop movement
  */
 function handleRightClick(event) {
-    if (!gameEngine || !movementSystem || !characterManager) {
-        console.warn('🚫 Game systems not ready');
-        return;
-    }
-
-    // Get the focused character (player character)
+    if (!gameEngine || !characterManager || !movementSystem) return;
+    
     const focusCharacter = characterManager.getCharacter(focusTargetId);
-    if (!focusCharacter) {
-        console.warn('🚫 No focus character to stop');
+    if (focusCharacter) {
+        movementSystem.stopCharacter(focusCharacter);
+        console.log(`⏹️ Stopped ${focusCharacter.name} movement`);
+    }
+}
+
+/**
+ * Update loading status message
+ */
+function updateLoadingStatus(message, isError = false) {
+    const statusElement = document.getElementById('loading-status');
+    if (statusElement) {
+        statusElement.textContent = message;
+        statusElement.style.color = isError ? '#e74c3c' : '#2c3e50';
+    }
+    console.log(`📢 Status: ${message}`);
+}
+
+/**
+ * Enhanced error handling for critical game systems
+ */
+function showErrorMessage(message, isRecoverable = true) {
+    console.error('🚨 Error:', message);
+    
+    // Update loading status
+    updateLoadingStatus(`Error: ${message}`, true);
+    
+    // Show user-friendly error
+    if (isRecoverable) {
+        const retry = confirm(`${message}\n\nWould you like to try refreshing the page?`);
+        if (retry) {
+            window.location.reload();
+        }
+    } else {
+        alert(message);
+    }
+}
+
+// =============================================================================
+// DEBUG AND TESTING FUNCTIONS
+// =============================================================================
+
+/**
+ * Test coordinate conversion with actual world dimensions
+ */
+window.testWorldCoordinates = function(canvasX, canvasY) {
+    console.log('🧪 Testing coordinate conversion...');
+    
+    if (!gameEngine || !gameEngine.world) {
+        console.error('❌ Game world not available');
         return;
     }
-
-    // Stop the character's movement
-    if (movementSystem.stopCharacter) {
-        movementSystem.stopCharacter(focusCharacter);
-        console.log(`🛑 Stopped movement for ${focusCharacter.name}`);
-    } else {
-        console.warn('🚫 Movement system does not support stopping characters');
+    
+    const worldBounds = gameEngine.world.getWorldBounds();
+    const canvasElement = document.querySelector('#world-canvas-container canvas') || 
+                         document.querySelector('#world-canvas-container');
+    
+    if (!canvasElement) {
+        console.error('❌ Canvas element not found');
+        return;
     }
-}
+    
+    const canvasRect = canvasElement.getBoundingClientRect();
+    const actualCanvasWidth = canvasRect.width;
+    const actualCanvasHeight = canvasRect.height;
+    
+    // Convert canvas coordinates to world coordinates
+    const worldX = (canvasX / actualCanvasWidth) * worldBounds.width;
+    const worldY = (canvasY / actualCanvasHeight) * worldBounds.height;
+    
+    console.log('📊 Coordinate Conversion Test:');
+    console.log(`   Canvas click: (${canvasX}, ${canvasY})`);
+    console.log(`   Canvas size: ${actualCanvasWidth} × ${actualCanvasHeight}`);
+    console.log(`   World size: ${worldBounds.width} × ${worldBounds.height}`);
+    console.log(`   World coords: (${worldX.toFixed(1)}, ${worldY.toFixed(1)})`);
+    
+    // Test if coordinates are within bounds
+    const isValidX = worldX >= 0 && worldX <= worldBounds.width;
+    const isValidY = worldY >= 0 && worldY <= worldBounds.height;
+    
+    console.log(`   Valid coordinates: ${isValidX && isValidY}`);
+    
+    return { worldX, worldY, isValid: isValidX && isValidY };
+};
 
 /**
- * Add proper tab styling for status panels
+ * Test movement to actual world center
  */
-function addTabCSS() {
-    if (document.getElementById('tab-styling')) return;
+window.testMovementToCenter = function() {
+    console.log('🧪 Testing movement to world center...');
     
-    const style = document.createElement('style');
-    style.id = 'tab-styling';
-    style.textContent = `
-        .tab-button {
-            padding: 8px 16px;
-            background: #e0e0e0;
-            border: 1px solid #ccc;
-            border-bottom: none;
-            cursor: pointer;
-            border-radius: 4px 4px 0 0;
-            margin-right: 2px;
-            transition: background-color 0.2s;
-        }
-        .tab-button:hover {
-            background: #d0d0d0;
-        }
-        .tab-button.active {
-            background: white;
-            font-weight: bold;
-        }
-        .tab-content {
-            display: none;
-            padding: 16px;
-            border: 1px solid #ccc;
-            border-radius: 0 4px 4px 4px;
-            background: white;
-            min-height: 200px;
-        }
-        .tab-content.active {
-            display: block;
-        }
-    `;
-    document.head.appendChild(style);
-}
+    if (!gameEngine || !characterManager || !movementSystem) {
+        console.error('❌ Game systems not available');
+        return;
+    }
+    
+    const worldBounds = gameEngine.world.getWorldBounds();
+    const centerX = worldBounds.width / 2;
+    const centerY = worldBounds.height / 2;
+    
+    console.log(`🎯 World center: (${centerX}, ${centerY})`);
+    console.log(`📏 World size: ${worldBounds.width} × ${worldBounds.height}`);
+    
+    // Get player character
+    const playerCharacter = characterManager.getCharacter(focusTargetId);
+    if (!playerCharacter) {
+        console.error('❌ No player character found');
+        return;
+    }
+    
+    console.log(`👤 Moving ${playerCharacter.name} to center...`);
+    
+    // Attempt movement
+    const success = movementSystem.moveCharacterTo(
+        playerCharacter, 
+        { x: centerX, y: centerY }, 
+        gameEngine.world
+    );
+    
+    if (success) {
+        console.log('✅ Movement to center initiated successfully');
+    } else {
+        console.error('❌ Movement to center failed');
+    }
+    
+    return { centerX, centerY, success };
+};
 
 /**
- * Setup status panel tabs functionality
+ * Comprehensive sprite loading test
  */
-function setupStatusPanelTabs() {
-    console.log('🔧 Setting up status panel tabs...');
+window.testAllSprites = function() {
+    console.log('🧪 Testing all 20 character sprites...');
     
-    // FIXED: Create openTab function on window for HTML onclick handlers
-    window.openTab = function(evt, tabName) {
-        // Hide all tab contents
-        const tabContents = document.querySelectorAll('.tab-content, .tabcontent');
-        tabContents.forEach(content => {
-            content.classList.remove('active');
-            content.style.display = 'none';
-        });
-        
-        // Remove active class from all tab buttons
-        const tabButtons = document.querySelectorAll('.tab-button, .tablink');
-        tabButtons.forEach(button => {
-            button.classList.remove('active');
-        });
-        
-        // Show the selected tab content and mark button as active
-        const targetTab = document.getElementById(tabName);
-        if (targetTab) {
-            targetTab.classList.add('active');
-            targetTab.style.display = 'block';
+    const results = [];
+    let loadedCount = 0;
+    let failedCount = 0;
+    
+    return new Promise((resolve) => {
+        for (let i = 1; i <= 20; i++) {
+            const paddedNumber = i.toString().padStart(2, '0');
+            const spritePath = `./assets/characters/character-${paddedNumber}.png`;
+            
+            const img = new Image();
+            
+            img.onload = function() {
+                loadedCount++;
+                results.push({ 
+                    index: i, 
+                    path: spritePath, 
+                    status: 'loaded', 
+                    dimensions: `${this.width}×${this.height}` 
+                });
+                console.log(`✅ Sprite ${i}: ${spritePath} (${this.width}×${this.height})`);
+                
+                if (loadedCount + failedCount === 20) {
+                    console.log('📊 Sprite Loading Results:');
+                    console.log(`   ✅ Loaded: ${loadedCount}/20`);
+                    console.log(`   ❌ Failed: ${failedCount}/20`);
+                    console.table(results);
+                    resolve(results);
+                }
+            };
+            
+            img.onerror = function() {
+                failedCount++;
+                results.push({ 
+                    index: i, 
+                    path: spritePath, 
+                    status: 'failed', 
+                    dimensions: 'N/A' 
+                });
+                console.error(`❌ Sprite ${i}: ${spritePath}`);
+                
+                if (loadedCount + failedCount === 20) {
+                    console.log('📊 Sprite Loading Results:');
+                    console.log(`   ✅ Loaded: ${loadedCount}/20`);
+                    console.log(`   ❌ Failed: ${failedCount}/20`);
+                    console.table(results);
+                    resolve(results);
+                }
+            };
+            
+            img.src = spritePath;
         }
-        
-        if (evt && evt.currentTarget) {
-            evt.currentTarget.classList.add('active');
-        }
+    });
+};
+
+/**
+ * Test character creator connection
+ */
+window.testCharacterCreatorConnection = function() {
+    console.log('🧪 Testing character creator connection...');
+    
+    const tests = {
+        creatorLoaded: characterCreatorLoaded,
+        initFunctionExists: typeof window.initializeCharacterCreator === 'function',
+        exportFunctionExists: typeof window.getCharactersFromCreator === 'function',
+        startGameFunctionExists: typeof window.startGameWithCharacters === 'function',
+        modalExists: !!document.getElementById('character-creator-modal'),
+        newGameButtonExists: !!document.getElementById('new-game-btn')
     };
     
-    // Set up click handlers for tab buttons (backup to onclick)
-    const tabButtons = document.querySelectorAll('.tab-link, .tablink');
-    tabButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabName = button.getAttribute('data-tab') || 
-                           button.textContent.toLowerCase().replace(/\s+/g, '');
-            window.openTab(e, tabName);
-        });
-    });
+    console.log('📊 Character Creator Connection Test Results:');
+    console.table(tests);
     
-    // Activate first tab by default if none are active
-    const firstTabButton = document.querySelector('.tab-link, .tablink');
-    if (firstTabButton && !document.querySelector('.tab-content.active, .tabcontent.active')) {
-        const firstTabName = firstTabButton.getAttribute('data-tab') || 
-                            firstTabButton.textContent.toLowerCase().replace(/\s+/g, '');
-        window.openTab(null, firstTabName);
+    const allPassed = Object.values(tests).every(test => test === true);
+    
+    if (allPassed) {
+        console.log('✅ All character creator connection tests passed');
+    } else {
+        console.log('❌ Some character creator connection tests failed');
+        
+        // Specific recommendations
+        if (!tests.creatorLoaded) {
+            console.log('🔧 Fix: Ensure character-creator.js loads properly');
+        }
+        if (!tests.initFunctionExists) {
+            console.log('🔧 Fix: Add initializeCharacterCreator function to character-creator.js');
+        }
+        if (!tests.exportFunctionExists) {
+            console.log('🔧 Fix: Add getCharactersFromCreator function to character-creator.js');
+        }
+        if (!tests.startGameFunctionExists) {
+            console.log('🔧 Fix: Add startGameWithCharacters function to main.js');
+        }
+        if (!tests.modalExists) {
+            console.log('🔧 Fix: Ensure character-creator-modal exists in index.html');
+        }
+        if (!tests.newGameButtonExists) {
+            console.log('🔧 Fix: Ensure new-game-btn exists in index.html');
+        }
     }
     
-    console.log('✅ Status panel tabs configured');
-}
+    return tests;
+};
 
 /**
- * Main game start function - FIXED to match character creator expectations
- * This is called from character creator after "Start Simulation" is clicked
+ * System health check
  */
-window.startGameSimulation = async function(characters, focusTarget) {
+window.performHealthCheck = function() {
+    console.log('🏥 Performing system health check...');
+    
+    const health = {
+        // Core Systems
+        gameEngine: !!gameEngine,
+        characterManager: !!characterManager,
+        renderer: !!renderer,
+        movementSystem: !!movementSystem,
+        uiUpdater: !!uiUpdater,
+        
+        // Character Creator
+        characterCreatorLoaded: characterCreatorLoaded,
+        charactersExist: !!(window.getCharactersFromCreator && window.getCharactersFromCreator()),
+        
+        // World State
+        worldExists: !!(gameEngine && gameEngine.world),
+        mapDataLoaded: !!(gameEngine && gameEngine.world && gameEngine.world.getWorldBounds),
+        
+        // Rendering
+        canvasExists: !!document.querySelector('#world-canvas-container canvas') || 
+                     !!document.querySelector('#world-canvas-container div'),
+        pixiAppExists: !!(renderer && renderer.app),
+        
+        // UI
+        gameViewExists: !!document.getElementById('game-view'),
+        statusPanelExists: !!document.getElementById('status-panel'),
+        
+        // Movement
+        focusTargetSet: !!focusTargetId,
+        movementSystemActive: !!(movementSystem && gameEngine && gameEngine.world)
+    };
+    
+    console.log('📊 System Health Check Results:');
+    console.table(health);
+    
+    const healthyCount = Object.values(health).filter(h => h === true).length;
+    const totalCount = Object.keys(health).length;
+    const healthPercentage = (healthyCount / totalCount * 100).toFixed(1);
+    
+    console.log(`🏥 Overall Health: ${healthPercentage}% (${healthyCount}/${totalCount} systems healthy)`);
+    
+    // Recommendations for failed systems
+    Object.entries(health).forEach(([system, isHealthy]) => {
+        if (!isHealthy) {
+            console.log(`🔧 ${system}: Needs attention`);
+        }
+    });
+    
+    return health;
+};
+
+/**
+ * Debug world bounds and movement
+ */
+window.debugWorldMovement = function(worldX, worldY) {
+    console.log('🧪 Testing world movement...');
+    
+    if (!gameEngine || !characterManager || !movementSystem) {
+        console.error('❌ Game systems not available');
+        return;
+    }
+    
+    const worldBounds = gameEngine.world.getWorldBounds();
+    const playerCharacter = characterManager.getCharacter(focusTargetId);
+    
+    if (!playerCharacter) {
+        console.error('❌ No player character found');
+        return;
+    }
+    
+    console.log('📊 Movement Debug Info:');
+    console.log(`   Current position: (${playerCharacter.position.x.toFixed(1)}, ${playerCharacter.position.y.toFixed(1)})`);
+    console.log(`   Target position: (${worldX}, ${worldY})`);
+    console.log(`   World bounds: ${worldBounds.width} × ${worldBounds.height}`);
+    console.log(`   Valid range X: ${worldBounds.tileSize} - ${worldBounds.width - worldBounds.tileSize}`);
+    console.log(`   Valid range Y: ${worldBounds.tileSize} - ${worldBounds.height - worldBounds.tileSize}`);
+    
+    // Test movement
+    const success = movementSystem.moveCharacterTo(
+        playerCharacter, 
+        { x: worldX, y: worldY }, 
+        gameEngine.world
+    );
+    
+    console.log(`   Movement result: ${success ? 'SUCCESS' : 'FAILED'}`);
+    
+    return { 
+        success, 
+        currentPos: playerCharacter.position, 
+        targetPos: { x: worldX, y: worldY },
+        worldBounds 
+    };
+};
+
+/**
+ * Quick test function to verify all fixes
+ */
+window.runAllTests = async function() {
+    console.log('🧪 Running comprehensive test suite...');
+    
     try {
-        console.log('🚀 Starting game simulation...');
-        console.log('👥 Characters:', characters?.length || 0);
-        console.log('🎯 Focus target:', focusTarget);
+        // Test 1: Character Creator Connection
+        console.log('\n=== Test 1: Character Creator Connection ===');
+        const connectionTest = window.testCharacterCreatorConnection();
         
-        // Validate inputs
-        if (!characters || characters.length === 0) {
-            throw new Error('No characters provided for simulation');
+        // Test 2: Sprite Loading
+        console.log('\n=== Test 2: Sprite Loading ===');
+        const spriteTest = await window.testAllSprites();
+        
+        // Test 3: Coordinate System
+        console.log('\n=== Test 3: Coordinate System ===');
+        const coordTest = window.testWorldCoordinates(400, 300);
+        
+        // Test 4: Movement System
+        console.log('\n=== Test 4: Movement System ===');
+        const movementTest = window.testMovementToCenter();
+        
+        // Test 5: System Health
+        console.log('\n=== Test 5: System Health ===');
+        const healthTest = window.performHealthCheck();
+        
+        // Summary
+        console.log('\n=== TEST SUMMARY ===');
+        const spriteSuccessRate = spriteTest.filter(s => s.status === 'loaded').length / spriteTest.length;
+        const connectionSuccessRate = Object.values(connectionTest).filter(t => t === true).length / Object.keys(connectionTest).length;
+        const healthSuccessRate = Object.values(healthTest).filter(h => h === true).length / Object.keys(healthTest).length;
+        
+        console.log(`📊 Sprite Loading: ${(spriteSuccessRate * 100).toFixed(1)}%`);
+        console.log(`📊 Creator Connection: ${(connectionSuccessRate * 100).toFixed(1)}%`);
+        console.log(`📊 Coordinate System: ${coordTest?.isValid ? '100%' : '0%'}`);
+        console.log(`📊 Movement System: ${movementTest?.success ? '100%' : '0%'}`);
+        console.log(`📊 System Health: ${(healthSuccessRate * 100).toFixed(1)}%`);
+        
+        const overallSuccess = (spriteSuccessRate + connectionSuccessRate + healthSuccessRate + 
+                               (coordTest?.isValid ? 1 : 0) + (movementTest?.success ? 1 : 0)) / 5;
+        
+        console.log(`\n🎯 OVERALL SUCCESS RATE: ${(overallSuccess * 100).toFixed(1)}%`);
+        
+        if (overallSuccess >= 0.8) {
+            console.log('✅ Most systems are working correctly!');
+        } else {
+            console.log('⚠️ Some systems need attention. Check individual test results above.');
         }
         
-        // Store focus target for movement system
-        focusTargetId = focusTarget || (characters.length > 0 ? characters[0].id : null);
-        
-        // Initialize core game systems
-        gameEngine = new GameEngine();
-        characterManager = new CharacterManager();
-        uiUpdater = new UIUpdater();
-        movementSystem = new MovementSystem();
-        
-        console.log('🎯 Core systems initialized');
-        
-        // Add characters to the character manager
-        console.log('👤 Adding characters to manager...');
-        for (const character of characters) {
-            characterManager.addCharacter(character);
-        }
-        console.log(`✅ ${characters.length} characters added to manager`);
-        
-        // Load map data
-        console.log('🗺️ Loading map data...');
-        const mapData = await loadMapData();
-        
-        // Initialize renderer - FIXED: Better error handling
-        console.log('🎨 Initializing renderer...');
-        const worldContainer = document.getElementById('world-canvas-container');
-        if (!worldContainer) {
-            throw new Error('World canvas container not found in DOM');
-        }
-        
-        // Try to load renderer dynamically
-        try {
-            const { Renderer } = await import('./src/rendering/renderer.js');
-            renderer = new Renderer(worldContainer);
-            await renderer.initialize();
-            gameEngine.setRenderer(renderer);
-            console.log('✅ Renderer initialized');
-            
-            // Render the map
-            renderer.renderMap(mapData);
-            console.log('🏢 Map rendered');
-        } catch (rendererError) {
-            console.warn('⚠️ Renderer failed to load, using placeholder:', rendererError.message);
-            
-            // Create a responsive placeholder that shows actual world dimensions
-            const worldInfo = mapData ? `${mapData.width}×${mapData.height} tiles (${mapData.width * (mapData.tilewidth || 48)}×${mapData.height * (mapData.tileheight || 48)} pixels)` : 'Unknown dimensions';
-            
-            worldContainer.innerHTML = `
-                <div style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; 
-                           aspect-ratio: ${mapData ? mapData.width / mapData.height : 16/9}; 
-                           background: linear-gradient(135deg, #e8f4f8 0%, #f0f8ff 100%); 
-                           display: flex; align-items: center; justify-content: center;
-                           border: 2px dashed #b8daff; border-radius: 8px; margin: auto;
-                           box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
-                    <div style="text-align: center; color: #666; user-select: none;">
-                        <h3 style="margin: 0 0 8px 0; color: #2563eb;">Office Purgatory</h3>
-                        <p style="margin: 4px 0; font-size: 14px;">Click anywhere to test character movement</p>
-                        <p style="margin: 4px 0; font-size: 12px; color: #999;">Renderer: Placeholder Mode</p>
-                        <p style="margin: 4px 0; font-size: 11px; color: #bbb;">World: ${worldInfo}</p>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Start the game engine (this creates the world and nav grid)
-        gameEngine.initialize(mapData);
-        console.log('✅ Game engine initialized');
-        
-        // Initialize character positions AFTER world is created
-        if (gameEngine.world) {
-            characterManager.initializeCharacterPositions(gameEngine.world);
-            console.log('📍 Character positions initialized');
-            
-            // Add characters to renderer if available
-            if (renderer) {
-                console.log('👤 Adding characters to renderer...');
-                try {
-                    for (const character of characterManager.characters) {
-                        await renderer.addCharacter(character);
-                    }
-                    console.log('✅ Characters added to renderer');
-                } catch (rendererError) {
-                    console.warn('⚠️ Failed to add characters to renderer:', rendererError.message);
-                }
-            }
-        }
-        
-        // Connect movement system to game engine
-        if (gameEngine.setMovementSystem) {
-            gameEngine.setMovementSystem(movementSystem);
-            console.log('🚶 Movement system connected');
-        }
-        
-        // Hide character creator and show game world
-        hideCharacterCreator();
-        showGameWorld();
-        
-        // Initialize UI updater with character manager
-        try {
-            if (uiUpdater.initialize) {
-                uiUpdater.initialize(characterManager, focusTargetId);
-            }
-        } catch (uiError) {
-            console.warn('⚠️ Failed to initialize UI updater:', uiError.message);
-        }
-        
-        // Print game status for debugging
-        printGameStatus();
-        
-        console.log('🎉 Game simulation started successfully!');
+        return {
+            spriteTest,
+            connectionTest,
+            coordTest,
+            movementTest,
+            healthTest,
+            overallSuccess: overallSuccess * 100
+        };
         
     } catch (error) {
-        console.error('❌ Failed to start game simulation:', error);
-        
-        // Enhanced error message for different error types
-        let userMessage = 'Failed to start game: ';
-        if (error.message.includes('character')) {
-            userMessage += 'Character setup failed. Please try creating characters again.';
-        } else if (error.message.includes('world')) {
-            userMessage += 'Game world failed to initialize. Please refresh and try again.';
-        } else if (error.message.includes('renderer')) {
-            userMessage += 'Graphics system failed to load. The game may still work without graphics.';
-        } else {
-            userMessage += error.message;
-        }
-        
-        showErrorMessage(userMessage);
-        
-        // Try to show start screen again on critical error
-        showStartScreen();
-        hideCharacterCreator();
+        console.error('❌ Test suite failed:', error);
+        return null;
     }
 };
 
-/**
- * Show error message to user - ENHANCED with better UI
- */
-function showErrorMessage(message) {
-    console.error('🚨 User error notification:', message);
-    
-    // Try to show error in a more user-friendly way
-    const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = `
-        position: fixed; top: 20px; right: 20px; z-index: 10000;
-        background: linear-gradient(135deg, #fee 0%, #fdd 100%); 
-        border: 1px solid #fcc; color: #c33;
-        padding: 15px 20px; border-radius: 8px; max-width: 400px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 14px; line-height: 1.4;
-    `;
-    errorDiv.innerHTML = `
-        <strong>Error</strong><br>
-        ${message}
-        <button onclick="this.parentElement.remove()" style="
-            float: right; margin-left: 10px; background: none; border: none; 
-            color: #c33; cursor: pointer; font-size: 16px; font-weight: bold;
-        ">×</button>
-    `;
-    
-    document.body.appendChild(errorDiv);
-    
-    // Auto-remove after 8 seconds
-    setTimeout(() => {
-        if (errorDiv.parentElement) {
-            errorDiv.remove();
-        }
-    }, 8000);
-    
-    // Fallback to alert for critical errors
-    if (message.includes('refresh')) {
-        setTimeout(() => alert(message), 100);
-    }
-}
+// Export the health check function for global access
+window.checkSystemHealth = window.performHealthCheck;
 
-/**
- * Print comprehensive game status for debugging
- */
-function printGameStatus() {
-    console.log('📊 === GAME STATUS ===');
-    
-    if (gameEngine) {
-        console.log('🎮 Game Engine: ✅ Ready');
-        if (gameEngine.world) {
-            console.log('🌍 World Status:', gameEngine.world.getStatus());
-        } else {
-            console.log('🌍 World: ❌ Not created');
-        }
-    } else {
-        console.log('🎮 Game Engine: ❌ Not initialized');
-    }
-    
-    if (characterManager) {
-        console.log('👥 Character Manager: ✅ Ready');
-        console.log('👤 Characters loaded:', characterManager.characters.length);
-        if (characterManager.characters.length > 0) {
-            characterManager.characters.forEach(char => {
-                console.log(`   - ${char.name}: ${char.position?.x?.toFixed(1) || 0}, ${char.position?.y?.toFixed(1) || 0}`);
-            });
-        }
-    } else {
-        console.log('👥 Character Manager: ❌ Not initialized');
-    }
-    
-    if (renderer) {
-        console.log('🎨 Renderer: ✅ Ready');
-        if (renderer.getStatus) {
-            console.log('🎨 Renderer Status:', renderer.getStatus());
-        }
-    } else {
-        console.log('🎨 Renderer: ⚠️ Not loaded (using placeholder)');
-    }
-    
-    if (movementSystem) {
-        console.log('🚶 Movement System: ✅ Ready');
-        try {
-            if (movementSystem.getStatus) {
-                console.log('🚶 Movement Status:', movementSystem.getStatus());
-            }
-        } catch (error) {
-            console.log('🚶 Movement System: ⚠️ Status unavailable');
-        }
-    } else {
-        console.log('🚶 Movement System: ❌ Not initialized');
-    }
-    
-    if (uiUpdater) {
-        console.log('🖥️ UI Updater: ✅ Ready');
-    } else {
-        console.log('🖥️ UI Updater: ❌ Not initialized');
-    }
-    
-    console.log('📊 === END STATUS ===');
-}
-
-/**
- * DEBUG: Enhanced movement testing function with dynamic coordinates
- */
-window.testMovement = function(canvasX, canvasY) {
-    if (!focusTargetId || !characterManager || !movementSystem || !gameEngine) {
-        console.warn('🚫 Game not ready for movement test');
-        return;
-    }
-    
-    const character = characterManager.getCharacter(focusTargetId);
-    if (!character) {
-        console.warn('🚫 No character found for movement test');
-        return;
-    }
-    
-    // Get dynamic world bounds
-    const worldBounds = gameEngine.world.getWorldBounds();
-    
-    // Assume canvas size (could be dynamic)
-    const canvasElement = document.querySelector('#world-canvas-container canvas');
-    const canvasWidth = canvasElement ? canvasElement.clientWidth : 800;
-    const canvasHeight = canvasElement ? canvasElement.clientHeight : 600;
-    
-    const worldX = (canvasX / canvasWidth) * worldBounds.width;
-    const worldY = (canvasY / canvasHeight) * worldBounds.height;
-    
-    const targetPosition = { x: worldX, y: worldY };
-    
-    console.log(`🧪 Test movement: ${character.name}`);
-    console.log(`   From: (${character.position.x.toFixed(1)}, ${character.position.y.toFixed(1)})`);
-    console.log(`   Canvas click: (${canvasX}, ${canvasY})`);
-    console.log(`   World target: (${worldX.toFixed(1)}, ${worldY.toFixed(1)})`);
-    console.log(`   Canvas: ${canvasWidth}×${canvasHeight}, World: ${worldBounds.width}×${worldBounds.height}`);
-    
-    // Test if target position is walkable
-    const isWalkable = gameEngine.world.isPositionWalkable(worldX, worldY);
-    console.log(`   Target walkable: ${isWalkable}`);
-    
-    // Test grid conversion
-    const gridPos = gameEngine.world.worldToGrid(worldX, worldY);
-    console.log(`   Grid position: (${gridPos.x}, ${gridPos.y})`);
-    
-    movementSystem.moveCharacterTo(character, targetPosition, gameEngine.world);
-};
-
-/**
- * DEBUG: Test specific world coordinates directly
- */
-window.testWorldMovement = function(worldX, worldY) {
-    if (!focusTargetId || !characterManager || !movementSystem || !gameEngine) {
-        console.warn('🚫 Game not ready for movement test');
-        return;
-    }
-    
-    const character = characterManager.getCharacter(focusTargetId);
-    if (!character) {
-        console.warn('🚫 No character found for movement test');
-        return;
-    }
-    
-    const targetPosition = { x: worldX, y: worldY };
-    
-    console.log(`🧪 Direct world movement test: ${character.name}`);
-    console.log(`   From: (${character.position.x.toFixed(1)}, ${character.position.y.toFixed(1)})`);
-    console.log(`   To: (${worldX}, ${worldY})`);
-    
-    // Test grid conversion
-    const startGrid = gameEngine.world.worldToGrid(character.position.x, character.position.y);
-    const endGrid = gameEngine.world.worldToGrid(worldX, worldY);
-    console.log(`   Start grid: (${startGrid.x}, ${startGrid.y})`);
-    console.log(`   End grid: (${endGrid.x}, ${endGrid.y})`);
-    
-    // Test walkability
-    const startWalkable = gameEngine.world.navGrid.isWalkable(startGrid.x, startGrid.y);
-    const endWalkable = gameEngine.world.navGrid.isWalkable(endGrid.x, endGrid.y);
-    console.log(`   Start walkable: ${startWalkable}, End walkable: ${endWalkable}`);
-    
-    movementSystem.moveCharacterTo(character, targetPosition, gameEngine.world);
-};
-
-/**
- * DEBUG: Check if movement is updating
- */
-window.debugMovement = function() {
-    if (!characterManager || !gameEngine) {
-        console.warn('🚫 Game not ready');
-        return;
-    }
-    
-    const characters = characterManager.characters;
-    console.log('📊 Movement Debug Status:');
-    console.log('🔄 Game loop running:', gameEngine.isRunning);
-    console.log('⏱️ Last update time:', gameEngine.lastUpdateTime);
-    console.log('🚶 Movement system exists:', !!gameEngine.movementSystem);
-    
-    characters.forEach(char => {
-        console.log(`👤 ${char.name}:`);
-        console.log(`   Position: (${char.position.x.toFixed(1)}, ${char.position.y.toFixed(1)})`);
-        console.log(`   Path: ${char.path?.length || 0} waypoints`);
-        console.log(`   Moving: ${gameEngine.movementSystem?.movingCharacters?.has(char.id) || false}`);
-    });
-};
-
-/**
- * DEBUG: Convert canvas click to all coordinate systems for debugging
- */
-window.debugCoordinates = function(canvasX, canvasY) {
-    if (!gameEngine || !gameEngine.world) {
-        console.warn('🚫 Game world not available');
-        return;
-    }
-    
-    console.log(`🔍 Coordinate conversion for canvas click (${canvasX}, ${canvasY}):`);
-    
-    // Get dynamic dimensions
-    const worldBounds = gameEngine.world.getWorldBounds();
-    const canvasElement = document.querySelector('#world-canvas-container canvas');
-    const canvasWidth = canvasElement ? canvasElement.clientWidth : 800;
-    const canvasHeight = canvasElement ? canvasElement.clientHeight : 600;
-    
-    const worldX = (canvasX / canvasWidth) * worldBounds.width;
-    const worldY = (canvasY / canvasHeight) * worldBounds.height;
-    
-    console.log(`   Canvas: (${canvasX}, ${canvasY})`);
-    console.log(`   World: (${worldX.toFixed(1)}, ${worldY.toFixed(1)})`);
-    console.log(`   Canvas size: ${canvasWidth}×${canvasHeight}`);
-    console.log(`   World size: ${worldBounds.width}×${worldBounds.height}`);
-    
-    // World to grid conversion
-    const gridPos = gameEngine.world.worldToGrid(worldX, worldY);
-    console.log(`   Grid: (${gridPos.x}, ${gridPos.y})`);
-    console.log(`   Grid size: ${worldBounds.tileWidth}×${worldBounds.tileHeight}`);
-    
-    // Check if walkable
-    if (gameEngine.world.navGrid) {
-        const isWalkable = gameEngine.world.navGrid.isWalkable(gridPos.x, gridPos.y);
-        console.log(`   Walkable: ${isWalkable}`);
-        
-        if (!isWalkable) {
-            console.log('🔧 Searching for nearby walkable positions...');
-            const nearby = gameEngine.world.navGrid.findNearbyWalkable(gridPos);
-            if (nearby) {
-                const nearbyWorld = gameEngine.world.gridToWorld(nearby.x, nearby.y);
-                console.log(`   Nearby walkable: grid(${nearby.x}, ${nearby.y}) → world(${nearbyWorld.x.toFixed(1)}, ${nearbyWorld.y.toFixed(1)})`);
-            } else {
-                console.log('   No nearby walkable positions found');
-            }
-        }
-    }
-    
-    return { canvas: {x: canvasX, y: canvasY}, world: {x: worldX, y: worldY}, grid: gridPos };
-};
+console.log('🎮 Main.js loaded and ready');
