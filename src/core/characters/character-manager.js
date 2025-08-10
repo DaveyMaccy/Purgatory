@@ -1,5 +1,6 @@
 /**
  * STAGE 3 COMPLETE: Character Manager - Handles character lifecycle and positioning
+ * STAGE 4 FIX: Fixed coordinate system to match canvas size (800x450)
  * 
  * Handles all character-related operations including:
  * - Loading characters from character creator
@@ -80,10 +81,8 @@ export class CharacterManager {
     }
 
     /**
-     * STAGE 2-3 CRITICAL: Initialize character positions using world navigation grid
-     * This method is essential for proper character placement in the game world.
-     * It sets the initial x and y positions for all characters by finding
-     * a random walkable tile on the navigation grid for each one.
+     * STAGE 4 FIXED: Initialize character positions with proper canvas coordinates
+     * Characters spawn near desk areas within the 800x450 canvas bounds
      * @param {World} world - The game world instance, containing the navGrid.
      */
     initializeCharacterPositions(world) {
@@ -94,34 +93,67 @@ export class CharacterManager {
 
         console.log('📍 Initializing character positions...');
         
+        // Define desk areas in canvas coordinates (800x450 canvas)
+        const deskAreas = [
+            { x: 120, y: 180, name: "Desk 1" },  // Near left desk
+            { x: 320, y: 180, name: "Desk 2" },  // Near center-left desk
+            { x: 520, y: 180, name: "Desk 3" },  // Near center-right desk
+            { x: 120, y: 320, name: "Desk 4" },  // Near bottom-left desk
+            { x: 320, y: 320, name: "Desk 5" }   // Near bottom-center desk
+        ];
+        
         this.characters.forEach((character, index) => {
             let position;
             
-            // Try to get a random walkable position from the world
-            if (world.getRandomWalkablePosition) {
-                try {
-                    position = world.getRandomWalkablePosition();
-                    console.log(`🎯 Found walkable position for ${character.name}: (${position.x}, ${position.y})`);
-                } catch (error) {
-                    console.warn(`⚠️ Failed to get walkable position for ${character.name}:`, error);
-                    position = null;
-                }
+            // Try to position near a desk area first
+            if (index < deskAreas.length) {
+                const deskArea = deskAreas[index];
+                // Add some randomness around the desk area
+                const offsetX = (Math.random() - 0.5) * 80; // ±40 pixels
+                const offsetY = (Math.random() - 0.5) * 80; // ±40 pixels
+                
+                position = {
+                    x: Math.max(60, Math.min(740, deskArea.x + offsetX)), // Keep within canvas bounds
+                    y: Math.max(60, Math.min(390, deskArea.y + offsetY))  // Keep within canvas bounds
+                };
+                
+                console.log(`🏢 Positioned ${character.name} near ${deskArea.name}: (${position.x}, ${position.y})`);
+            } else {
+                // Fallback for extra characters - random position in walkable area
+                position = {
+                    x: 100 + Math.random() * 600, // Random X between 100-700
+                    y: 100 + Math.random() * 250  // Random Y between 100-350
+                };
+                
+                console.log(`🎲 Random position for ${character.name}: (${position.x}, ${position.y})`);
             }
             
-            // Fallback position calculation if world positioning fails
-            if (!position) {
-                const fallbackX = 100 + (index * 100) % 600; // Spread characters across width
-                const fallbackY = 200 + (index * 80) % 300;  // Spread characters across height
-                position = { x: fallbackX, y: fallbackY };
-                console.warn(`⚠️ Using fallback position for ${character.name}: (${position.x}, ${position.y})`);
+            // Validate position is within reasonable bounds
+            if (this.isPositionValid(position)) {
+                character.setPosition(position);
+                console.log(`✅ Positioned ${character.name} at (${position.x}, ${position.y})`);
+            } else {
+                // Ultimate fallback - safe center position
+                const safePosition = {
+                    x: 200 + (index * 100) % 400,
+                    y: 200 + (index * 50) % 150
+                };
+                character.setPosition(safePosition);
+                console.log(`🔧 Safe fallback position for ${character.name}: (${safePosition.x}, ${safePosition.y})`);
             }
-            
-            // Set character position
-            character.setPosition(position);
-            console.log(`✅ Positioned ${character.name} at (${position.x}, ${position.y})`);
         });
         
         console.log('📍 Character positioning complete');
+    }
+
+    /**
+     * Validate if position is within canvas bounds
+     * @param {Object} position - Position {x, y}
+     * @returns {boolean} True if position is valid
+     */
+    isPositionValid(position) {
+        return position.x >= 50 && position.x <= 750 &&
+               position.y >= 50 && position.y <= 400;
     }
 
     /**
@@ -134,56 +166,28 @@ export class CharacterManager {
 
     /**
      * Get character by ID
-     * @param {string} id - Character ID
-     * @returns {Character|null} Character or null if not found
+     * @param {string} characterId - Character ID to find
+     * @returns {Character|null} The character or null if not found
      */
-    getCharacter(id) {
-        return this.characters.find(char => char.id === id) || null;
+    getCharacter(characterId) {
+        return this.characters.find(char => char.id === characterId) || null;
     }
 
     /**
-     * Get character by name
-     * @param {string} name - Character name
-     * @returns {Character|null} Character or null if not found
+     * Get character by name (for debugging)
+     * @param {string} name - Character name to find
+     * @returns {Character|null} The character or null if not found
      */
     getCharacterByName(name) {
         return this.characters.find(char => char.name === name) || null;
     }
 
     /**
-     * Get all NPCs (non-player characters)
-     * @returns {Array<Character>} Array of NPC characters
+     * Get all NPC characters (non-player)
+     * @returns {Array} Array of NPC characters
      */
     getNPCs() {
         return this.characters.filter(char => !char.isPlayer);
-    }
-
-    /**
-     * Get characters by job role
-     * @param {string} jobRole - Job role to filter by
-     * @returns {Array<Character>} Array of characters with the specified job role
-     */
-    getCharactersByJobRole(jobRole) {
-        return this.characters.filter(char => char.jobRole === jobRole);
-    }
-
-    /**
-     * Get characters within a certain distance of a position
-     * @param {Object} position - {x, y} position
-     * @param {number} radius - Search radius
-     * @returns {Array<Character>} Array of characters within radius
-     */
-    getCharactersNearPosition(position, radius = 100) {
-        return this.characters.filter(char => {
-            if (!char.position) return false;
-            
-            const distance = Math.sqrt(
-                Math.pow(char.position.x - position.x, 2) + 
-                Math.pow(char.position.y - position.y, 2)
-            );
-            
-            return distance <= radius;
-        });
     }
 
     /**
@@ -201,7 +205,7 @@ export class CharacterManager {
     }
 
     /**
-     * Add a new character to the game
+     * Add a new character to the game (for dynamic character creation)
      * @param {Object} characterData - Character data
      * @returns {Character} The created character
      */
