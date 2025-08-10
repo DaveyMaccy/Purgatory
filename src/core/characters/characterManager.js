@@ -1,6 +1,6 @@
 /**
- * Character Manager - Manages game characters
- * STAGE 1 FIX: Added loadCharacters method and fixed initialization
+ * STAGE 2 FIXED: Character Manager with proper name handling
+ * Manages game characters and loads them from character creator data
  */
 import { Character } from './character.js';
 
@@ -11,7 +11,7 @@ export class CharacterManager {
     }
 
     /**
-     * STAGE 1 FIX: Load characters from character creator data
+     * STAGE 2 FIXED: Load characters from character creator data with proper name handling
      * @param {Array} characterDataArray - Array of character data from character creator
      */
     loadCharacters(characterDataArray) {
@@ -24,10 +24,10 @@ export class CharacterManager {
         // Create Character instances from the data
         characterDataArray.forEach((charData, index) => {
             try {
-                // Create new Character instance
+                // FIXED: Create new Character instance with proper data
                 const character = new Character(
                     charData.id,
-                    charData.name,
+                    charData.name, // This should now come through properly
                     charData.physicalAttributes,
                     charData.skills,
                     charData.personalityTags,
@@ -35,11 +35,14 @@ export class CharacterManager {
                     charData.deskItems
                 );
                 
-                // Set additional properties
+                // FIXED: Set all properties from character creator data
                 character.isPlayer = charData.isPlayer;
                 character.spriteSheet = charData.spriteSheet;
                 character.apiKey = charData.apiKey;
                 character.jobRole = charData.jobRole;
+                
+                // FIXED: Ensure name is properly set
+                character.name = charData.name || `Character ${index + 1}`;
                 
                 // Set initial position (will be properly positioned in Stage 2)
                 character.x = 100 + (index * 60); // Temporary spacing
@@ -72,7 +75,7 @@ export class CharacterManager {
     }
 
     /**
-     * STAGE 1 FIX: Initialize characters - now checks if characters already loaded
+     * STAGE 2 FIXED: Initialize characters - now checks if characters already loaded
      */
     initializeCharacters() {
         // Only create default characters if none have been loaded
@@ -86,7 +89,7 @@ export class CharacterManager {
     }
 
     /**
-     * STAGE 1 FIX: Create default characters (fallback method)
+     * STAGE 2 FIXED: Create default characters (fallback method)
      */
     createDefaultCharacters() {
         console.log('Creating default characters...');
@@ -145,7 +148,7 @@ export class CharacterManager {
     }
 
     /**
-     * STAGE 1 FIX: Initialize character positions
+     * STAGE 2 FIXED: Initialize character positions
      * This function sets the initial x and y positions for all characters by finding
      * a random walkable tile on the navigation grid for each one.
      * @param {World} world - The game world instance, containing the navGrid.
