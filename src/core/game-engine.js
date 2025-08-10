@@ -1,6 +1,6 @@
 /**
- * Game Engine - Updated with standardized imports and Stage 3 enhancements
- * Lightweight coordinator for game systems
+ * Game Engine - Complete Stage 2-3 Integration
+ * Lightweight coordinator for game systems with full renderer support
  */
 import { CharacterManager } from './characters/character-manager.js';
 import { World } from './world/world.js';
@@ -12,8 +12,11 @@ export class GameEngine {
         // World will be initialized after map data is loaded
         this.world = null;
         
-        // STAGE 2: Only initialize systems that exist
-        // Other systems will be added in later stages
+        // STAGE 2: Rendering system
+        this.renderer = null;
+        this.uiUpdater = null;
+        
+        // STAGE 3: Systems that will be added in later stages
         this.interactionSystem = null;
         this.movementSystem = null;
         this.perceptionSystem = null;
@@ -22,50 +25,59 @@ export class GameEngine {
         this.aiQueueManager = null;
         this.gameLoop = null;
         
-        // STAGE 2: Rendering system reference
-        this.renderer = null;
-        this.uiUpdater = null;
-        
         // Game state
         this.gameTime = 0;
         this.isRunning = false;
     }
 
     /**
-     * STAGE 3 FIX: Simplified initialize with only essential systems
+     * STAGE 2-3 COMPLETE: Initialize with full renderer support
      */
-    initialize(officeLayout) {
+    initialize(mapData) {
         try {
-            console.log('Initializing game engine...');
+            console.log('🎮 Initializing game engine...');
             
-            if (!officeLayout) {
-                throw new Error('Office layout data is required');
+            if (!mapData) {
+                throw new Error('Map data is required for initialization');
             }
             
             // Initialize world with map data
-            this.world = new World(this.characterManager, officeLayout);
+            this.world = new World(this.characterManager, mapData);
             
-            // Generate navigation grid
+            // Generate navigation grid for character positioning
             this.world.generateNavGrid();
             
             // Initialize characters (they should already be loaded by characterManager)
             this.characterManager.initializeCharacters();
             
-            // Position characters if world positioning is available
-            if (this.world && this.characterManager.characters.length > 0) {
-                this.characterManager.initializeCharacterPositions(this.world);
-            }
-            
-            // STAGE 2: Simple update loop instead of complex game loop
+            // STAGE 2: Start the update loop
             this.startSimpleUpdateLoop();
             this.isRunning = true;
             
-            console.log('Game engine initialized successfully');
+            console.log('✅ Game engine initialized successfully');
             
         } catch (error) {
-            console.error('Failed to initialize game engine:', error);
+            console.error('❌ Failed to initialize game engine:', error);
             throw error;
         }
+    }
+
+    /**
+     * STAGE 2: Set renderer reference
+     * @param {Renderer} renderer - The renderer instance
+     */
+    setRenderer(renderer) {
+        this.renderer = renderer;
+        console.log('🎨 Renderer connected to game engine');
+    }
+
+    /**
+     * STAGE 3: Set UI updater reference
+     * @param {UIUpdater} uiUpdater - The UI updater instance
+     */
+    setUIUpdater(uiUpdater) {
+        this.uiUpdater = uiUpdater;
+        console.log('🖥️ UI updater connected to game engine');
     }
 
     /**
@@ -78,11 +90,11 @@ export class GameEngine {
             this.update(updateInterval);
         }, updateInterval);
         
-        console.log('Simple update loop started');
+        console.log('🔄 Update loop started at 60 FPS');
     }
 
     /**
-     * Update game state (called by update loop)
+     * STAGE 2-3: Enhanced update with renderer support
      * @param {number} deltaTime - Time in milliseconds since last update
      */
     update(deltaTime) {
@@ -90,75 +102,144 @@ export class GameEngine {
         
         this.gameTime += deltaTime;
         
-        // STAGE 2: Basic updates only
-        
-        // Update characters
+        // Update characters (includes needs decay and observer notifications)
         if (this.characterManager) {
             this.characterManager.update(deltaTime);
         }
         
         // STAGE 2: Update renderer if available
-        if (this.renderer) {
-            this.renderer.update();
-            
+        if (this.renderer && this.renderer.isInitialized) {
             // Update character positions in renderer
             this.characterManager.characters.forEach(character => {
-                this.renderer.updateCharacterPosition(character.id, character.position.x, character.position.y);
+                if (character.position) {
+                    this.renderer.updateCharacterPosition(
+                        character.id, 
+                        character.position.x, 
+                        character.position.y
+                    );
+                }
             });
+            
+            this.renderer.update();
         }
         
-        // Update UI - handled by observer pattern in Stage 3
-        if (this.uiUpdater) {
-            // UI updates are handled by the observer pattern
-        }
+        // STAGE 3: UI updates are handled by observer pattern
+        // The UI updater automatically receives notifications from characters
     }
 
     /**
-     * Variable update (for non-fixed updates)
+     * Variable update (for non-fixed updates in future stages)
      * @param {number} deltaTime - Time in milliseconds since last update
      */
     variableUpdate(deltaTime) {
-        // Currently empty, but can be used for non-fixed updates
+        // Currently empty, but can be used for non-fixed updates in later stages
     }
 
     /**
-     * Render the game (called by game loop)
+     * STAGE 2: Get game world bounds for movement/camera systems
      */
-    render() {
+    getWorldBounds() {
         if (this.renderer) {
-            this.renderer.render();
+            return this.renderer.getWorldBounds();
         }
+        return { width: 800, height: 600 }; // Default fallback
     }
 
     /**
-     * Add a prompt to the global queue (for future AI integration)
+     * Add a prompt to the global queue (placeholder for Stage 5)
      * @param {Object} promptData - Prompt data object
      */
     addToPromptQueue(promptData) {
-        if (this.aiQueueManager) {
-            this.aiQueueManager.addToPromptQueue(promptData);
+        console.log('🤖 AI queue not implemented yet (Stage 5):', promptData);
+    }
+
+    /**
+     * Pause the game
+     */
+    pause() {
+        this.isRunning = false;
+        if (this.updateLoop) {
+            clearInterval(this.updateLoop);
+        }
+        console.log('⏸️ Game paused');
+    }
+
+    /**
+     * Resume the game
+     */
+    resume() {
+        if (!this.isRunning) {
+            this.isRunning = true;
+            this.startSimpleUpdateLoop();
+            console.log('▶️ Game resumed');
         }
     }
 
     /**
-     * Stop the game engine
+     * Stop and cleanup the game
      */
     stop() {
         this.isRunning = false;
+        
         if (this.updateLoop) {
             clearInterval(this.updateLoop);
             this.updateLoop = null;
         }
-        console.log('Game engine stopped');
+        
+        // Cleanup systems
+        if (this.renderer) {
+            this.renderer.destroy();
+            this.renderer = null;
+        }
+        
+        if (this.uiUpdater) {
+            this.uiUpdater.destroy();
+            this.uiUpdater = null;
+        }
+        
+        console.log('⛔ Game stopped and cleaned up');
     }
 
     /**
-     * Restart the game engine
+     * Get comprehensive game status for debugging
      */
-    restart() {
-        this.stop();
-        this.startSimpleUpdateLoop();
-        this.isRunning = true;
-        console.log('Game engine restarted');
+    getStatus() {
+        return {
+            isRunning: this.isRunning,
+            gameTime: this.gameTime,
+            characterCount: this.characterManager ? this.characterManager.characters.length : 0,
+            hasRenderer: !!this.renderer,
+            rendererInitialized: this.renderer ? this.renderer.isInitialized : false,
+            hasWorld: !!this.world,
+            hasUIUpdater: !!this.uiUpdater,
+            worldNavGridSize: this.world ? `${this.world.navGrid.length}x${this.world.navGrid[0]?.length || 0}` : 'none'
+        };
+    }
+
+    /**
+     * STAGE 3: Debug function to get character positions
+     */
+    getCharacterPositions() {
+        if (!this.characterManager) return [];
+        
+        return this.characterManager.characters.map(char => ({
+            id: char.id,
+            name: char.name,
+            position: char.position,
+            isPlayer: char.isPlayer
+        }));
+    }
+
+    /**
+     * STAGE 3: Debug function to force UI update
+     */
+    forceUIUpdate() {
+        if (this.uiUpdater && this.characterManager) {
+            const playerCharacter = this.characterManager.getPlayerCharacter();
+            if (playerCharacter) {
+                this.uiUpdater.updateUI(playerCharacter);
+                console.log('🔄 Forced UI update completed');
+            }
+        }
     }
 }
