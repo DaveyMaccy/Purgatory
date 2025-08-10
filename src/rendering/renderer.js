@@ -1,5 +1,5 @@
 /**
- * STAGE 2 FIXED: Basic Rendering System using PixiJS with proper sprite cropping
+ * STAGE 2 FIXED: Basic Rendering System using PixiJS with proper 48x96 sprite rendering
  * 
  * This file handles all visual rendering for the game world
  */
@@ -15,6 +15,8 @@ export class Renderer {
         
         // Rendering constants
         this.TILE_SIZE = 48;
+        this.CHARACTER_WIDTH = 48;
+        this.CHARACTER_HEIGHT = 96; // Characters are 48x96 (2 tiles tall)
         this.WORLD_WIDTH = 800;
         this.WORLD_HEIGHT = 600;
     }
@@ -149,22 +151,24 @@ export class Renderer {
             // Load the full spritesheet texture
             const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
             
-            // FIXED: Create a cropped texture to show just one character frame
-            // Character sprites are 48x48, and we want the idle frame (usually first frame)
+            // FIXED: Create a cropped texture for proper 48x96 character
+            // Character sprites are 48x96, and we want the idle frame (usually first frame)
             const croppedTexture = new PIXI.Texture(
                 fullTexture.baseTexture,
-                new PIXI.Rectangle(0, 0, 48, 48) // Take just the first 48x48 frame
+                new PIXI.Rectangle(0, 0, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT) // Take 48x96 frame
             );
             
             // Create sprite from cropped texture
             const sprite = new PIXI.Sprite(croppedTexture);
             
-            // Set sprite properties
-            sprite.width = this.TILE_SIZE;
-            sprite.height = this.TILE_SIZE;
+            // FIXED: Set proper sprite dimensions (don't squash to 48x48)
+            sprite.width = this.CHARACTER_WIDTH;   // 48 pixels wide
+            sprite.height = this.CHARACTER_HEIGHT; // 96 pixels tall
             sprite.x = character.x || 100;
             sprite.y = character.y || 100;
-            sprite.anchor.set(0.5); // Center the sprite
+            
+            // FIXED: Anchor at bottom center so character "stands" on the ground
+            sprite.anchor.set(0.5, 1.0); // Center horizontally, bottom vertically
             
             // Add name label
             const nameText = new PIXI.Text(character.name, {
@@ -175,14 +179,14 @@ export class Renderer {
             });
             nameText.anchor.set(0.5);
             nameText.x = 0;
-            nameText.y = -30; // Above the character
+            nameText.y = -this.CHARACTER_HEIGHT - 10; // Above the character
             sprite.addChild(nameText);
 
             // Add player indicator if this is the player
             if (character.isPlayer) {
                 const playerIndicator = new PIXI.Graphics();
                 playerIndicator.beginFill(0x00ff00); // Green circle
-                playerIndicator.drawCircle(0, -40, 5);
+                playerIndicator.drawCircle(0, -this.CHARACTER_HEIGHT - 20, 5);
                 playerIndicator.endFill();
                 sprite.addChild(playerIndicator);
             }
@@ -217,12 +221,12 @@ export class Renderer {
         const colorIndex = parseInt(character.id.replace('char_', '')) % colors.length;
         
         graphics.beginFill(colors[colorIndex]);
-        graphics.drawCircle(0, 0, this.TILE_SIZE / 2);
+        graphics.drawCircle(0, -this.TILE_SIZE/2, this.TILE_SIZE / 2); // Draw circle above ground level
         graphics.endFill();
         
         // Add border
         graphics.lineStyle(2, 0x000000);
-        graphics.drawCircle(0, 0, this.TILE_SIZE / 2);
+        graphics.drawCircle(0, -this.TILE_SIZE/2, this.TILE_SIZE / 2);
 
         graphics.x = character.x || 100;
         graphics.y = character.y || 100;
@@ -236,14 +240,14 @@ export class Renderer {
         });
         nameText.anchor.set(0.5);
         nameText.x = 0;
-        nameText.y = -30;
+        nameText.y = -this.TILE_SIZE - 20;
         graphics.addChild(nameText);
 
         // Add player indicator
         if (character.isPlayer) {
             const playerIndicator = new PIXI.Graphics();
             playerIndicator.beginFill(0x00ff00);
-            playerIndicator.drawCircle(0, -40, 5);
+            playerIndicator.drawCircle(0, -this.TILE_SIZE - 30, 5);
             playerIndicator.endFill();
             graphics.addChild(playerIndicator);
         }
