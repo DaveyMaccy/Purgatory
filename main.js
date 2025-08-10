@@ -73,12 +73,35 @@ async function initializeGame() {
  * Setup the New Game button
  */
 function setupNewGameButton() {
-    const newGameBtn = document.getElementById('new-game-btn');
+    // Try multiple possible button IDs to ensure compatibility
+    const buttonIds = ['new-game-btn', 'new-game-button'];
+    let newGameBtn = null;
+    
+    for (const id of buttonIds) {
+        newGameBtn = document.getElementById(id);
+        if (newGameBtn) {
+            console.log(`🎯 Found New Game button with ID: ${id}`);
+            break;
+        }
+    }
+    
     if (newGameBtn) {
-        newGameBtn.addEventListener('click', function() {
+        // Enable the button
+        newGameBtn.disabled = false;
+        
+        // Remove any existing event listeners by cloning the node
+        const newButton = newGameBtn.cloneNode(true);
+        newGameBtn.parentNode.replaceChild(newButton, newGameBtn);
+        
+        // Add our event listener
+        newButton.addEventListener('click', function() {
             console.log('🎯 New Game button clicked');
             showCharacterCreator();
         });
+        
+        console.log('✅ New Game button setup complete');
+    } else {
+        console.error('❌ New Game button not found! Checked IDs:', buttonIds);
     }
 }
 
