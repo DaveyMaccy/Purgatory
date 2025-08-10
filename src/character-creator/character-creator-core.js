@@ -1,440 +1,347 @@
+// src/character-creator/character-creator-core.js
 /**
- * Character Creator Core Module
- * Handles the main character creation logic and data management
+ * Character Creator Core Logic Module
+ * Handles all business logic and data management
+ * PHASE 3 RESTORED VERSION with proper functionality
  */
 
 import { CONSTANTS } from './character-creator-constants.js';
-import { CharacterCreatorUI } from './character-creator-ui.js';
-import { CharacterCreatorEvents } from './character-creator-events.js';
 
 export class CharacterCreatorCore {
     constructor() {
         this.characters = [];
         this.currentCharacterIndex = 0;
-        this.officeType = 'Game Studio';
-        this.globalAPIKey = '';
-        this.ui = new CharacterCreatorUI(this);
-        this.events = new CharacterCreatorEvents(this);
+        this.officeType = "Corporate"; // Default office type
+        this.globalApiKey = "";
         
-        console.log('🎭 Character Creator Core initialized');
+        console.log('🧠 Character Creator Core initialized');
+        this.initializeDefaultCharacters();
     }
 
     /**
-     * Initialize the character creator
+     * Initialize with default characters
      */
-    async initialize(selectedOfficeType = 'Game Studio') {
-        console.log('🎭 Initializing character creator...');
-        
-        try {
-            this.officeType = selectedOfficeType;
-            
-            // Create default characters
-            this.createDefaultCharacters();
-            
-            // Initialize UI
-            await this.ui.initialize();
-            
-            // Setup event handlers
-            this.events.initialize();
-            
-            console.log('✅ Character creator fully initialized');
-            
-        } catch (error) {
-            console.error('❌ Failed to initialize character creator:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Create default characters
-     */
-    createDefaultCharacters() {
+    initializeDefaultCharacters() {
         console.log('👥 Creating default characters...');
         
-        this.characters = [
-            this.createRandomCharacter(0),
-            this.createRandomCharacter(1)
-        ];
+        // Create initial characters
+        for (let i = 0; i < CONSTANTS.MIN_CHARACTERS; i++) {
+            this.addCharacter();
+        }
         
         // Set first character as player
-        this.characters[0].isPlayer = true;
-        this.characters[1].isPlayer = false;
-        
-        console.log(`✅ Created ${this.characters.length} default characters`);
-    }
-
-    /**
-     * Create a random character
-     */
-    createRandomCharacter(index) {
-        const gender = this.getRandomItem(CONSTANTS.GENDERS);
-        const randomTags = this.getRandomItems(CONSTANTS.PERSONALITY_TAGS, 3, 6);
-        const randomInventory = this.getRandomItems(CONSTANTS.INVENTORY_OPTIONS, 1, 3);
-        const randomDeskItems = this.getRandomItems(CONSTANTS.DESK_ITEM_OPTIONS, 1, 2);
-        
-        // Use valid sprite index for 20 sprites
-        const validSpriteIndex = Math.floor(Math.random() * 20);
-        const spriteSheet = CONSTANTS.SPRITE_OPTIONS[validSpriteIndex];
-        
-        return {
-            id: `char_${index}`,
-            name: this.generateNameByGender(gender),
-            isPlayer: false,
-            gender: gender,
-            office: this.officeType,
-            jobRole: this.getRandomItem(CONSTANTS.JOB_ROLES_BY_OFFICE[this.officeType]),
-            
-            // Sprite information
-            spriteSheet: spriteSheet,
-            spriteIndex: validSpriteIndex,
-            customPortrait: null,
-            
-            // Physical attributes
-            physicalAttributes: {
-                age: Math.floor(Math.random() * 30) + 22,
-                height: Math.floor(Math.random() * 40) + 150,
-                weight: Math.floor(Math.random() * 60) + 50,
-                looks: Math.floor(Math.random() * 10) + 1,
-                build: this.getRandomItem(CONSTANTS.PHYSICAL_BUILDS),
-                gender: gender
-            },
-            
-            // Skill attributes (using 1-10 scale as per original SSOT)
-            skillAttributes: {
-                competence: Math.floor(Math.random() * 10) + 1,
-                laziness: Math.floor(Math.random() * 10) + 1,
-                charisma: Math.floor(Math.random() * 10) + 1,
-                leadership: Math.floor(Math.random() * 10) + 1
-            },
-            
-            personalityTags: randomTags,
-            inventory: randomInventory,
-            deskItems: randomDeskItems,
-            
-            // API settings
-            apiKey: '',
-            
-            // Game engine required fields
-            position: { x: 0, y: 0 },
-            actionState: 'idle',
-            mood: 'Neutral',
-            facingAngle: 90,
-            maxSightRange: 250,
-            isBusy: false,
-            currentAction: null,
-            currentActionTranscript: [],
-            pendingIntent: null,
-            heldItem: null,
-            conversationId: null,
-            shortTermMemory: [],
-            longTermMemory: [],
-            longTermGoal: null,
-            assignedTask: null,
-            pixiArmature: null,
-            path: [],
-            relationships: {}
-        };
-    }
-
-    /**
-     * Generate name based on gender
-     */
-    generateNameByGender(gender) {
-        const names = CONSTANTS.NAMES_BY_GENDER[gender];
-        if (!names) return 'Unknown Character';
-        
-        const firstName = this.getRandomItem(names.first);
-        const lastName = this.getRandomItem(names.last);
-        return `${firstName} ${lastName}`;
-    }
-
-    /**
-     * Switch to a character tab
-     */
-    switchToTab(index) {
-        if (index < 0 || index >= this.characters.length) {
-            console.warn(`Invalid character index: ${index}`);
-            return;
+        if (this.characters.length > 0) {
+            this.characters[0].isPlayer = true;
+            console.log('👑 Set character 0 as player character');
         }
-        
-        // Update current character from form before switching
-        if (this.currentCharacterIndex !== index) {
-            this.updateCharacterFromForm(this.currentCharacterIndex);
-        }
-        
-        this.currentCharacterIndex = index;
-        
-        // Update UI
-        this.ui.updateTabDisplay(index);
-        this.ui.refreshCharacterPanel(index);
-        
-        console.log(`📝 Switched to character ${index + 1}: ${this.characters[index].name}`);
     }
 
     /**
-     * Add new character
+     * Add a new character
      */
-    addNewCharacter() {
-        if (this.characters.length >= 5) {
-            alert('Maximum 5 characters allowed');
-            return;
+    addCharacter() {
+        if (this.characters.length >= CONSTANTS.MAX_CHARACTERS) {
+            console.warn('⚠️ Cannot add more characters (max reached)');
+            return false;
         }
+
+        const newCharacter = this.createDefaultCharacter();
+        newCharacter.spriteIndex = this.characters.length % CONSTANTS.SPRITE_OPTIONS.length;
+        newCharacter.spriteSheet = CONSTANTS.SPRITE_OPTIONS[newCharacter.spriteIndex];
         
-        const newIndex = this.characters.length;
-        const newCharacter = this.createRandomCharacter(newIndex);
-        newCharacter.isPlayer = false;
+        // Assign default job role based on office type
+        const availableRoles = CONSTANTS.JOB_ROLES_BY_OFFICE[this.officeType];
+        newCharacter.jobRole = availableRoles[this.characters.length % availableRoles.length];
         
         this.characters.push(newCharacter);
         
-        // Update UI
-        this.ui.recreateAllUI();
-        this.switchToTab(newIndex);
-        
-        console.log(`✅ Added new character: ${newCharacter.name}`);
+        console.log(`✅ Added character ${this.characters.length}: ${newCharacter.name || 'Unnamed'}`);
+        return true;
     }
 
     /**
-     * Remove current character
+     * Remove a character
      */
-    removeCurrentCharacter() {
-        if (this.characters.length <= 2) {
-            alert('Minimum 2 characters required');
-            return;
+    removeCharacter(index) {
+        if (this.characters.length <= CONSTANTS.MIN_CHARACTERS) {
+            console.warn('⚠️ Cannot remove character (minimum required)');
+            return false;
         }
-        
-        const removedCharacter = this.characters[this.currentCharacterIndex];
-        
-        // If removing player character, make first remaining character the player
-        if (removedCharacter.isPlayer && this.characters.length > 1) {
-            const nextPlayerIndex = this.currentCharacterIndex === 0 ? 1 : 0;
-            this.characters[nextPlayerIndex].isPlayer = true;
+
+        if (index < 0 || index >= this.characters.length) {
+            console.warn('⚠️ Invalid character index for removal');
+            return false;
         }
+
+        // Don't allow removing the last player character
+        const removingPlayer = this.characters[index].isPlayer;
+        const playerCount = this.characters.filter(c => c.isPlayer).length;
         
-        this.characters.splice(this.currentCharacterIndex, 1);
+        if (removingPlayer && playerCount === 1) {
+            console.warn('⚠️ Cannot remove the only player character');
+            return false;
+        }
+
+        this.characters.splice(index, 1);
         
-        // Adjust current index
+        // Adjust current index if needed
         if (this.currentCharacterIndex >= this.characters.length) {
             this.currentCharacterIndex = this.characters.length - 1;
         }
         
-        // Update UI
-        this.ui.recreateAllUI();
-        this.switchToTab(this.currentCharacterIndex);
-        
-        console.log(`✅ Removed character: ${removedCharacter.name}`);
+        console.log(`🗑️ Removed character at index ${index}`);
+        return true;
     }
 
     /**
-     * Randomize current character
+     * Create a default character object
      */
-    randomizeCurrentCharacter() {
-        try {
-            if (this.currentCharacterIndex >= 0 && this.currentCharacterIndex < this.characters.length) {
-                const wasPlayer = this.characters[this.currentCharacterIndex].isPlayer;
-                this.characters[this.currentCharacterIndex] = this.createRandomCharacter(this.currentCharacterIndex);
-                this.characters[this.currentCharacterIndex].isPlayer = wasPlayer;
-                
-                // Update UI
-                this.ui.refreshCharacterPanel(this.currentCharacterIndex);
-                this.ui.updateTabDisplay(this.currentCharacterIndex);
-                
-                console.log(`✅ Randomized character ${this.currentCharacterIndex + 1}`);
-            }
-        } catch (error) {
-            console.error('❌ Failed to randomize character:', error);
+    createDefaultCharacter() {
+        return JSON.parse(JSON.stringify(CONSTANTS.DEFAULT_CHARACTER));
+    }
+
+    /**
+     * Switch to a different character tab
+     */
+    switchToTab(index) {
+        if (index < 0 || index >= this.characters.length) {
+            console.warn(`⚠️ Invalid character index: ${index}`);
+            return;
         }
+
+        this.currentCharacterIndex = index;
+        console.log(`📋 Switched to character ${index}`);
+    }
+
+    /**
+     * Update character sprite (navigate between available sprites)
+     */
+    updateCharacterSprite(index, direction) {
+        if (index < 0 || index >= this.characters.length) return;
+
+        const character = this.characters[index];
+        const currentIndex = character.spriteIndex || 0;
+        let newIndex;
+
+        if (direction === 'next') {
+            newIndex = (currentIndex + 1) % CONSTANTS.SPRITE_OPTIONS.length;
+        } else {
+            newIndex = currentIndex === 0 ? CONSTANTS.SPRITE_OPTIONS.length - 1 : currentIndex - 1;
+        }
+
+        character.spriteIndex = newIndex;
+        character.spriteSheet = CONSTANTS.SPRITE_OPTIONS[newIndex];
+        
+        console.log(`🎨 Updated character ${index} sprite to ${newIndex + 1}/${CONSTANTS.SPRITE_OPTIONS.length}`);
+    }
+
+    /**
+     * Set a character as the player character
+     */
+    setPlayerCharacter(index) {
+        if (index < 0 || index >= this.characters.length) return;
+
+        // Remove player status from all characters
+        this.characters.forEach(char => char.isPlayer = false);
+        
+        // Set new player character
+        this.characters[index].isPlayer = true;
+        
+        console.log(`👑 Set character ${index} as player character`);
+    }
+
+    /**
+     * Randomize a character's attributes
+     */
+    randomizeCharacter(index) {
+        if (index < 0 || index >= this.characters.length) return;
+
+        const character = this.characters[index];
+        
+        // Randomize basic attributes
+        character.physicalAttributes.gender = this.getRandomFromArray(CONSTANTS.GENDERS);
+        character.physicalAttributes.build = this.getRandomFromArray(CONSTANTS.PHYSICAL_BUILDS);
+        
+        // Generate random name based on gender
+        character.name = this.generateRandomName(character.physicalAttributes.gender);
+        
+        // Randomize sprite
+        character.spriteIndex = Math.floor(Math.random() * CONSTANTS.SPRITE_OPTIONS.length);
+        character.spriteSheet = CONSTANTS.SPRITE_OPTIONS[character.spriteIndex];
+        
+        // Randomize skills (30-80 range for realism)
+        Object.keys(character.skills).forEach(skill => {
+            character.skills[skill] = Math.floor(Math.random() * 51) + 30;
+        });
+        
+        // Randomize personality tags (2-4 tags)
+        character.personality.tags = this.generateRandomPersonalityTags();
+        
+        // Randomize inventory (1-3 items)
+        const inventoryCount = Math.floor(Math.random() * 3) + 1;
+        character.inventory = this.getRandomFromArray(CONSTANTS.INVENTORY_OPTIONS, inventoryCount);
+        
+        // Randomize desk items (1-2 items)
+        const deskItemCount = Math.floor(Math.random() * 2) + 1;
+        character.deskItems = this.getRandomFromArray(CONSTANTS.DESK_ITEM_OPTIONS, deskItemCount);
+        
+        console.log(`🎲 Randomized character ${index}: ${character.name}`);
     }
 
     /**
      * Randomize all characters
      */
     randomizeAllCharacters() {
-        console.log('🎲 Randomizing all characters...');
-        
-        this.characters.forEach((char, index) => {
-            const wasPlayer = char.isPlayer;
-            this.characters[index] = this.createRandomCharacter(index);
-            this.characters[index].isPlayer = wasPlayer;
+        this.characters.forEach((_, index) => {
+            this.randomizeCharacter(index);
         });
         
-        // Update UI
-        this.ui.recreateAllUI();
-        this.switchToTab(this.currentCharacterIndex);
-        
-        console.log('✅ All characters randomized');
+        console.log('🎲 Randomized all characters');
     }
 
     /**
-     * Update character from form data
+     * Generate random name based on gender
      */
-    updateCharacterFromForm(index) {
-        const character = this.characters[index];
-        if (!character) return;
+    generateRandomName(gender) {
+        let nameList;
         
-        // Update basic info
-        const nameInput = document.getElementById(`name-${index}`);
-        const genderSelect = document.getElementById(`gender-${index}`);
-        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
-        const buildSelect = document.getElementById(`build-${index}`);
-        const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
-        const apiKeyInput = document.getElementById(`api-key-${index}`);
-        
-        if (nameInput) character.name = nameInput.value;
-        if (genderSelect) character.physicalAttributes.gender = genderSelect.value;
-        if (jobRoleSelect) character.jobRole = jobRoleSelect.value;
-        if (buildSelect) character.physicalAttributes.build = buildSelect.value;
-        if (apiKeyInput) character.apiKey = apiKeyInput.value;
-        
-        // Handle player character selection
-        if (isPlayerCheckbox) {
-            if (isPlayerCheckbox.checked) {
-                // Make this the only player character
-                this.characters.forEach((char, i) => {
-                    char.isPlayer = (i === index);
-                });
-            }
+        switch (gender) {
+            case 'Male':
+                nameList = CONSTANTS.MALE_NAMES;
+                break;
+            case 'Female': 
+                nameList = CONSTANTS.FEMALE_NAMES;
+                break;
+            case 'Non-binary':
+                nameList = CONSTANTS.NONBINARY_NAMES;
+                break;
+            default:
+                nameList = CONSTANTS.MALE_NAMES;
         }
         
-        // Update personality tags, inventory, desk items
-        this.updateCharacterLists(index);
+        return this.getRandomFromArray(nameList);
     }
 
     /**
-     * Update character lists (tags, inventory, desk items)
+     * Generate random personality tags (avoiding conflicts)
      */
-    updateCharacterLists(index) {
-        const character = this.characters[index];
-        
-        // Update personality tags
+    generateRandomPersonalityTags() {
+        const numTags = Math.floor(Math.random() * 3) + 2; // 2-4 tags
         const selectedTags = [];
-        CONSTANTS.PERSONALITY_TAGS.forEach(tag => {
-            const checkbox = document.getElementById(`personality-${index}-${tag}`);
-            if (checkbox && checkbox.checked) {
-                selectedTags.push(tag);
-            }
-        });
-        character.personalityTags = selectedTags;
+        const availableTags = [...CONSTANTS.PERSONALITY_TAGS];
         
-        // Update inventory (max 3)
-        const selectedInventory = [];
-        CONSTANTS.INVENTORY_OPTIONS.forEach(item => {
-            const checkbox = document.getElementById(`inventory-${index}-${item}`);
-            if (checkbox && checkbox.checked) {
-                selectedInventory.push(item);
+        for (let i = 0; i < numTags && availableTags.length > 0; i++) {
+            const randomIndex = Math.floor(Math.random() * availableTags.length);
+            const selectedTag = availableTags[randomIndex];
+            
+            // Check for conflicts with already selected tags
+            const hasConflict = selectedTags.some(existingTag => 
+                this.areTraitsConflicting(existingTag, selectedTag)
+            );
+            
+            if (!hasConflict) {
+                selectedTags.push(selectedTag);
+                // Remove conflicting traits from available options
+                this.removeConflictingTraits(availableTags, selectedTag);
             }
-        });
-        character.inventory = selectedInventory.slice(0, 3);
+            
+            // Remove the selected tag from available options
+            availableTags.splice(randomIndex, 1);
+        }
         
-        // Update desk items (max 2)
-        const selectedDeskItems = [];
-        CONSTANTS.DESK_ITEM_OPTIONS.forEach(item => {
-            const checkbox = document.getElementById(`desk-item-${index}-${item}`);
-            if (checkbox && checkbox.checked) {
-                selectedDeskItems.push(item);
-            }
-        });
-        character.deskItems = selectedDeskItems.slice(0, 2);
+        return selectedTags;
     }
 
     /**
-     * Validate all characters
+     * Check if two personality traits conflict
      */
-    validateAllCharacters() {
+    areTraitsConflicting(trait1, trait2) {
+        return CONSTANTS.CONFLICTING_TRAITS.some(pair => 
+            (pair[0] === trait1 && pair[1] === trait2) || 
+            (pair[0] === trait2 && pair[1] === trait1)
+        );
+    }
+
+    /**
+     * Remove traits that conflict with the selected trait
+     */
+    removeConflictingTraits(availableTraits, selectedTrait) {
+        CONSTANTS.CONFLICTING_TRAITS.forEach(pair => {
+            if (pair[0] === selectedTrait) {
+                const conflictIndex = availableTraits.indexOf(pair[1]);
+                if (conflictIndex !== -1) {
+                    availableTraits.splice(conflictIndex, 1);
+                }
+            } else if (pair[1] === selectedTrait) {
+                const conflictIndex = availableTraits.indexOf(pair[0]);
+                if (conflictIndex !== -1) {
+                    availableTraits.splice(conflictIndex, 1);
+                }
+            }
+        });
+    }
+
+    /**
+     * Get random item(s) from an array
+     */
+    getRandomFromArray(array, count = 1) {
+        if (count === 1) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+        
+        const shuffled = [...array].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, Math.min(count, array.length));
+    }
+
+    /**
+     * Validate character data before starting the game
+     */
+    validateCharacters() {
         const errors = [];
         
-        if (!this.characters || this.characters.length === 0) {
-            errors.push('No characters created');
-            return errors;
+        // Check minimum characters
+        if (this.characters.length < CONSTANTS.MIN_CHARACTERS) {
+            errors.push(`Minimum ${CONSTANTS.MIN_CHARACTERS} characters required`);
         }
         
-        if (this.characters.length < 2) {
-            errors.push('At least 2 characters required');
-        }
-        
-        // Check for player character
-        const playerCount = this.characters.filter(char => char.isPlayer).length;
+        // Check for at least one player character
+        const playerCount = this.characters.filter(c => c.isPlayer).length;
         if (playerCount === 0) {
-            errors.push('No player character selected');
-        } else if (playerCount > 1) {
-            errors.push('Multiple player characters selected');
+            errors.push('At least one player character required');
         }
         
         // Validate each character
-        this.characters.forEach((char, index) => {
-            if (!char.name || char.name.trim().length === 0) {
-                errors.push(`Character ${index + 1}: Missing name`);
+        this.characters.forEach((character, index) => {
+            if (!character.name || character.name.trim() === '') {
+                errors.push(`Character ${index + 1} needs a name`);
             }
             
-            if (!char.jobRole) {
-                errors.push(`Character ${index + 1}: Missing job role`);
-            }
-            
-            if (!char.spriteSheet) {
-                errors.push(`Character ${index + 1}: Missing sprite selection`);
+            if (!character.jobRole) {
+                errors.push(`Character ${index + 1} needs a job role`);
             }
         });
         
-        return errors;
+        return {
+            isValid: errors.length === 0,
+            errors: errors
+        };
     }
 
     /**
-     * Export characters for game
+     * Get the current game state for starting the simulation
      */
-    exportCharacters() {
-        console.log('📤 Exporting characters from creator...');
+    getGameState() {
+        const validation = this.validateCharacters();
         
-        if (!this.characters || this.characters.length === 0) {
-            console.warn('⚠️ No characters created, returning null');
+        if (!validation.isValid) {
+            console.error('❌ Character validation failed:', validation.errors);
             return null;
         }
         
-        // Update current character from form
-        this.updateCharacterFromForm(this.currentCharacterIndex);
-        
-        // Initialize relationships
-        this.initializeCharacterRelationships();
-        
-        // Clean up sprite paths
-        const fixedCharacters = this.characters.map(char => {
-            if (char.spriteSheet && char.spriteSheet.includes('assets/characters/assets/characters/')) {
-                char.spriteSheet = char.spriteSheet.replace('assets/characters/assets/characters/', 'assets/characters/');
-            }
-            
-            if (char.spriteSheet && !char.spriteSheet.startsWith('./')) {
-                char.spriteSheet = './' + char.spriteSheet;
-            }
-            
-            return char;
-        });
-        
-        console.log(`✅ Exported ${fixedCharacters.length} characters from creator`);
-        return fixedCharacters;
-    }
-
-    /**
-     * Initialize relationships between characters
-     */
-    initializeCharacterRelationships() {
-        this.characters.forEach(char => {
-            char.relationships = {};
-            this.characters.forEach(otherChar => {
-                if (otherChar.id !== char.id) {
-                    char.relationships[otherChar.id] = 50; // Neutral starting relationship
-                }
-            });
-        });
-    }
-
-    /**
-     * Helper functions
-     */
-    getRandomItem(array) {
-        return array[Math.floor(Math.random() * array.length)];
-    }
-
-    getRandomItems(array, min, max) {
-        const count = Math.floor(Math.random() * (max - min + 1)) + min;
-        const shuffled = [...array].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, count);
+        return {
+            characters: this.characters,
+            officeType: this.officeType,
+            globalApiKey: this.globalApiKey
+        };
     }
 }
