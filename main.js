@@ -11,13 +11,11 @@
  * Character creator functionality is in separate character-creator.js
  * 
  * FIXES APPLIED:
- * - Fixed button ID matching (new-game-button)
- * - Fixed modal ID matching (creator-modal-backdrop) 
- * - Fixed coordinate transformation for pathfinding
- * - Optimized canvas resolution to 960×540 (16:9, +44% area)
- * - Fixed load order issues
+ * - Works with actual 30×20 map (2304×1536 pixels)
+ * - Fixed coordinate transformation for any world/canvas size
+ * - Fixed button and modal ID matching
+ * - Dynamic canvas sizing and aspect ratio handling
  * - Enhanced error handling
- * - Fixed all UI element targeting
  */
 
 import { GameEngine } from './src/core/game-engine.js';
@@ -31,21 +29,8 @@ let gameEngine = null;
 let characterManager = null;
 let uiUpdater = null;
 let renderer = null;
-let movementSystem = null; // STAGE 4 NEW
+let movementSystem = null;
 let focusTargetId = null;
-
-// Canvas dimensions - OPTIMIZED for better space usage (16:9 aspect ratio)
-const CANVAS_WIDTH = 960;   // Was 800 - now 20% larger
-const CANVAS_HEIGHT = 540;  // Was 450 - now 20% larger (960÷540 = 1.777... = 16:9)
-
-// World configuration to match
-const WORLD_CONFIG = {
-    TILES_X: 20,        // Was 16 - more detail
-    TILES_Y: 11,        // Was 12 - adjusted for aspect ratio  
-    TILE_SIZE: 48,      // Consistent tile size
-    WORLD_WIDTH: 20 * 48,   // 960 pixels
-    WORLD_HEIGHT: 11 * 48   // 528 pixels
-};
 
 // Flag to track if character creator is loaded
 let characterCreatorLoaded = false;
@@ -134,7 +119,7 @@ function initializeUIElements() {
             handleRightClick(event);
         });
         
-        // Set container to fill available space while maintaining 16:9 aspect ratio
+        // Set container to fill available space and maintain aspect ratio
         worldContainer.style.cssText = `
             width: 100%;
             height: 100%;
@@ -147,14 +132,9 @@ function initializeUIElements() {
             position: relative;
         `;
         
-        // Add responsive aspect ratio maintenance
-        const aspectRatioStyle = document.createElement('style');
-        aspectRatioStyle.textContent = `
-            #world-canvas-container {
-                aspect-ratio: 16/9;
-                max-width: 100%;
-                max-height: 100%;
-            }
+        // Add responsive canvas styling
+        const canvasStyle = document.createElement('style');
+        canvasStyle.textContent = `
             #world-canvas-container canvas {
                 max-width: 100%;
                 max-height: 100%;
@@ -162,9 +142,10 @@ function initializeUIElements() {
                 height: auto;
                 object-fit: contain;
                 border-radius: 4px;
+                display: block;
             }
         `;
-        document.head.appendChild(aspectRatioStyle);
+        document.head.appendChild(canvasStyle);
     }
     
     // Set up tab switching in the status panel
@@ -350,7 +331,7 @@ function showGameWorld() {
 
 /**
  * STAGE 4 COMPLETE: Handle clicks on the game world for character movement
- * FIXED: Proper coordinate transformation between canvas and world coordinates
+ * FIXED: Dynamic coordinate transformation that works with any world/canvas size
  */
 function handleWorldClick(event) {
     if (!gameEngine || !gameEngine.world || !movementSystem || !characterManager) {
@@ -377,15 +358,14 @@ function handleWorldClick(event) {
         return;
     }
 
-    // Get world bounds from the game engine
+    // FIXED: Get dynamic world bounds from the actual world
     const worldBounds = gameEngine.world.getWorldBounds();
     
     // Get actual canvas dimensions (could be scaled)
     const actualCanvasWidth = canvasRect.width;
     const actualCanvasHeight = canvasRect.height;
     
-    // FIXED: Convert canvas coordinates to world coordinates
-    // Scale canvas coordinates to world coordinate space
+    // FIXED: Dynamic coordinate conversion based on actual dimensions
     const worldX = (canvasX / actualCanvasWidth) * worldBounds.width;
     const worldY = (canvasY / actualCanvasHeight) * worldBounds.height;
     
@@ -576,7 +556,7 @@ window.startGameSimulation = async function(characters, focusTarget) {
         gameEngine = new GameEngine();
         characterManager = new CharacterManager();
         uiUpdater = new UIUpdater();
-        movementSystem = new MovementSystem(); // STAGE 4 NEW
+        movementSystem = new MovementSystem();
         
         console.log('🎯 Core systems initialized');
         
@@ -611,10 +591,14 @@ window.startGameSimulation = async function(characters, focusTarget) {
             console.log('🏢 Map rendered');
         } catch (rendererError) {
             console.warn('⚠️ Renderer failed to load, using placeholder:', rendererError.message);
-            // Create a responsive placeholder that maintains aspect ratio and shows new dimensions
+            
+            // Create a responsive placeholder that shows actual world dimensions
+            const worldInfo = mapData ? `${mapData.width}×${mapData.height} tiles (${mapData.width * (mapData.tilewidth || 48)}×${mapData.height * (mapData.tileheight || 48)} pixels)` : 'Unknown dimensions';
+            
             worldContainer.innerHTML = `
                 <div style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; 
-                           aspect-ratio: 16/9; background: linear-gradient(135deg, #e8f4f8 0%, #f0f8ff 100%); 
+                           aspect-ratio: ${mapData ? mapData.width / mapData.height : 16/9}; 
+                           background: linear-gradient(135deg, #e8f4f8 0%, #f0f8ff 100%); 
                            display: flex; align-items: center; justify-content: center;
                            border: 2px dashed #b8daff; border-radius: 8px; margin: auto;
                            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
@@ -622,8 +606,7 @@ window.startGameSimulation = async function(characters, focusTarget) {
                         <h3 style="margin: 0 0 8px 0; color: #2563eb;">Office Purgatory</h3>
                         <p style="margin: 4px 0; font-size: 14px;">Click anywhere to test character movement</p>
                         <p style="margin: 4px 0; font-size: 12px; color: #999;">Renderer: Placeholder Mode</p>
-                        <p style="margin: 4px 0; font-size: 11px; color: #bbb;">Canvas: ${CANVAS_WIDTH}×${CANVAS_HEIGHT} (16:9)</p>
-                        <p style="margin: 4px 0; font-size: 10px; color: #aaa;">World: ${WORLD_CONFIG.WORLD_WIDTH}×${WORLD_CONFIG.WORLD_HEIGHT} | ${WORLD_CONFIG.TILES_X}×${WORLD_CONFIG.TILES_Y} tiles</p>
+                        <p style="margin: 4px 0; font-size: 11px; color: #bbb;">World: ${worldInfo}</p>
                     </div>
                 </div>
             `;
@@ -652,7 +635,7 @@ window.startGameSimulation = async function(characters, focusTarget) {
             }
         }
         
-        // STAGE 4 NEW: Connect movement system to game engine
+        // Connect movement system to game engine
         if (gameEngine.setMovementSystem) {
             gameEngine.setMovementSystem(movementSystem);
             console.log('🚶 Movement system connected');
@@ -801,7 +784,7 @@ function printGameStatus() {
 }
 
 /**
- * DEBUG: Enhanced movement testing function with proper coordinates
+ * DEBUG: Enhanced movement testing function with dynamic coordinates
  */
 window.testMovement = function(canvasX, canvasY) {
     if (!focusTargetId || !characterManager || !movementSystem || !gameEngine) {
@@ -815,11 +798,16 @@ window.testMovement = function(canvasX, canvasY) {
         return;
     }
     
-    // Convert canvas coordinates to world coordinates
+    // Get dynamic world bounds
     const worldBounds = gameEngine.world.getWorldBounds();
     
-    const worldX = (canvasX / CANVAS_WIDTH) * worldBounds.width;
-    const worldY = (canvasY / CANVAS_HEIGHT) * worldBounds.height;
+    // Assume canvas size (could be dynamic)
+    const canvasElement = document.querySelector('#world-canvas-container canvas');
+    const canvasWidth = canvasElement ? canvasElement.clientWidth : 800;
+    const canvasHeight = canvasElement ? canvasElement.clientHeight : 600;
+    
+    const worldX = (canvasX / canvasWidth) * worldBounds.width;
+    const worldY = (canvasY / canvasHeight) * worldBounds.height;
     
     const targetPosition = { x: worldX, y: worldY };
     
@@ -827,7 +815,7 @@ window.testMovement = function(canvasX, canvasY) {
     console.log(`   From: (${character.position.x.toFixed(1)}, ${character.position.y.toFixed(1)})`);
     console.log(`   Canvas click: (${canvasX}, ${canvasY})`);
     console.log(`   World target: (${worldX.toFixed(1)}, ${worldY.toFixed(1)})`);
-    console.log(`   World bounds: ${worldBounds.width}×${worldBounds.height}`);
+    console.log(`   Canvas: ${canvasWidth}×${canvasHeight}, World: ${worldBounds.width}×${worldBounds.height}`);
     
     // Test if target position is walkable
     const isWalkable = gameEngine.world.isPositionWalkable(worldX, worldY);
@@ -909,20 +897,24 @@ window.debugCoordinates = function(canvasX, canvasY) {
     
     console.log(`🔍 Coordinate conversion for canvas click (${canvasX}, ${canvasY}):`);
     
-    // Canvas to world conversion
+    // Get dynamic dimensions
     const worldBounds = gameEngine.world.getWorldBounds();
+    const canvasElement = document.querySelector('#world-canvas-container canvas');
+    const canvasWidth = canvasElement ? canvasElement.clientWidth : 800;
+    const canvasHeight = canvasElement ? canvasElement.clientHeight : 600;
     
-    const worldX = (canvasX / CANVAS_WIDTH) * worldBounds.width;
-    const worldY = (canvasY / CANVAS_HEIGHT) * worldBounds.height;
+    const worldX = (canvasX / canvasWidth) * worldBounds.width;
+    const worldY = (canvasY / canvasHeight) * worldBounds.height;
     
     console.log(`   Canvas: (${canvasX}, ${canvasY})`);
     console.log(`   World: (${worldX.toFixed(1)}, ${worldY.toFixed(1)})`);
-    console.log(`   Canvas size: ${CANVAS_WIDTH}×${CANVAS_HEIGHT}`);
+    console.log(`   Canvas size: ${canvasWidth}×${canvasHeight}`);
     console.log(`   World size: ${worldBounds.width}×${worldBounds.height}`);
     
     // World to grid conversion
     const gridPos = gameEngine.world.worldToGrid(worldX, worldY);
     console.log(`   Grid: (${gridPos.x}, ${gridPos.y})`);
+    console.log(`   Grid size: ${worldBounds.tileWidth}×${worldBounds.tileHeight}`);
     
     // Check if walkable
     if (gameEngine.world.navGrid) {
