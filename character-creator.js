@@ -289,7 +289,7 @@ function generatePanelHTML(index, charData) {
             
             <div class="form-group mt-4">
                 <h3 class="text-lg font-bold mb-2">Personality (Max 6)</h3>
-                <div class="grid grid-cols-2 gap-2 text-sm max-h-48 overflow-y-auto">${tagOptions}</div>
+                <div class="grid grid-cols-2 gap-2 text-sm" style="max-height: 200px; overflow-y-auto;">${tagOptions}</div>
             </div>
 
             <div class="form-group mt-4">
@@ -625,4 +625,5 @@ function collectCharacterDataFromPanel(index) {
 function showCustomAlert(message) {
     alert(message);
 }
+
 
