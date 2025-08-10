@@ -24,8 +24,8 @@ export class CharacterCreatorCore {
     initializeDefaultCharacters() {
         console.log('👥 Creating default characters...');
         
-        // Create initial characters
-        for (let i = 0; i < CONSTANTS.MIN_CHARACTERS; i++) {
+        // Create initial characters (3 to start)
+        for (let i = 0; i < 3; i++) {
             this.addCharacter();
         }
         
