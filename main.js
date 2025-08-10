@@ -49,6 +49,9 @@ document.addEventListener('DOMContentLoaded', function() {
  * Initialize UI elements and event handlers
  */
 function initializeUIElements() {
+    // FIXED: Add proper tab styling
+    addTabCSS();
+    
     // Set up game world click handlers (for future movement system)
     const worldContainer = document.getElementById('world-canvas-container');
     if (worldContainer) {
@@ -59,6 +62,62 @@ function initializeUIElements() {
     setupStatusPanelTabs();
     
     console.log('✅ UI elements initialized');
+}
+
+/**
+ * FIXED: Add CSS for proper tab styling
+ */
+function addTabCSS() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .tab-link {
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-right: 4px;
+        }
+        
+        .tab-link:hover {
+            background-color: #e5e7eb;
+            color: #1f2937;
+        }
+        
+        .tab-link.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 16px;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            background-color: white;
+            min-height: 200px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tabs {
+            border-bottom: 1px solid #d1d5db;
+            margin-bottom: 0;
+            background-color: #f9fafb;
+            padding: 8px 8px 0 8px;
+            border-radius: 6px 6px 0 0;
+        }
+    `;
+    document.head.appendChild(style);
+    console.log('✅ Tab CSS injected');
 }
 
 /**
@@ -120,25 +179,47 @@ function handleWorldClick(event) {
  * Set up status panel tab switching
  */
 function setupStatusPanelTabs() {
-    const tabButtons = document.querySelectorAll('[data-tab]');
-    const tabContents = document.querySelectorAll('[data-tab-content]');
+    // FIXED: Proper tab switching implementation
+    console.log('🔧 Setting up status panel tabs...');
     
+    // Make openTab function available globally (as required by HTML onclick)
+    window.openTab = function(evt, tabName) {
+        console.log(`📋 Switching to tab: ${tabName}`);
+        
+        // Hide all tab content
+        const tabContents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+        }
+        
+        // Remove active class from all tab links
+        const tabLinks = document.getElementsByClassName("tab-link");
+        for (let i = 0; i < tabLinks.length; i++) {
+            tabLinks[i].classList.remove("active");
+        }
+        
+        // Show the selected tab content and mark button as active
+        const targetTab = document.getElementById(tabName);
+        if (targetTab) {
+            targetTab.classList.add("active");
+        }
+        
+        if (evt && evt.currentTarget) {
+            evt.currentTarget.classList.add("active");
+        }
+    };
+    
+    // Set up click handlers for tab buttons (backup to onclick)
+    const tabButtons = document.querySelectorAll('.tab-link');
     tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetTab = button.getAttribute('data-tab');
-            
-            // Remove active class from all tabs and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.add('hidden'));
-            
-            // Add active class to clicked tab and show content
-            button.classList.add('active');
-            const targetContent = document.querySelector(`[data-tab-content="${targetTab}"]`);
-            if (targetContent) {
-                targetContent.classList.remove('hidden');
-            }
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabName = button.textContent.toLowerCase();
+            window.openTab(e, tabName);
         });
     });
+    
+    console.log('✅ Status panel tabs configured');
 }
 
 /**
