@@ -1,5 +1,5 @@
 /**
- * Character Creator - Core Module
+ * Character Creator - Core Module - PHASE 1 FIXED
  * 
  * This is the main character creator file that coordinates all modules.
  * It handles initialization, character management, and delegates specific
@@ -225,44 +225,54 @@ function randomizeCurrentCharacter() {
 }
 
 /**
- * Handle start simulation
- * FIXED: Updated to use correct modal ID from HTML structure
+ * Handle start simulation - PHASE 1 FIXED
+ * FIXED: Updated to use correct modal ID and proper game start flow
  */
 function handleStartSimulation() {
     console.log('🚀 Starting simulation with characters:', characters.length);
     
-    // Validate all characters
-    const validation = ValidationUtils.validateAllCharacters(characters);
-    if (!validation.isValid) {
-        alert(`Cannot start simulation: ${validation.errors.join(', ')}`);
-        return;
-    }
-    
-    // Finalize character data
-    const finalizedCharacters = CharacterData.finalizeCharacters(characters, globalAPIKey);
-    
-    // Close character creator modal (using correct ID from HTML)
-    const modal = document.getElementById('creator-modal-backdrop');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.add('hidden');
-        console.log('📝 Character creator modal closed');
-    } else {
-        console.error('❌ Character creator modal not found! Expected ID: creator-modal-backdrop');
-    }
-    
-    // Trigger game start via the main.js function
-    if (window.startGame && typeof window.startGame === 'function') {
-        window.startGame(finalizedCharacters);
-    } else {
-        console.log('💾 Characters ready for game engine:', finalizedCharacters);
-        // Store for when game engine is ready
-        window.characterCreatorData = finalizedCharacters;
-        
-        // Alternative: try calling through game engine if available
-        if (window.gameEngine && typeof window.gameEngine.startGame === 'function') {
-            window.gameEngine.startGame(finalizedCharacters);
+    try {
+        // Validate all characters
+        const validation = ValidationUtils.validateAllCharacters(characters);
+        if (!validation.isValid) {
+            alert(`Cannot start simulation: ${validation.errors.join(', ')}`);
+            return;
         }
+        
+        // Finalize character data
+        const finalizedCharacters = CharacterData.finalizeCharacters(characters, globalAPIKey);
+        
+        // PHASE 1 FIX: Close character creator modal using correct ID
+        const modal = document.getElementById('creator-modal-backdrop');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            console.log('📝 Character creator modal closed');
+        } else {
+            console.error('❌ Character creator modal not found! Expected ID: creator-modal-backdrop');
+        }
+        
+        // PHASE 1 FIX: Call the global startGame function properly
+        if (window.startGame && typeof window.startGame === 'function') {
+            console.log('🎯 Calling window.startGame with characters:', finalizedCharacters);
+            window.startGame(finalizedCharacters);
+        } else {
+            console.error('❌ window.startGame function not found');
+            alert('Failed to start simulation. Game initialization error.');
+            
+            // Fallback: try alternative methods
+            if (window.gameEngine && typeof window.gameEngine.startGame === 'function') {
+                console.log('🔄 Trying fallback: window.gameEngine.startGame');
+                window.gameEngine.startGame(finalizedCharacters);
+            } else {
+                console.log('💾 Storing characters for later use');
+                window.characterCreatorData = finalizedCharacters;
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to start simulation:', error);
+        alert(`Failed to start simulation: ${error.message}`);
     }
 }
 
