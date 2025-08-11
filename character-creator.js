@@ -1,4 +1,79 @@
 /**
+ * Randomize the current character
+ */
+function randomizeCurrentCharacter() {
+    if (currentCharacterIndex < 0 || currentCharacterIndex >= characters.length) return;
+    
+    // Generate new random character data
+    const randomData = CharacterData.generateRandomCharacter(officeType);
+    
+    // Keep the same ID but update all other properties
+    const originalId = characters[currentCharacterIndex].id;
+    characters[currentCharacterIndex] = { ...randomData, id: originalId };
+    
+    // Update global reference
+    window.characters = characters;
+    
+    // Refresh the current panel
+    const panel = document.getElementById(`character-panel-${currentCharacterIndex}`);
+    if (panel) {
+        panel.innerHTML = UIGenerator.generatePanelHTML(currentCharacterIndex, characters[currentCharacterIndex], officeType);
+        EventHandlers.setupPanelEventListeners(currentCharacterIndex, characters, globalAPIKey);
+        SpriteManager.updateCharacterPortrait(currentCharacterIndex, characters[currentCharacterIndex].spriteSheet);
+    }
+    
+    console.log(`🎲 Randomized character ${currentCharacterIndex + 1}`);
+}
+
+/**
+ * Handle start simulation - FIXED: Use correct modal ID and validation
+ */
+function handleStartSimulation() {
+    console.log('🚀 Starting simulation with characters:', characters.length);
+    
+    try {
+        // Validate all characters
+        const validation = ValidationUtils.validateAllCharacters(characters);
+        if (!validation.isValid) {
+            alert(`Cannot start simulation: ${validation.errors.join(', ')}`);
+            return;
+        }
+        
+        // Finalize character data
+        const finalizedCharacters = CharacterData.finalizeCharacters(characters, globalAPIKey);
+        
+        // FIXED: Close character creator modal using correct ID
+        const modal = document.getElementById('creator-modal-backdrop');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            console.log('📝 Character creator modal closed');
+        }
+        
+        // Call the global startGame function
+        if (window.startGame && typeof window.startGame === 'function') {
+            console.log('🎯 Calling window.startGame with characters:', finalizedCharacters);
+            window.startGame(finalizedCharacters);
+        } else {
+            console.error('❌ window.startGame function not found');
+            alert('Failed to start simulation. Game initialization error.');
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to start simulation:', error);
+        alert(`Failed to start simulation: ${error.message}`);
+    }
+}
+
+// Export functions for global access (needed for HTML onclick handlers)
+window.switchTab = switchToTab;
+window.randomizeCurrentCharacter = randomizeCurrentCharacter;
+window.startSimulation = handleStartSimulation;
+
+// Export main initialization function
+export { initializeCharacterCreator };
+
+console.log('📦 Character Creator Core Module loaded - WORKING VERSION');
  * Character Creator - WORKING VERSION
  * 
  * FIXED: All imports, office types, and functionality working
