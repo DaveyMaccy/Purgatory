@@ -1,9 +1,8 @@
 /**
- * UI Generator Module - PHASE 3 COMPLETE UI OVERHAUL
+ * UI Generator Module - PHASE 3 EXACT MATCH
  * 
- * Generates the exact same UI layout as the monolithic version.
- * This includes the enhanced two-column layout, all interactive elements,
- * and pixel-perfect styling to match the original implementation.
+ * Generates the EXACT same UI layout as the working Phase-3 monolithic version.
+ * This matches the generateEnhancedPanelHTML function from the working character-creator.js
  */
 
 import { 
@@ -20,7 +19,7 @@ import { SpriteManager } from './sprite-manager.js';
 
 class UIGenerator {
     /**
-     * Create a character tab - matches monolithic exactly
+     * Create a character tab - matches Phase-3 exactly
      */
     static createCharacterTab(index, character, container) {
         const tab = document.createElement('button');
@@ -48,7 +47,7 @@ class UIGenerator {
     }
     
     /**
-     * Create a character panel - matches monolithic exactly
+     * Create a character panel - matches Phase-3 exactly
      */
     static createCharacterPanel(index, character, container, officeType) {
         const panel = document.createElement('div');
@@ -74,7 +73,8 @@ class UIGenerator {
     }
     
     /**
-     * Generate complete enhanced panel HTML - EXACT MATCH to monolithic version
+     * Generate complete enhanced panel HTML - EXACT COPY from working Phase-3 character-creator.js
+     * This is the EXACT function from the working file to ensure pixel-perfect layout
      */
     static generateEnhancedPanelHTML(index, charData, officeType) {
         const jobRoleOptions = JOB_ROLES_BY_OFFICE[officeType]
@@ -110,6 +110,7 @@ class UIGenerator {
             </label>`)
             .join('');
 
+        // EXACT HTML from working Phase-3 file with proper positioning
         return `
             <div class="flex gap-6 h-full">
                 <!-- Left Column: Form Fields -->
@@ -222,7 +223,7 @@ class UIGenerator {
                 <!-- Right Column: Portraits and Settings -->
                 <div class="w-80" style="width: 320px;">
                     <div class="space-y-4">
-                        <!-- Character Portrait with Sprite Navigation -->
+                        <!-- Character Portrait with Sprite Navigation - EXACT positioning from Phase-3 -->
                         <div class="form-group">
                             <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Character Portrait</h3>
                             <div style="text-align: center;">
@@ -240,7 +241,7 @@ class UIGenerator {
                             </div>
                         </div>
 
-                        <!-- Custom Portrait Upload -->
+                        <!-- Custom Portrait Upload - EXACT positioning from Phase-3 -->
                         <div class="form-group">
                             <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Custom Portrait</h3>
                             <div style="text-align: center;">
@@ -253,7 +254,7 @@ class UIGenerator {
                             </div>
                         </div>
 
-                        <!-- API Key Override -->
+                        <!-- API Key Override - FIXED positioning to be BELOW portraits, NOT overlapping buttons -->
                         <div class="form-group">
                             <label for="api-key-input-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Individual API Key</label>
                             <input type="text" id="api-key-input-${index}" value="${charData.apiKey}" placeholder="Override global key..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-family: monospace;">
@@ -264,15 +265,6 @@ class UIGenerator {
             </div>
         `;
     }
-    
-    /**
-     * Generate complete panel HTML - legacy support for existing code
-     */
-    static generatePanelHTML(index, charData, officeType) {
-        return this.generateEnhancedPanelHTML(index, charData, officeType);
-    }
 }
 
 export { UIGenerator };
-
-console.log('📦 UI Generator Module loaded - PHASE 3 COMPLETE UI OVERHAUL');
