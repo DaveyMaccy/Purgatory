@@ -1,111 +1,37 @@
 /**
- * Validation Utils Module
+ * Validation Utils Module - PHASE 2 ENHANCED
  * 
- * Handles all validation logic for character creation.
- * Ensures data integrity and provides user feedback.
+ * Handles all validation for character data with enhanced player character
+ * enforcement and complete data structure validation.
  */
+
+import { MIN_CHARACTERS, MAX_CHARACTERS } from './character-data.js';
 
 class ValidationUtils {
     /**
-     * Validate a single character
+     * Validate all characters before starting game - matches monolithic exactly
      */
-    static validateCharacter(character) {
+    static validateAllCharacters(characters) {
         const errors = [];
         
-        // Basic info validation
-        if (!character.firstName || character.firstName.trim().length === 0) {
-            errors.push('First name is required');
-        } else if (character.firstName.trim().length > 50) {
-            errors.push('First name must be 50 characters or less');
+        // Check character count
+        if (characters.length < MIN_CHARACTERS) {
+            errors.push(`Minimum ${MIN_CHARACTERS} characters required`);
         }
         
-        if (!character.lastName || character.lastName.trim().length === 0) {
-            errors.push('Last name is required');
-        } else if (character.lastName.trim().length > 50) {
-            errors.push('Last name must be 50 characters or less');
+        if (characters.length > MAX_CHARACTERS) {
+            errors.push(`Maximum ${MAX_CHARACTERS} characters allowed`);
         }
         
-        if (!character.jobRole || character.jobRole.trim().length === 0) {
-            errors.push('Job role is required');
-        }
+        // Validate individual characters
+        characters.forEach((character, index) => {
+            const charErrors = this.validateSingleCharacter(character, index);
+            errors.push(...charErrors);
+        });
         
-        // Age validation
-        if (!character.age || character.age < 18 || character.age > 65) {
-            errors.push('Age must be between 18 and 65');
-        }
-        
-        // Physical attributes validation
-        if (!character.physicalAttributes) {
-            errors.push('Physical attributes are missing');
-        } else {
-            const attrs = character.physicalAttributes;
-            
-            if (!attrs.gender) {
-                errors.push('Gender is required');
-            }
-            
-            if (!attrs.build) {
-                errors.push('Build is required');
-            }
-            
-            if (!attrs.height || attrs.height < 140 || attrs.height > 210) {
-                errors.push('Height must be between 140 and 210 cm');
-            }
-            
-            if (!attrs.weight || attrs.weight < 40 || attrs.weight > 150) {
-                errors.push('Weight must be between 40 and 150 kg');
-            }
-            
-            if (!attrs.looks || attrs.looks < 1 || attrs.looks > 10) {
-                errors.push('Looks rating must be between 1 and 10');
-            }
-        }
-        
-        // Skills validation
-        if (!character.skills) {
-            errors.push('Skills are missing');
-        } else {
-            const skills = character.skills;
-            const skillNames = ['competence', 'laziness', 'charisma', 'leadership'];
-            
-            skillNames.forEach(skill => {
-                if (!skills[skill] || skills[skill] < 1 || skills[skill] > 10) {
-                    errors.push(`${skill} must be between 1 and 10`);
-                }
-            });
-        }
-        
-        // Personality tags validation
-        if (!character.personalityTags || !Array.isArray(character.personalityTags)) {
-            errors.push('Personality tags are missing');
-        } else if (character.personalityTags.length < 2) {
-            errors.push('At least 2 personality tags are required');
-        } else if (character.personalityTags.length > 5) {
-            errors.push('Maximum 5 personality tags allowed');
-        }
-        
-        // Inventory validation
-        if (!character.inventory || !Array.isArray(character.inventory)) {
-            errors.push('Inventory is missing');
-        } else if (character.inventory.length < 3) {
-            errors.push('At least 3 inventory items are required');
-        } else if (character.inventory.length > 6) {
-            errors.push('Maximum 6 inventory items allowed');
-        }
-        
-        // Desk items validation
-        if (!character.deskItems || !Array.isArray(character.deskItems)) {
-            errors.push('Desk items are missing');
-        } else if (character.deskItems.length < 3) {
-            errors.push('At least 3 desk items are required');
-        } else if (character.deskItems.length > 6) {
-            errors.push('Maximum 6 desk items allowed');
-        }
-        
-        // Sprite validation
-        if (!character.spriteSheet) {
-            errors.push('Character sprite is required');
-        }
+        // Validate player character enforcement
+        const playerErrors = this.validatePlayerCharacters(characters);
+        errors.push(...playerErrors);
         
         return {
             isValid: errors.length === 0,
@@ -114,269 +40,251 @@ class ValidationUtils {
     }
     
     /**
-     * Validate all characters
+     * Validate a single character - enhanced validation
      */
-    static validateAllCharacters(characters) {
-        const allErrors = [];
+    static validateSingleCharacter(character, index) {
+        const errors = [];
         
-        if (!characters || !Array.isArray(characters)) {
-            return {
-                isValid: false,
-                errors: ['No characters found']
-            };
+        // Check required fields
+        if (!character.name || character.name.trim() === '') {
+            errors.push(`Character ${index + 1}: Name is required`);
         }
         
-        if (characters.length < 2) {
-            allErrors.push('At least 2 characters are required');
+        if (!character.jobRole || character.jobRole.trim() === '') {
+            errors.push(`Character ${index + 1}: Job role is required`);
         }
         
-        if (characters.length > 5) {
-            allErrors.push('Maximum 5 characters allowed');
-        }
-        
-        // Check for player character
-        const playerCharacters = characters.filter(char => char.isPlayerCharacter);
-        if (playerCharacters.length === 0) {
-            allErrors.push('One character must be designated as the player character');
-        } else if (playerCharacters.length > 1) {
-            allErrors.push('Only one character can be the player character');
-        }
-        
-        // Validate each character individually
-        characters.forEach((character, index) => {
-            const validation = this.validateCharacter(character);
-            if (!validation.isValid) {
-                validation.errors.forEach(error => {
-                    allErrors.push(`Character ${index + 1}: ${error}`);
-                });
+        // Validate physical attributes
+        if (!character.physicalAttributes) {
+            errors.push(`Character ${index + 1}: Physical attributes missing`);
+        } else {
+            if (!character.physicalAttributes.gender) {
+                errors.push(`Character ${index + 1}: Gender is required`);
             }
-        });
-        
-        // Check for duplicate names
-        const names = characters.map(char => `${char.firstName} ${char.lastName}`.toLowerCase());
-        const duplicateNames = names.filter((name, index) => names.indexOf(name) !== index);
-        if (duplicateNames.length > 0) {
-            allErrors.push('Characters must have unique names');
-        }
-        
-        return {
-            isValid: allErrors.length === 0,
-            errors: allErrors
-        };
-    }
-    
-    /**
-     * Validate API key format
-     */
-    static validateAPIKey(apiKey) {
-        if (!apiKey || typeof apiKey !== 'string') {
-            return {
-                isValid: false,
-                error: 'API key is required'
-            };
-        }
-        
-        // Remove whitespace
-        apiKey = apiKey.trim();
-        
-        if (apiKey.length === 0) {
-            return {
-                isValid: false,
-                error: 'API key cannot be empty'
-            };
-        }
-        
-        // Basic format validation (adjust based on your API requirements)
-        if (apiKey.length < 10) {
-            return {
-                isValid: false,
-                error: 'API key appears to be too short'
-            };
-        }
-        
-        if (apiKey.length > 200) {
-            return {
-                isValid: false,
-                error: 'API key appears to be too long'
-            };
-        }
-        
-        // Check for potentially invalid characters
-        if (!/^[a-zA-Z0-9\-_\.]+$/.test(apiKey)) {
-            return {
-                isValid: false,
-                error: 'API key contains invalid characters'
-            };
-        }
-        
-        return {
-            isValid: true,
-            error: null
-        };
-    }
-    
-    /**
-     * Validate character name for uniqueness
-     */
-    static validateNameUniqueness(firstName, lastName, characters, excludeIndex = -1) {
-        const fullName = `${firstName} ${lastName}`.toLowerCase().trim();
-        
-        for (let i = 0; i < characters.length; i++) {
-            if (i === excludeIndex) continue;
             
-            const existingName = `${characters[i].firstName} ${characters[i].lastName}`.toLowerCase().trim();
-            if (existingName === fullName) {
-                return {
-                    isValid: false,
-                    error: 'A character with this name already exists'
-                };
+            if (character.physicalAttributes.age < 18 || character.physicalAttributes.age > 70) {
+                errors.push(`Character ${index + 1}: Age must be between 18 and 70`);
             }
         }
         
-        return {
-            isValid: true,
-            error: null
-        };
+        // Validate skills
+        if (!character.skills) {
+            errors.push(`Character ${index + 1}: Skills missing`);
+        } else {
+            const requiredSkills = ['competence', 'laziness', 'charisma', 'leadership'];
+            requiredSkills.forEach(skill => {
+                if (typeof character.skills[skill] !== 'number' || 
+                    character.skills[skill] < 1 || 
+                    character.skills[skill] > 10) {
+                    errors.push(`Character ${index + 1}: ${skill} must be between 1 and 10`);
+                }
+            });
+        }
+        
+        // Validate personality tags limit
+        if (character.personalityTags && character.personalityTags.length > 6) {
+            errors.push(`Character ${index + 1}: Maximum 6 personality tags allowed`);
+        }
+        
+        // Validate inventory limit
+        if (character.inventory && character.inventory.length > 3) {
+            errors.push(`Character ${index + 1}: Maximum 3 inventory items allowed`);
+        }
+        
+        // Validate desk items limit
+        if (character.deskItems && character.deskItems.length > 2) {
+            errors.push(`Character ${index + 1}: Maximum 2 desk items allowed`);
+        }
+        
+        return errors;
     }
     
     /**
-     * Validate bio length and content
+     * Validate player character enforcement - exactly one player
      */
-    static validateBio(bio) {
-        if (!bio) {
-            return { isValid: true, error: null }; // Bio is optional
+    static validatePlayerCharacters(characters) {
+        const errors = [];
+        const playerCharacters = characters.filter(char => char.isPlayer);
+        
+        if (playerCharacters.length === 0) {
+            // Auto-fix: make first character the player
+            characters[0].isPlayer = true;
+            console.log('⚠️ No player character found, making first character the player');
+        } else if (playerCharacters.length > 1) {
+            // Auto-fix: keep only first player
+            let foundFirst = false;
+            characters.forEach(char => {
+                if (char.isPlayer && foundFirst) {
+                    char.isPlayer = false;
+                } else if (char.isPlayer) {
+                    foundFirst = true;
+                }
+            });
+            console.log('⚠️ Multiple player characters found, using first one');
         }
         
-        if (typeof bio !== 'string') {
-            return {
-                isValid: false,
-                error: 'Bio must be text'
+        return errors;
+    }
+    
+    /**
+     * Validate character name
+     */
+    static validateCharacterName(name) {
+        if (!name || name.trim() === '') {
+            return { isValid: false, error: 'Name is required' };
+        }
+        
+        if (name.length > 50) {
+            return { isValid: false, error: 'Name must be 50 characters or less' };
+        }
+        
+        return { isValid: true };
+    }
+    
+    /**
+     * Validate personality tags selection
+     */
+    static validatePersonalityTags(tags) {
+        if (!Array.isArray(tags)) {
+            return { isValid: false, error: 'Personality tags must be an array' };
+        }
+        
+        if (tags.length > 6) {
+            return { isValid: false, error: 'Maximum 6 personality tags allowed' };
+        }
+        
+        return { isValid: true };
+    }
+    
+    /**
+     * Validate inventory items
+     */
+    static validateInventoryItems(items) {
+        if (!Array.isArray(items)) {
+            return { isValid: false, error: 'Inventory items must be an array' };
+        }
+        
+        if (items.length > 3) {
+            return { isValid: false, error: 'Maximum 3 inventory items allowed' };
+        }
+        
+        return { isValid: true };
+    }
+    
+    /**
+     * Validate desk items
+     */
+    static validateDeskItems(items) {
+        if (!Array.isArray(items)) {
+            return { isValid: false, error: 'Desk items must be an array' };
+        }
+        
+        if (items.length > 2) {
+            return { isValid: false, error: 'Maximum 2 desk items allowed' };
+        }
+        
+        return { isValid: true };
+    }
+    
+    /**
+     * Validate skill value
+     */
+    static validateSkillValue(value, skillName) {
+        if (typeof value !== 'number') {
+            return { isValid: false, error: `${skillName} must be a number` };
+        }
+        
+        if (value < 1 || value > 10) {
+            return { isValid: false, error: `${skillName} must be between 1 and 10` };
+        }
+        
+        return { isValid: true };
+    }
+    
+    /**
+     * Validate physical attribute value
+     */
+    static validatePhysicalAttribute(value, attributeName, min, max) {
+        if (typeof value !== 'number') {
+            return { isValid: false, error: `${attributeName} must be a number` };
+        }
+        
+        if (value < min || value > max) {
+            return { isValid: false, error: `${attributeName} must be between ${min} and ${max}` };
+        }
+        
+        return { isValid: true };
+    }
+    
+    /**
+     * Sanitize character name
+     */
+    static sanitizeCharacterName(name) {
+        if (!name) return '';
+        return name.trim().substring(0, 50);
+    }
+    
+    /**
+     * Ensure character data completeness - fill in missing fields
+     */
+    static ensureCharacterCompleteness(character, index) {
+        // Ensure required fields exist
+        if (!character.id) {
+            character.id = `char_${index}`;
+        }
+        
+        if (!character.name || character.name.trim() === '') {
+            character.name = `Character ${index + 1}`;
+        }
+        
+        if (typeof character.isPlayer !== 'boolean') {
+            character.isPlayer = false;
+        }
+        
+        if (!character.physicalAttributes) {
+            character.physicalAttributes = {
+                age: 30,
+                height: 170,
+                weight: 70,
+                build: 'Average',
+                looks: 5,
+                gender: 'Male'
             };
         }
         
-        if (bio.length > 1000) {
-            return {
-                isValid: false,
-                error: 'Bio must be 1000 characters or less'
+        if (!character.skills) {
+            character.skills = {
+                competence: 5,
+                laziness: 5,
+                charisma: 5,
+                leadership: 5
             };
         }
         
-        // Check for inappropriate content (basic check)
-        const inappropriateWords = ['badword1', 'badword2']; // Add actual inappropriate words
-        const lowercaseBio = bio.toLowerCase();
-        
-        for (const word of inappropriateWords) {
-            if (lowercaseBio.includes(word)) {
-                return {
-                    isValid: false,
-                    error: 'Bio contains inappropriate content'
-                };
-            }
+        if (!Array.isArray(character.personalityTags)) {
+            character.personalityTags = [];
         }
         
-        return {
-            isValid: true,
-            error: null
-        };
-    }
-    
-    /**
-     * Real-time validation for form fields
-     */
-    static validateField(fieldType, value, context = {}) {
-        switch (fieldType) {
-            case 'firstName':
-            case 'lastName':
-                if (!value || value.trim().length === 0) {
-                    return { isValid: false, error: 'This field is required' };
-                }
-                if (value.trim().length > 50) {
-                    return { isValid: false, error: 'Must be 50 characters or less' };
-                }
-                if (!/^[a-zA-Z\s\-']+$/.test(value)) {
-                    return { isValid: false, error: 'Only letters, spaces, hyphens, and apostrophes allowed' };
-                }
-                break;
-                
-            case 'age':
-                const age = parseInt(value);
-                if (isNaN(age) || age < 18 || age > 65) {
-                    return { isValid: false, error: 'Age must be between 18 and 65' };
-                }
-                break;
-                
-            case 'height':
-                const height = parseInt(value);
-                if (isNaN(height) || height < 140 || height > 210) {
-                    return { isValid: false, error: 'Height must be between 140 and 210 cm' };
-                }
-                break;
-                
-            case 'weight':
-                const weight = parseInt(value);
-                if (isNaN(weight) || weight < 40 || weight > 150) {
-                    return { isValid: false, error: 'Weight must be between 40 and 150 kg' };
-                }
-                break;
-                
-            case 'skill':
-                const skill = parseInt(value);
-                if (isNaN(skill) || skill < 1 || skill > 10) {
-                    return { isValid: false, error: 'Must be between 1 and 10' };
-                }
-                break;
-                
-            case 'bio':
-                return this.validateBio(value);
-                
-            case 'apiKey':
-                return this.validateAPIKey(value);
-                
-            default:
-                return { isValid: true, error: null };
+        if (!Array.isArray(character.inventory)) {
+            character.inventory = [];
         }
         
-        return { isValid: true, error: null };
-    }
-    
-    /**
-     * Get validation summary for display
-     */
-    static getValidationSummary(characters) {
-        const summary = {
-            totalCharacters: characters.length,
-            validCharacters: 0,
-            invalidCharacters: 0,
-            errors: [],
-            warnings: []
-        };
-        
-        characters.forEach((character, index) => {
-            const validation = this.validateCharacter(character);
-            if (validation.isValid) {
-                summary.validCharacters++;
-            } else {
-                summary.invalidCharacters++;
-                validation.errors.forEach(error => {
-                    summary.errors.push(`Character ${index + 1}: ${error}`);
-                });
-            }
-        });
-        
-        // Add warnings
-        if (summary.totalCharacters < 3) {
-            summary.warnings.push('Consider adding more characters for a richer simulation');
+        if (!Array.isArray(character.deskItems)) {
+            character.deskItems = [];
         }
         
-        const playerChars = characters.filter(char => char.isPlayerCharacter);
-        if (playerChars.length === 0) {
-            summary.warnings.push('No player character designated');
+        if (!character.needs) {
+            character.needs = { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 };
         }
         
-        return summary;
+        if (!character.relationships) {
+            character.relationships = {};
+        }
+        
+        return character;
     }
 }
 
 export { ValidationUtils };
 
-console.log('✅ Validation Utils Module loaded');
+console.log('📦 Validation Utils Module loaded - PHASE 2 ENHANCED');
