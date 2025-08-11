@@ -119,7 +119,7 @@ export class NavGrid {
         const path = [current];
         let currentPoint = current;
         
-        while (cameFrom.has(this.hashPoint(currentPoint)) {
+        while (cameFrom.has(this.hashPoint(currentPoint))) {
             currentPoint = cameFrom.get(this.hashPoint(currentPoint));
             path.unshift(currentPoint);
         }
