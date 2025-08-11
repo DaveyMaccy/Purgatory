@@ -175,6 +175,14 @@ async function startGame(characters) {
             console.log('📝 Character creator closed');
         }
         
+        // SHOW GAME UI FIRST - before creating the world container
+        const gameUI = document.getElementById('main-game-ui');
+        if (gameUI) {
+            gameUI.classList.remove('hidden');
+            gameUI.style.display = 'block';
+            console.log('🎮 Game UI shown');
+        }
+        
         gameEngine = new GameEngine();
         
         characterManager = new CharacterManager();
@@ -182,20 +190,12 @@ async function startGame(characters) {
         
         const mapData = await loadMapData();
         
+        // Look for existing container in the proper game UI structure
         let gameWorldContainer = document.getElementById('world-canvas-container');
         if (!gameWorldContainer) {
-            console.log('⚠️ Creating missing world-canvas-container element');
-            gameWorldContainer = document.createElement('div');
-            gameWorldContainer.id = 'world-canvas-container';
-            gameWorldContainer.style.cssText = 'width: 100%; height: 500px; background: #000; border: 2px solid #333; margin: 20px 0;';
-            
-            const gameUI = document.getElementById('main-game-ui');
-            if (gameUI) {
-                gameUI.insertBefore(gameWorldContainer, gameUI.firstChild);
-            } else {
-                document.body.appendChild(gameWorldContainer);
-                console.log('⚠️ Added world-canvas-container to body as fallback');
-            }
+            console.log('⚠️ world-canvas-container not found in HTML, this should not happen');
+            // Don't create fallback - the HTML structure should have this element
+            throw new Error('world-canvas-container element missing from HTML structure');
         }
         
         renderer = new Renderer(gameWorldContainer);
@@ -207,17 +207,10 @@ async function startGame(characters) {
         gameEngine.setRenderer(renderer);
         gameEngine.setUIUpdater(uiUpdater);
         
-        // This was the fix from the previous step.
         gameEngine.initialize(mapData);
         
         if (gameStateManager) {
             gameStateManager.setState('playing');
-        }
-        
-        const gameUI = document.getElementById('main-game-ui');
-        if (gameUI) {
-            gameUI.classList.remove('hidden');
-            gameUI.style.display = 'block';
         }
         
         if (uiManager) {
@@ -265,5 +258,3 @@ export {
 };
 
 console.log('🎮 Main.js loaded - Core game system ready');
-
-
