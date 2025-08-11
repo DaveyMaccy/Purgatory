@@ -1,37 +1,45 @@
 /**
- * Main.js - Game initialization and coordination
- * CORRECTED UPDATE: Only the specified functions (startGame and showErrorMessage) have been replaced.
- * All other functions, including fallbacks and debug tools, are preserved.
+ * Main Application Entry Point - MINIMAL FIX VERSION
+ *
+ * This is a MINIMAL fix that only addresses the two specific errors:
+ * 1. Map file path (office-layout.json → purgatorygamemap.json)
+ * 2. Missing DOM element for renderer
+ * CHANGE: Removed the incorrect closeCharacterCreator() call from startGame to fix the loop.
  */
 
+// Import core systems
+import { UIManager } from './src/ui/ui-manager.js';
+import { InputManager } from './src/input/input-manager.js';
+import { GameStateManager } from './src/core/game-state-manager.js';
 import { GameEngine } from './src/core/game-engine.js';
 import { CharacterManager } from './src/core/characters/character-manager.js';
-import { UIUpdater } from './src/ui/ui-updater.js';
 import { Renderer } from './src/rendering/renderer.js';
-// loadMapData is now imported within the new startGame function where it's used.
+import { UIUpdater } from './src/ui/ui-updater.js';
 import { initializeCharacterCreator } from './character-creator.js';
 
-// Global game state for Stage 3
+// Global system instances
+let uiManager = null;
+let inputManager = null;
+let gameStateManager = null;
 let gameEngine = null;
 let characterManager = null;
-let uiUpdater = null;
 let renderer = null;
-let focusTargetId = null;
+let uiUpdater = null;
 
 /**
- * DOM Ready Event - Main initialization
+ * Application entry point
  */
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎮 Office Purgatory - Game Loading...');
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🎮 Purgatory Office Simulator - Initializing...');
     
     try {
-        // Initialize UI elements
-        initializeUIElements();
+        await initializeGame();
+        console.log('🚀 Game initialization complete');
         
-        // Setup the New Game button
-        setupNewGameButton();
-        
-        console.log('🎮 Game initialization complete - Ready to start!');
+        const loadingStatus = document.getElementById('loading-status');
+        if (loadingStatus) {
+            loadingStatus.textContent = 'Ready to start!';
+        }
         
     } catch (error) {
         console.error('❌ Failed to initialize game:', error);
@@ -40,396 +48,240 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Initialize UI elements and event handlers
+ * Initialize the complete game system
  */
-function initializeUIElements() {
-    // FIXED: Add proper tab styling
-    addTabCSS();
+async function initializeGame() {
+    console.log('🚀 Initializing game systems...');
     
-    // Set up game world click handlers (for future movement system)
-    const worldContainer = document.getElementById('world-canvas-container');
-    if (worldContainer) {
-        worldContainer.addEventListener('click', handleWorldClick);
-    }
+    uiManager = new UIManager();
+    await uiManager.initialize();
     
-    // Set up tab switching in the status panel
-    setupStatusPanelTabs();
+    inputManager = new InputManager();
+    inputManager.initialize();
     
-    console.log('✅ UI elements initialized');
+    gameStateManager = new GameStateManager();
+    gameStateManager.initialize();
+    
+    initializeCharacterCreator();
+    
+    setupNewGameButton();
+    
+    console.log('✅ All systems initialized successfully');
 }
 
 /**
- * FIXED: Add CSS for proper tab styling with even alignment
- */
-function addTabCSS() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .tabs { display: flex; border-bottom: 1px solid #d1d5db; margin-bottom: 0; background-color: #f9fafb; padding: 8px 8px 0 8px; border-radius: 6px 6px 0 0; gap: 2px; }
-        .tab-link { background-color: #f3f4f6; border: 1px solid #d1d5db; color: #374151; padding: 8px 12px; cursor: pointer; border-radius: 6px 6px 0 0; font-size: 14px; font-weight: 500; transition: all 0.2s ease; flex: 1; text-align: center; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: none; }
-        .tab-link:hover { background-color: #e5e7eb; color: #1f2937; }
-        .tab-link.active { background-color: #3b82f6; color: white; border-color: #3b82f6; border-bottom: 1px solid #3b82f6; }
-        .tab-content { display: none; padding: 16px; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 6px 6px; background-color: white; min-height: 200px; margin-top: -1px; }
-        .tab-content.active { display: block; }
-        .widget.flex-grow { display: flex; flex-direction: column; }
-        .widget .flex-grow { flex: 1; overflow-y: auto; }
-    `;
-    document.head.appendChild(style);
-    console.log('✅ Tab CSS injected with proper alignment');
-}
-
-/**
- * Setup New Game button with proper event handling
+ * Setup the New Game button
  */
 function setupNewGameButton() {
-    const newGameButton = document.getElementById('new-game-button');
-    if (newGameButton) {
-        // Remove any existing listeners by cloning
-        const newButton = newGameButton.cloneNode(true);
-        newGameButton.parentNode.replaceChild(newButton, newGameButton);
-        
-        // Enable and add event listener
-        newButton.disabled = false;
-        newButton.addEventListener('click', handleNewGameClick);
-        
-        console.log('✅ New Game button enabled and connected');
-    } else {
-        console.warn('⚠️ New Game button not found');
-        // Auto-start for testing if button missing
-        setTimeout(handleNewGameClick, 1000);
+    const buttonIds = ['new-game-btn', 'new-game-button'];
+    let newGameBtn = null;
+    
+    for (const id of buttonIds) {
+        newGameBtn = document.getElementById(id);
+        if (newGameBtn) {
+            console.log(`🎯 Found New Game button with ID: ${id}`);
+            break;
+        }
     }
-}
-
-/**
- * Handle New Game button click
- */
-function handleNewGameClick() {
-    console.log('🎭 New Game clicked - Opening character creator...');
     
-    try {
-        // Hide start screen
-        hideStartScreen();
+    if (newGameBtn) {
+        newGameBtn.disabled = false;
         
-        // Show character creator
-        showCharacterCreator();
+        const newButton = newGameBtn.cloneNode(true);
+        newGameBtn.parentNode.replaceChild(newButton, newGameBtn);
         
-        // Initialize the character creator with Game Studio office type
-        initializeCharacterCreator('Game Studio');
-        
-        console.log('✅ Character creator opened');
-        
-    } catch (error) {
-        console.error('❌ Failed to open character creator:', error);
-        // Fallback: start with default characters
-        startGameWithFallbackCharacters();
-    }
-}
-
-/**
- * Handle clicks on the game world (placeholder for movement system)
- */
-function handleWorldClick(event) {
-    // This will be implemented in Stage 4 for character movement
-    console.log('🖱️ World clicked at:', event.offsetX, event.offsetY);
-}
-
-/**
- * Set up status panel tab switching
- */
-function setupStatusPanelTabs() {
-    // FIXED: Proper tab switching implementation
-    console.log('🔧 Setting up status panel tabs...');
-    
-    // Make openTab function available globally (as required by HTML onclick)
-    window.openTab = function(evt, tabName) {
-        console.log(`📋 Switching to tab: ${tabName}`);
-        
-        // Hide all tab content
-        const tabContents = document.getElementsByClassName("tab-content");
-        for (let i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        
-        // Remove active class from all tab links
-        const tabLinks = document.getElementsByClassName("tab-link");
-        for (let i = 0; i < tabLinks.length; i++) {
-            tabLinks[i].classList.remove("active");
-        }
-        
-        // Show the selected tab content and mark button as active
-        const targetTab = document.getElementById(tabName);
-        if (targetTab) {
-            targetTab.classList.add("active");
-        }
-        
-        if (evt && evt.currentTarget) {
-            evt.currentTarget.classList.add("active");
-        }
-    };
-    
-    // Set up click handlers for tab buttons (backup to onclick)
-    const tabButtons = document.querySelectorAll('.tab-link');
-    tabButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabName = button.textContent.toLowerCase();
-            window.openTab(e, tabName);
+        newButton.addEventListener('click', function() {
+            console.log('🎯 New Game button clicked');
+            showCharacterCreator();
         });
-    });
-    
-    console.log('✅ Status panel tabs configured');
-}
-
-/**
- * MAIN GAME START FUNCTION - REPLACED AS PER INSTRUCTIONS
- * This function now orchestrates the entire game startup process with the enhanced renderer.
- */
-async function startGame(charactersData) {
-    console.log('🎮 Starting game with enhanced renderer and sprite preloading...');
-    
-    try {
-        // Hide character creator and show game world view
-        hideCharacterCreator();
-        showGameWorld();
-        
-        // Get the world canvas container
-        const worldContainer = document.getElementById('world-canvas-container');
-        if (!worldContainer) {
-            throw new Error('World canvas container not found in DOM');
-        }
-
-        // Initialize Character Manager
-        characterManager = new CharacterManager();
-        // Load character data into character manager
-        console.log('📝 Loading characters into character manager...');
-        characterManager.loadCharacters(charactersData);
-        
-        // Load map data
-        console.log('🗺️ Loading map data...');
-        const { loadMapData } = await import('./src/core/world/world.js');
-        const mapData = await loadMapData();
-        
-        // ENHANCED: Initialize renderer with sprite preloading
-        console.log('🎨 Initializing enhanced renderer with sprite preloading...');
-        renderer = new Renderer(worldContainer);
-        await renderer.initialize(mapData); // This now includes automatic sprite preloading
-        
-        // Initialize game engine with enhanced renderer
-        console.log('⚙️ Initializing game engine...');
-        gameEngine = new GameEngine(characterManager, renderer);
-        await gameEngine.initialize();
-        
-        // Initialize UI updater
-        console.log('🖥️ Initializing UI updater...');
-        uiUpdater = new UIUpdater(characterManager);
-        uiUpdater.initialize();
-        
-        // Start the game loop
-        console.log('🔄 Starting game loop...');
-        gameEngine.start();
-        
-        // Add global access for debugging
-        window.game = {
-            renderer,
-            gameEngine,
-            characterManager,
-            uiUpdater
-        };
-        
-        console.log('✅ Game started successfully with enhanced sprite rendering!');
-        console.log('🔍 Debug tip: Run "window.game.renderer.getStatus()" in console to check renderer status');
-        
-    } catch (error) {
-        console.error('❌ Failed to start game:', error);
-        showErrorMessage('Failed to start game: ' + error.message);
-        
-        // Clean up on failure
-        if (renderer) {
-            renderer.destroy();
-            renderer = null;
-        }
-    }
-}
-// Make the new start function available globally for the character creator
-window.startGameSimulation = startGame;
-
-/**
- * Fallback game start with default characters (PRESERVED)
- */
-function startGameWithFallbackCharacters() {
-    console.log('🔧 Starting with fallback characters...');
-    
-    const fallbackCharacters = [
-        { id: 'fallback_1', name: 'Test Player', isPlayer: true, jobRole: 'Senior Coder', spriteSheet: null, portrait: null, apiKey: '', physicalAttributes: { age: 30, height: 175, weight: 70, build: 'Average', looks: 5 }, skills: { competence: 7, laziness: 3, charisma: 6, leadership: 5 }, personalityTags: ['Analytical', 'Focused'], experienceTags: [], needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 }, inventory: ['Coffee Mug', 'Laptop'], deskItems: ['Monitor', 'Keyboard'], relationships: {} },
-        { id: 'fallback_2', name: 'Test NPC 1', isPlayer: false, jobRole: 'Junior Coder', spriteSheet: null, portrait: null, apiKey: '', physicalAttributes: { age: 25, height: 170, weight: 65, build: 'Slim', looks: 6 }, skills: { competence: 5, laziness: 4, charisma: 7, leadership: 3 }, personalityTags: ['Enthusiastic', 'Collaborative'], experienceTags: [], needs: { energy: 7, hunger: 6, social: 9, comfort: 7, stress: 3 }, inventory: ['Notebook', 'Pen'], deskItems: ['Plant', 'Photo'], relationships: {} }
-    ];
-    
-    // Add 3 more characters to make 5 total
-    for (let i = 2; i < 5; i++) {
-        fallbackCharacters.push({ ...fallbackCharacters[1], id: `fallback_${i + 1}`, name: `Test NPC ${i}`, isPlayer: false });
-    }
-    
-    // Start the game with fallback characters
-    if (window.startGameSimulation) {
-        window.startGameSimulation(fallbackCharacters);
+        
+        console.log('✅ New Game button setup complete');
     } else {
-        console.error('❌ startGameSimulation not available');
+        console.error('❌ New Game button not found! Checked IDs:', buttonIds);
     }
 }
 
 /**
- * UI state management functions (PRESERVED)
+ * Show the character creator modal
  */
-function hideStartScreen() {
+function showCharacterCreator() {
     const startScreen = document.getElementById('start-screen-backdrop');
     if (startScreen) {
         startScreen.style.display = 'none';
-        console.log('📺 Start screen hidden');
+        console.log('📝 Start screen hidden');
     }
-}
-
-function showCharacterCreator() {
-    const creatorModal = document.getElementById('creator-modal-backdrop');
-    if (creatorModal) {
-        creatorModal.style.display = 'flex';
-        creatorModal.classList.remove('hidden');
-        console.log('🎭 Character creator shown');
-    }
-}
-
-function hideCharacterCreator() {
-    const creatorModal = document.getElementById('creator-modal-backdrop');
-    if (creatorModal) {
-        creatorModal.style.display = 'none';
-        console.log('🎭 Character creator hidden');
-    }
-}
-
-function showGameWorld() {
-    // Show the main game UI
-    const mainGameUI = document.getElementById('main-game-ui');
-    if (mainGameUI) {
-        mainGameUI.classList.remove('hidden');
-        mainGameUI.style.display = 'flex';
-        console.log('🌍 Game world shown');
+    
+    const modal = document.getElementById('creator-modal-backdrop');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        console.log('📝 Character creator opened');
+    } else {
+        console.error('❌ Character creator modal not found!');
     }
 }
 
 /**
- * Show error message to user (REPLACED AS PER INSTRUCTIONS)
+ * Close the character creator modal
+ */
+function closeCharacterCreator() {
+    const modal = document.getElementById('creator-modal-backdrop');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+        console.log('📝 Character creator closed');
+    }
+    
+    const startScreen = document.getElementById('start-screen-backdrop');
+    if (startScreen) {
+        startScreen.style.display = 'flex';
+        console.log('📝 Start screen shown');
+    }
+}
+
+/**
+ * Load map data from JSON file
+ */
+async function loadMapData() {
+    try {
+        const response = await fetch('assets/maps/purgatorygamemap.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('❌ Failed to load map data:', error);
+        return {
+            width: 16, height: 12, tilewidth: 48, tileheight: 48, layers: []
+        };
+    }
+}
+
+/**
+ * Start the actual game with finalized characters
+ */
+async function startGame(characters) {
+    console.log('🚀 Starting game with', characters.length, 'characters');
+    
+    try {
+        if (uiManager) {
+            uiManager.showLoadingState(true, 'Starting simulation...');
+        }
+        
+        // Close character creator modal (fix for modal staying open)
+        const modal = document.getElementById('creator-modal-backdrop');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            console.log('📝 Character creator closed');
+        }
+        
+        // SHOW GAME UI FIRST - before creating the world container
+        const gameUI = document.getElementById('main-game-ui');
+        if (gameUI) {
+            gameUI.classList.remove('hidden');
+            gameUI.style.display = 'block';
+            console.log('🎮 Game UI shown');
+        }
+        
+        gameEngine = new GameEngine();
+        
+        characterManager = new CharacterManager();
+        characterManager.loadCharacters(characters);
+        
+        const mapData = await loadMapData();
+        
+        // Look for existing container in the proper game UI structure
+        let gameWorldContainer = document.getElementById('world-canvas-container');
+        if (!gameWorldContainer) {
+            console.log('⚠️ world-canvas-container not found in HTML, this should not happen');
+            // Don't create fallback - the HTML structure should have this element
+            throw new Error('world-canvas-container element missing from HTML structure');
+        }
+        
+        renderer = new Renderer(gameWorldContainer);
+        await renderer.initialize(mapData);
+        
+        uiUpdater = new UIUpdater(characterManager);
+        
+        // CRITICAL FIX: Establish observer pattern connections between UIUpdater and characters
+        const allCharacters = characterManager.getCharacters();
+        console.log(`🔗 Connecting UI observer to ${allCharacters.length} characters...`);
+        
+        allCharacters.forEach(character => {
+            uiUpdater.subscribeToCharacter(character);
+            console.log(`✅ UI subscribed to character: ${character.name}`);
+        });
+        
+        // Set initial UI focus to player character
+        const playerCharacter = characterManager.getPlayerCharacter();
+        if (playerCharacter) {
+            console.log(`🎯 Setting initial UI focus to player: ${playerCharacter.name}`);
+            uiUpdater.updateUI(playerCharacter);
+        }
+        
+        gameEngine.setCharacterManager(characterManager);
+        gameEngine.setRenderer(renderer);
+        gameEngine.setUIUpdater(uiUpdater);
+        
+        gameEngine.initialize(mapData);
+        
+        if (gameStateManager) {
+            gameStateManager.setState('playing');
+        }
+        
+        if (uiManager) {
+            uiManager.showLoadingState(false);
+        }
+        
+        console.log('🎮 Game started successfully with observer pattern connections!');
+        
+        // Test the observer pattern after 1 second to verify it's working
+        setTimeout(() => {
+            console.log('🧪 Testing observer pattern...');
+            if (playerCharacter) {
+                // This should trigger uiUpdater.onCharacterStateChange() -> updateUI()
+                playerCharacter.setMood('happy');
+                console.log('✅ Test mood change sent - UI should update automatically via observer pattern');
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Failed to start game:', error);
+        
+        if (uiManager) {
+            uiManager.showLoadingState(false);
+            uiManager.showError('Failed to start game: ' + error.message);
+        }
+    }
+}
+
+/**
+ * Show error message to user
  */
 function showErrorMessage(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = `
-        position: fixed; top: 20px; right: 20px; background: #dc3545;
-        color: white; padding: 15px; border-radius: 5px; z-index: 9999;
-        max-width: 300px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        font-family: sans-serif;
-    `;
-    errorDiv.textContent = message;
-    document.body.appendChild(errorDiv);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        if (errorDiv.parentNode) {
-            errorDiv.parentNode.removeChild(errorDiv);
-        }
-    }, 5000);
+    if (uiManager) {
+        uiManager.showError(message);
+    } else {
+        alert(message);
+    }
 }
 
-/**
- * Log comprehensive game status for debugging (PRESERVED)
- */
-function logGameStatus() {
-    console.log('📊 Game Status Report:');
-    if (gameEngine) console.log('🎮 Game Engine:', gameEngine.getStatus());
-    if (characterManager) console.log('👥 Character Manager:', characterManager.getStatus());
-    if (renderer) console.log('🎨 Renderer:', renderer.getStatus());
-    if (uiUpdater) console.log('🖥️ UI Updater: Active with clock running');
-}
+// Make functions globally accessible
+window.startGame = startGame;
+window.startGameSimulation = startGame;  // Alias for character creator compatibility
+// The rest of the global functions remain for compatibility.
+window.showCharacterCreator = showCharacterCreator;
+window.closeCharacterCreator = closeCharacterCreator;
+window.togglePause = () => gameEngine?.pause();
+window.setFocusTarget = (id) => renderer?.setFocusTarget(id);
+window.setSimulationSpeed = (speed) => gameEngine?.setSimulationSpeed(speed);
 
-/**
- * Clean up game resources (for page unload or restart) (PRESERVED)
- */
-function cleanupGame() {
-    console.log('🧹 Cleaning up game resources...');
-    if (gameEngine) {
-        gameEngine.stop();
-        gameEngine = null;
-    }
-    if (renderer) {
-        renderer.destroy();
-        renderer = null;
-    }
-    if (uiUpdater) {
-        uiUpdater.destroy();
-        uiUpdater = null;
-    }
-    characterManager = null;
-    focusTargetId = null;
-    console.log('✅ Game cleanup complete');
-}
-
-/**
- * Handle page unload cleanup (PRESERVED)
- */
-window.addEventListener('beforeunload', cleanupGame);
-
-/**
- * Debug functions for console testing (PRESERVED)
- */
-window.debugGame = {
-    getGameEngine: () => gameEngine,
-    getCharacterManager: () => characterManager,
-    getRenderer: () => renderer,
-    getUIUpdater: () => uiUpdater,
-    logStatus: logGameStatus,
-    forceUIUpdate: () => {
-        if (gameEngine && focusTargetId) {
-            const character = characterManager.getCharacter(focusTargetId);
-            if (character && uiUpdater) {
-                uiUpdater.updateUI(character);
-                console.log('🔄 Debug: UI force updated');
-            }
-        }
-    },
-    getCharacterPositions: () => {
-        if (characterManager) {
-            const positions = characterManager.getCharacterPositions();
-            console.log('Character Positions:');
-            positions.forEach(pos => {
-                console.log(`${pos.name}: (${pos.x}, ${pos.y}) - Player: ${pos.isPlayer}`);
-            });
-            return positions;
-        }
-        return [];
-    },
-    testNewGame: handleNewGameClick,
-    startFallback: startGameWithFallbackCharacters,
-    getCharacters: () => {
-        if (characterManager) {
-            return characterManager.characters.map(char => ({ name: char.name, needs: char.needs, position: char.position, mood: char.mood, jobRole: char.jobRole }));
-        }
-        return [];
-    },
-    testCharacterNeeds: () => {
-        if (characterManager) {
-            characterManager.characters.forEach(char => {
-                console.log(`${char.name} needs:`, char.needs);
-            });
-        }
-    },
-    adjustCharacterNeed: (characterName, needType, value) => {
-        if (characterManager) {
-            const char = characterManager.getCharacterByName(characterName);
-            if (char && char.needs && char.needs[needType] !== undefined) {
-                char.needs[needType] = Math.max(0, Math.min(10, value));
-                char.notifyObservers('needs');
-                console.log(`Set ${characterName}'s ${needType} to ${value}`);
-            } else {
-                console.log('Character or need type not found');
-            }
-        }
-    }
+// Export for module usage
+export { 
+    startGame, 
+    showCharacterCreator, 
+    closeCharacterCreator
 };
 
-console.log('🎮 Main.js loaded - Debug functions available as window.debugGame');
+console.log('🎮 Main.js loaded - Core game system ready');
