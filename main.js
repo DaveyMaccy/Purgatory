@@ -246,6 +246,7 @@ function showErrorMessage(message) {
 
 // Make functions globally accessible
 window.startGame = startGame;
+window.startGameSimulation = startGame;  // Alias for character creator compatibility
 // The rest of the global functions remain for compatibility.
 window.showCharacterCreator = showCharacterCreator;
 window.closeCharacterCreator = closeCharacterCreator;
@@ -261,3 +262,4 @@ export {
 };
 
 console.log('🎮 Main.js loaded - Core game system ready');
+
