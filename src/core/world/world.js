@@ -109,9 +109,11 @@ export class World {
             // Initialize grid with all walkable tiles
             this.navGrid = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
             
-            // PHASE 4 FIXED: Create NavGrid instance for A* pathfinding
-            this.navGridInstance = new NavGrid(this.width, this.height, this.navGrid);
-            console.log('✅ NavGrid A* instance created');
+            // CRITICAL FIX: Use correct NavGrid constructor signature
+            this.navGridInstance = new NavGrid();
+            this.navGridInstance.initialize(this.width, this.height);
+            
+            console.log('✅ NavGrid A* instance created and initialized');
             
             // Mark obstacles based on map data or default office layout
             this.markObstacles();
@@ -137,7 +139,7 @@ export class World {
             this.navGrid[0][x] = 1; // Top wall
             this.navGrid[this.height - 1][x] = 1; // Bottom wall
             
-            // PHASE 4: Also mark in NavGrid instance
+            // Also mark in NavGrid instance
             if (this.navGridInstance) {
                 this.navGridInstance.markObstacle(x, 0);
                 this.navGridInstance.markObstacle(x, this.height - 1);
@@ -148,7 +150,7 @@ export class World {
             this.navGrid[y][0] = 1; // Left wall
             this.navGrid[y][this.width - 1] = 1; // Right wall
             
-            // PHASE 4: Also mark in NavGrid instance
+            // Also mark in NavGrid instance
             if (this.navGridInstance) {
                 this.navGridInstance.markObstacle(0, y);
                 this.navGridInstance.markObstacle(this.width - 1, y);
@@ -170,7 +172,7 @@ export class World {
                     if (y >= 0 && y < this.height) {
                         this.navGrid[y][x] = 1;
                         
-                        // PHASE 4: Also mark in NavGrid instance
+                        // Also mark in NavGrid instance
                         if (this.navGridInstance) {
                             this.navGridInstance.markObstacle(x, y);
                         }
@@ -252,58 +254,67 @@ export class World {
                 { displayName: 'Debug Issues', requiredLocation: 'desk', duration: 90000 },
                 { displayName: 'Code Review', requiredLocation: 'desk', duration: 60000 }
             ],
-            'Designer': [
-                { displayName: 'Create Mockups', requiredLocation: 'desk', duration: 90000 },
-                { displayName: 'Review Designs', requiredLocation: 'meeting_room', duration: 45000 },
-                { displayName: 'Update Style Guide', requiredLocation: 'desk', duration: 60000 }
+            'Sales Rep': [
+                { displayName: 'Cold Calls', requiredLocation: 'desk', duration: 90000 },
+                { displayName: 'Update CRM', requiredLocation: 'desk', duration: 60000 },
+                { displayName: 'Client Meeting', requiredLocation: 'meeting_room', duration: 45000 }
             ],
-            'HR': [
-                { displayName: 'Review Resumes', requiredLocation: 'desk', duration: 45000 },
-                { displayName: 'Conduct Interview', requiredLocation: 'meeting_room', duration: 60000 },
-                { displayName: 'Update Policies', requiredLocation: 'desk', duration: 90000 }
+            'Marketing': [
+                { displayName: 'Content Creation', requiredLocation: 'desk', duration: 150000 },
+                { displayName: 'Social Media', requiredLocation: 'desk', duration: 45000 },
+                { displayName: 'Campaign Analysis', requiredLocation: 'desk', duration: 90000 }
             ],
             'Intern': [
-                { displayName: 'Make Coffee', requiredLocation: 'break_room', duration: 15000 },
-                { displayName: 'File Documents', requiredLocation: 'desk', duration: 30000 },
-                { displayName: 'Shadow Senior Staff', requiredLocation: 'desk', duration: 60000 }
+                { displayName: 'Coffee Run', requiredLocation: 'break_room', duration: 30000 },
+                { displayName: 'File Organization', requiredLocation: 'desk', duration: 120000 },
+                { displayName: 'Data Entry', requiredLocation: 'desk', duration: 180000 }
             ]
         };
     }
 
     /**
-     * PRESERVED: Assign tasks to characters based on their roles
-     * This is called at game start to give everyone initial tasks
+     * Assign initial tasks to all characters based on their job roles
+     * This ensures every character has something to do when the game starts
      */
     assignInitialTasks() {
         console.log('📋 Assigning initial tasks to characters...');
         
-        if (!this.characterManager) {
-            console.warn('⚠️ Cannot assign tasks: characterManager not available');
+        if (!this.characterManager || !this.characterManager.characters) {
+            console.warn('⚠️ No character manager or characters available for task assignment');
             return;
         }
-        
-        const characters = this.characterManager.characters;
-        
-        characters.forEach(character => {
-            const tasks = this.taskDictionary[character.jobRole];
-            if (tasks && tasks.length > 0) {
-                // Assign a random task from the available ones
-                const task = tasks[Math.floor(Math.random() * tasks.length)];
-                character.assignedTask = { ...task };
-                console.log(`✅ Assigned "${task.displayName}" to ${character.name} (${character.jobRole})`);
+
+        this.characterManager.characters.forEach(character => {
+            // Skip player character for task assignment (they're controlled by the player)
+            if (character.isPlayer) {
+                console.log(`👤 Skipping task assignment for player character: ${character.name}`);
+                return;
+            }
+
+            // Get available tasks for the character's job role
+            const availableTasks = this.taskDictionary[character.jobRole];
+            
+            if (availableTasks && availableTasks.length > 0) {
+                // Assign a random task from their job role
+                const randomTask = availableTasks[Math.floor(Math.random() * availableTasks.length)];
+                character.assignedTask = { ...randomTask };
+                
+                console.log(`📋 Assigned "${randomTask.displayName}" to ${character.name} (${character.jobRole})`);
             } else {
-                console.warn(`⚠️ No tasks available for role: ${character.jobRole}`);
+                console.warn(`⚠️ No tasks available for job role: ${character.jobRole}`);
             }
         });
+
+        console.log('✅ Initial task assignment complete');
     }
 
     /**
-     * PRESERVED: Get a random valid spawn position for character placement
-     * Ensures characters spawn on walkable tiles
+     * PRESERVED: Get a spawn position that avoids obstacles
+     * @returns {Object} Position object with x and y coordinates in pixels
      */
-    getRandomSpawnPosition() {
-        let attempts = 0;
+    getSpawnPosition() {
         const maxAttempts = 50;
+        let attempts = 0;
         
         while (attempts < maxAttempts) {
             const x = Math.random() * (this.width - 2) + 1; // Keep away from walls
@@ -373,37 +384,5 @@ export class World {
         this.gameTime += deltaTime;
         
         // Future: Update world objects, environmental effects, etc.
-        // This is where time-based world changes would be processed
-    }
-
-    /**
-     * PRESERVED: Get world information for UI display
-     * @returns {Object} World state information
-     */
-    getWorldInfo() {
-        return {
-            officeType: this.officeType,
-            gameTime: this.gameTime,
-            width: this.worldWidth,
-            height: this.worldHeight,
-            tileSize: this.TILE_SIZE
-        };
-    }
-
-    /**
-     * PRESERVED: Get world status for debugging
-     */
-    getStatus() {
-        return {
-            gameTime: this.gameTime,
-            worldSize: `${this.width}x${this.height} tiles`,
-            pixelSize: `${this.worldWidth}x${this.worldHeight} pixels`,
-            tileSize: this.TILE_SIZE,
-            hasNavGrid: !!this.navGrid.length,
-            hasNavGridInstance: !!this.navGridInstance,
-            objectCount: this.objects.length,
-            roomCount: this.rooms.length,
-            taskTypes: Object.keys(this.taskDictionary).length
-        };
     }
 }
