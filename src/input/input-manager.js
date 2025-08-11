@@ -546,7 +546,11 @@ class InputManager {
         if (!window.characterManager) return;
         
         // Find character at position
-        const character = window.characterManager.getCharacterAtPosition(position.x, position.y);
+        const character = window.characterManager.getCharactersNearPosition(position, 25).find(char => {
+    const dx = char.position.x - position.x;
+    const dy = char.position.y - position.y;
+    return Math.sqrt(dx * dx + dy * dy) <= 25;
+});
         
         if (character) {
             console.log(`🖱️ Character clicked: ${character.firstName} ${character.lastName}`);
