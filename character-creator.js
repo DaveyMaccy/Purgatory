@@ -26,6 +26,8 @@ function randomizeCurrentCharacter() {
 }
 
 /**
+ * Randomize the current character
+ */
  * Handle start simulation - FIXED: Use correct modal ID and validation
  */
 function handleStartSimulation() {
