@@ -1,18 +1,16 @@
 /**
  * GameEngine Class - Central game coordination
- * 
- * This class orchestrates all game systems including:
+ * * This class orchestrates all game systems including:
  * - Game loop management
  * - System updates (movement, AI, rendering)
  * - Time management
  * - State coordination
- * 
- * PHASE 4 ADDITIONS:
+ * * PHASE 4 ADDITIONS:
  * - Movement system processing in update loop
  */
 
-import { World } from '../world/world.js';
-import { MovementSystem } from '../systems/movement-system.js';
+import { World } from './world/world.js';
+import { MovementSystem } from './systems/movement-system.js';
 
 export class GameEngine {
     constructor(characterManager, renderer, mapData) {
