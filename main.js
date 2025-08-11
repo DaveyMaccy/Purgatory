@@ -486,3 +486,4 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
