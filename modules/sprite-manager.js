@@ -24,16 +24,18 @@ class SpriteManager {
         
         // Update portrait and info
         this.updateCharacterPortrait(index, character.spriteSheet);
-        this.updateSpriteInfo(index);
+        this.updateSpriteInfo(index, characters);
     }
     
     /**
      * Update sprite info display - matches monolithic exactly
      */
-    static updateSpriteInfo(index) {
+    static updateSpriteInfo(index, characters = null) {
         const spriteInfo = document.getElementById(`sprite-info-${index}`);
         if (spriteInfo) {
-            const spriteIndex = characters[index]?.spriteIndex || 0;
+            // Get characters from window if not passed
+            const charactersArray = characters || window.characters || [];
+            const spriteIndex = charactersArray[index]?.spriteIndex || 0;
             spriteInfo.textContent = `Sprite ${spriteIndex + 1} of ${SPRITE_OPTIONS.length}`;
         }
     }
@@ -148,7 +150,7 @@ class SpriteManager {
         }
         
         // Update sprite info
-        this.updateSpriteInfo(index);
+        this.updateSpriteInfo(index, null);
     }
     
     /**
