@@ -305,69 +305,98 @@ export class Renderer {
     }
 
     /**
-     * ENHANCED: Render character sprite with preloaded textures and better error handling
-     * @param {Object} character - Character data
-     */
-    async renderCharacter(character) {
-        if (!this.isInitialized) {
-            console.warn('❌ Cannot render character: renderer not initialized');
-            return;
-        }
+ * FIXED: Render character sprite with proper texture loading from sprite sheets
+ * @param {Object} character - Character data with spriteSheet property
+ */
+async renderCharacter(character) {
+    if (!this.isInitialized) {
+        console.warn('❌ Cannot render character: renderer not initialized');
+        return;
+    }
 
-        // Remove existing sprite if it exists
-        if (this.characterSprites.has(character.id)) {
-            this.removeCharacter(character.id);
-        }
+    // Remove existing sprite if it exists
+    if (this.characterSprites.has(character.id)) {
+        this.removeCharacter(character.id);
+    }
 
-        try {
-            let sprite;
-            
-            if (character.spriteSheet) {
-                // NEW: Try to get preloaded texture first for better performance
-                const texture = this.preloadedTextures.get(character.spriteSheet);
+    try {
+        let sprite;
+        
+        // Check if character has a valid sprite sheet
+        if (character.spriteSheet) {
+            try {
+                console.log(`🎨 Loading sprite sheet for ${character.name}: ${character.spriteSheet}`);
                 
-                if (texture) {
-                    // Use preloaded texture
-                    sprite = new PIXI.Sprite(texture);
+                // Load the full sprite sheet texture
+                const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
+                
+                if (fullTexture && fullTexture.valid) {
+                    // SPRITE SHEET SPECIFICATIONS (from sprite-manager.js analysis)
+                    const SPRITE_WIDTH = 48;
+                    const SPRITE_HEIGHT = 96;
+                    
+                    // Extract the first sprite frame (standing/idle pose)
+                    // Using frame 0 for game world (frame 3 is used for portraits)
+                    const frameIndex = 0; // First frame for idle pose
+                    const sourceX = frameIndex * SPRITE_WIDTH;
+                    const sourceY = 0; // First row
+                    
+                    // Create a new texture from the specific frame
+                    const frameTexture = new PIXI.Texture(
+                        fullTexture.baseTexture,
+                        new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT)
+                    );
+                    
+                    // Create sprite from the frame texture
+                    sprite = new PIXI.Sprite(frameTexture);
+                    
+                    // Set sprite properties to match renderer constants
                     sprite.width = this.CHARACTER_WIDTH;
                     sprite.height = this.CHARACTER_HEIGHT;
-                    sprite.anchor.set(0.5, 1.0); // Bottom center anchor
-                    console.log(`✅ Using preloaded texture for ${character.name}`);
+                    sprite.anchor.set(0.5, 1.0); // Bottom center anchor for proper positioning
+                    
+                    console.log(`✅ Loaded sprite frame for ${character.name} (${SPRITE_WIDTH}x${SPRITE_HEIGHT})`);
+                    
                 } else {
-                    // Try to load on-demand as fallback
-                    try {
-                        console.log(`🔄 Loading texture on-demand for ${character.name}: ${character.spriteSheet}`);
-                        const loadedTexture = await this.loadSpriteTexture(character.spriteSheet);
-                        sprite = new PIXI.Sprite(loadedTexture);
-                        sprite.width = this.CHARACTER_WIDTH;
-                        sprite.height = this.CHARACTER_HEIGHT;
-                        sprite.anchor.set(0.5, 1.0);
-                        console.log(`✅ Loaded texture on-demand for ${character.name}`);
-                    } catch (error) {
-                        console.warn(`⚠️ Texture loading failed for ${character.name}, using fallback sprite`, error);
-                        sprite = this.createSimpleCharacterSprite(character);
-                    }
+                    throw new Error('Texture failed to load or is invalid');
                 }
-            } else {
-                // No sprite sheet specified, use simple sprite
-                console.log(`🎨 Creating simple sprite for ${character.name} (no spriteSheet specified)`);
+                
+            } catch (error) {
+                console.warn(`⚠️ Failed to load sprite sheet for ${character.name}:`, error);
+                console.warn(`⚠️ Falling back to placeholder sprite`);
                 sprite = this.createSimpleCharacterSprite(character);
             }
+        } else {
+            console.log(`🎨 No sprite sheet specified for ${character.name}, using placeholder`);
+            sprite = this.createSimpleCharacterSprite(character);
+        }
 
-            // Set position
-            sprite.x = character.position?.x || 100;
-            sprite.y = character.position?.y || 100;
+        // Set character position
+        sprite.x = character.position?.x || 100;
+        sprite.y = character.position?.y || 100;
 
-            // Add to character layer
-            this.characterLayer.addChild(sprite);
-            this.characterSprites.set(character.id, sprite);
+        // Add to character layer
+        this.characterLayer.addChild(sprite);
+        this.characterSprites.set(character.id, sprite);
 
-            console.log(`✅ Character sprite rendered: ${character.name} at (${sprite.x}, ${sprite.y})`);
+        console.log(`✅ Character sprite rendered: ${character.name} at (${sprite.x}, ${sprite.y})`);
 
-        } catch (error) {
-            console.error('❌ Failed to render character:', character.name, error);
+    } catch (error) {
+        console.error('❌ Failed to render character:', character.name, error);
+        
+        // Emergency fallback - create placeholder sprite
+        try {
+            const fallbackSprite = this.createSimpleCharacterSprite(character);
+            fallbackSprite.x = character.position?.x || 100;
+            fallbackSprite.y = character.position?.y || 100;
+            this.characterLayer.addChild(fallbackSprite);
+            this.characterSprites.set(character.id, fallbackSprite);
+            console.log(`🔧 Emergency fallback sprite created for ${character.name}`);
+        } catch (fallbackError) {
+            console.error('❌ Even fallback sprite failed:', fallbackError);
         }
     }
+}
 
     /**
      * PRESERVED: Create a simple character sprite (fallback when image loading fails)
