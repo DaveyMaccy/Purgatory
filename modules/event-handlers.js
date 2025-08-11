@@ -25,6 +25,12 @@ class EventHandlers {
             characters = window.characters || [];
         }
         
+        // Ensure the character exists
+        if (!characters[index]) {
+            console.warn(`⚠️ Character ${index} not found, skipping event setup`);
+            return;
+        }
+        
         // Player character checkbox - enforce single player
         this.setupPlayerCharacterHandler(index, characters);
         
@@ -58,6 +64,8 @@ class EventHandlers {
         // Basic form handlers
         this.setupBasicFormHandlers(index, characters);
         
+        console.log(`✅ Event listeners set up for character ${index}`);
+        
         // Initialize checkbox states
         setTimeout(() => {
             this.updateCheckboxStates(index, 'personalityTags', 6);
@@ -83,9 +91,13 @@ class EventHandlers {
                         }
                     });
                     characters[index].isPlayer = true;
+                    console.log(`🎯 Set character ${index + 1} as player character`);
                 } else {
                     characters[index].isPlayer = false;
                 }
+                
+                // Update global reference
+                window.characters = characters;
             });
         }
     }
@@ -393,4 +405,4 @@ class EventHandlers {
 
 export { EventHandlers };
 
-console.log('📦 Event Handlers Module loaded - PHASE 3 COMPLETE');
+console.log('📦 Event Handlers Module loaded - PHASE 4 FINAL');
