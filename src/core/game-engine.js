@@ -1,257 +1,288 @@
 /**
- * Game Engine - Complete Stage 2-3 Integration
- * Lightweight coordinator for game systems with full renderer support
- * CHANGE: Added setCharacterManager method and cleaned up constructor.
+ * GameEngine Class - Central game coordination
+ * 
+ * This class orchestrates all game systems including:
+ * - Game loop management
+ * - System updates (movement, AI, rendering)
+ * - Time management
+ * - State coordination
+ * 
+ * PHASE 4 ADDITIONS:
+ * - Movement system processing in update loop
  */
-import { CharacterManager } from './characters/character-manager.js';
-import { World } from './world/world.js';
+
+import { World } from '../world/world.js';
+import { MovementSystem } from '../systems/movement-system.js';
 
 export class GameEngine {
-    constructor() {
-        // Core systems
-        // *** FIX: Changed to null. The manager is now provided by main.js. ***
-        this.characterManager = null;
-        // World will be initialized after map data is loaded
-        this.world = null;
-
-        // STAGE 2: Rendering system
-        this.renderer = null;
-        this.uiUpdater = null;
-
-        // STAGE 3: Systems that will be added in later stages
-        this.interactionSystem = null;
-        this.movementSystem = null;
-        this.perceptionSystem = null;
-        this.eventSystem = null;
-        this.conversationSystem = null;
-        this.aiQueueManager = null;
-        this.gameLoop = null;
-
-        // Game state
-        this.gameTime = 0;
-        this.isRunning = false;
-    }
-
-    /**
-     * STAGE 2-3 COMPLETE: Initialize with full renderer support
-     */
-    initialize(mapData) {
-        try {
-            console.log('🎮 Initializing game engine...');
-
-            if (!mapData) {
-                throw new Error('Map data is required for initialization');
-            }
-
-            // Initialize world with map data
-            this.world = new World(this.characterManager, mapData);
-
-            // Generate navigation grid for character positioning
-            this.world.generateNavGrid();
-
-            // Initialize characters (they should already be loaded by characterManager)
-            this.characterManager.initializeCharacters();
-
-            // STAGE 2: Start the update loop
-            this.startSimpleUpdateLoop();
-            this.isRunning = true;
-
-            console.log('✅ Game engine initialized successfully');
-
-        } catch (error) {
-            console.error('❌ Failed to initialize game engine:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * *** FIX: This entire method was added to resolve the error. ***
-     * STAGE 3: Set character manager reference
-     * @param {CharacterManager} characterManager - The character manager instance
-     */
-    setCharacterManager(characterManager) {
+    constructor(characterManager, renderer, mapData) {
         this.characterManager = characterManager;
-        console.log('👥 Character Manager connected to game engine');
-    }
-
-    /**
-     * STAGE 2: Set renderer reference
-     * @param {Renderer} renderer - The renderer instance
-     */
-    setRenderer(renderer) {
         this.renderer = renderer;
-        console.log('🎨 Renderer connected to game engine');
-    }
-
-    /**
-     * STAGE 3: Set UI updater reference
-     * @param {UIUpdater} uiUpdater - The UI updater instance
-     */
-    setUIUpdater(uiUpdater) {
-        this.uiUpdater = uiUpdater;
-        console.log('🖥️ UI updater connected to game engine');
-    }
-
-    /**
-     * STAGE 2: Simple update loop for basic functionality
-     */
-    startSimpleUpdateLoop() {
-        const updateInterval = 1000 / 60; // 60 FPS
-
-        this.updateLoop = setInterval(() => {
-            this.update(updateInterval);
-        }, updateInterval);
-
-        console.log('🔄 Update loop started at 60 FPS');
-    }
-
-    /**
-     * STAGE 2-3: Enhanced update with renderer support
-     * @param {number} deltaTime - Time in milliseconds since last update
-     */
-    update(deltaTime) {
-        if (!this.isRunning) return;
-
-        this.gameTime += deltaTime;
-
-        // Update characters (includes needs decay and observer notifications)
-        if (this.characterManager) {
-            this.characterManager.update(deltaTime);
-        }
-
-        // STAGE 2: Update renderer if available
-        if (this.renderer && this.renderer.isInitialized) {
-            // Update character positions in renderer
-            this.characterManager.characters.forEach(character => {
-                if (character.position) {
-                    this.renderer.updateCharacterPosition(
-                        character.id,
-                        character.position.x,
-                        character.position.y
-                    );
-                }
-            });
-
-            this.renderer.update();
-        }
-
-        // STAGE 3: UI updates are handled by observer pattern
-        // The UI updater automatically receives notifications from characters
-    }
-
-    /**
-     * Variable update (for non-fixed updates in future stages)
-     * @param {number} deltaTime - Time in milliseconds since last update
-     */
-    variableUpdate(deltaTime) {
-        // Currently empty, but can be used for non-fixed updates in later stages
-    }
-
-    /**
-     * STAGE 2: Get game world bounds for movement/camera systems
-     */
-    getWorldBounds() {
-        if (this.renderer) {
-            return this.renderer.getWorldBounds();
-        }
-        return { width: 800, height: 600 }; // Default fallback
-    }
-
-    /**
-     * Add a prompt to the global queue (placeholder for Stage 5)
-     * @param {Object} promptData - Prompt data object
-     */
-    addToPromptQueue(promptData) {
-        console.log('🤖 AI queue not implemented yet (Stage 5):', promptData);
-    }
-
-    /**
-     * Pause the game
-     */
-    pause() {
+        this.mapData = mapData;
+        
+        // Initialize world
+        this.world = new World(characterManager, mapData);
+        this.world.generateNavGrid();
+        
+        // Initialize systems
+        this.movementSystem = new MovementSystem();
+        
+        // Game state
         this.isRunning = false;
-        if (this.updateLoop) {
-            clearInterval(this.updateLoop);
-        }
-        console.log('⏸️ Game paused');
+        this.isPaused = false;
+        this.lastFrameTime = 0;
+        this.gameTime = 0;
+        
+        // Performance tracking
+        this.fps = 0;
+        this.frameCount = 0;
+        this.fpsUpdateTime = 0;
+        
+        // Game loop binding
+        this.gameLoop = this.gameLoop.bind(this);
+        
+        console.log('🎮 Game engine initialized');
     }
-
+    
     /**
-     * Resume the game
+     * Start the game engine
      */
-    resume() {
-        if (!this.isRunning) {
-            this.isRunning = true;
-            this.startSimpleUpdateLoop();
-            console.log('▶️ Game resumed');
+    start() {
+        if (this.isRunning) {
+            console.warn('⚠️ Game engine already running');
+            return;
         }
+        
+        this.isRunning = true;
+        this.lastFrameTime = performance.now();
+        this.fpsUpdateTime = this.lastFrameTime;
+        
+        console.log('🚀 Starting game engine...');
+        
+        // Start the game loop
+        requestAnimationFrame(this.gameLoop);
     }
-
+    
     /**
-     * Stop and cleanup the game
+     * Stop the game engine
      */
     stop() {
         this.isRunning = false;
-
-        if (this.updateLoop) {
-            clearInterval(this.updateLoop);
-            this.updateLoop = null;
-        }
-
-        // Cleanup systems
-        if (this.renderer) {
-            this.renderer.destroy();
-            this.renderer = null;
-        }
-
-        if (this.uiUpdater) {
-            this.uiUpdater.destroy();
-            this.uiUpdater = null;
-        }
-
-        console.log('⛔ Game stopped and cleaned up');
+        console.log('🛑 Game engine stopped');
     }
-
+    
     /**
-     * Get comprehensive game status for debugging
+     * Pause/unpause the game
      */
-    getStatus() {
-        return {
-            isRunning: this.isRunning,
-            gameTime: this.gameTime,
-            characterCount: this.characterManager ? this.characterManager.characters.length : 0,
-            hasRenderer: !!this.renderer,
-            rendererInitialized: this.renderer ? this.renderer.isInitialized : false,
-            hasWorld: !!this.world,
-            hasUIUpdater: !!this.uiUpdater,
-            worldNavGridSize: this.world ? `${this.world.navGrid.length}x${this.world.navGrid[0]?.length || 0}` : 'none'
-        };
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        console.log(this.isPaused ? '⏸️ Game paused' : '▶️ Game resumed');
+        return this.isPaused;
     }
-
+    
     /**
-     * STAGE 3: Debug function to get character positions
+     * Main game loop
+     * @param {number} currentTime - Current timestamp from requestAnimationFrame
      */
-    getCharacterPositions() {
-        if (!this.characterManager) return [];
-
-        return this.characterManager.characters.map(char => ({
-            id: char.id,
-            name: char.name,
-            position: char.position,
-            isPlayer: char.isPlayer
-        }));
+    gameLoop(currentTime) {
+        if (!this.isRunning) return;
+        
+        // Calculate delta time
+        const deltaTime = currentTime - this.lastFrameTime;
+        this.lastFrameTime = currentTime;
+        
+        // Update FPS counter
+        this.updateFPS(currentTime);
+        
+        // Update game if not paused
+        if (!this.isPaused) {
+            this.update(deltaTime);
+        }
+        
+        // Render
+        this.render();
+        
+        // Continue loop
+        requestAnimationFrame(this.gameLoop);
     }
-
+    
     /**
-     * STAGE 3: Debug function to force UI update
+     * Update all game systems
+     * @param {number} deltaTime - Time since last frame in milliseconds
      */
-    forceUIUpdate() {
-        if (this.uiUpdater && this.characterManager) {
-            const playerCharacter = this.characterManager.getPlayerCharacter();
-            if (playerCharacter) {
-                this.uiUpdater.updateUI(playerCharacter);
-                console.log('🔄 Forced UI update completed');
+    update(deltaTime) {
+        // Update game time
+        this.gameTime += deltaTime;
+        
+        // Update world
+        if (this.world) {
+            this.world.update(deltaTime);
+        }
+        
+        // Update all characters
+        if (this.characterManager) {
+            const characters = this.characterManager.getAllCharacters();
+            characters.forEach(character => {
+                character.update(deltaTime);
+            });
+        }
+        
+        // PHASE 4: Process character movement
+        if (this.movementSystem && this.characterManager && this.world) {
+            const characters = this.characterManager.getAllCharacters();
+            
+            for (const character of characters) {
+                if (character.path && character.path.length > 0) {
+                    // Convert deltaTime to seconds for movement system
+                    this.movementSystem.moveCharacter(character, this.world, deltaTime / 1000);
+                    
+                    // Update renderer with new position
+                    if (this.renderer) {
+                        this.renderer.updateCharacterPosition(character.id, character.position.x, character.position.y);
+                    }
+                }
             }
         }
+        
+        // Future: Update AI system
+        // if (this.aiSystem) {
+        //     this.aiSystem.update(deltaTime);
+        // }
+        
+        // Future: Update interaction system
+        // if (this.interactionSystem) {
+        //     this.interactionSystem.update(deltaTime);
+        // }
+    }
+    
+    /**
+     * Render the game
+     */
+    render() {
+        if (this.renderer) {
+            this.renderer.update();
+        }
+    }
+    
+    /**
+     * Update FPS counter
+     * @param {number} currentTime - Current timestamp
+     */
+    updateFPS(currentTime) {
+        this.frameCount++;
+        
+        // Update FPS every second
+        if (currentTime - this.fpsUpdateTime >= 1000) {
+            this.fps = this.frameCount;
+            this.frameCount = 0;
+            this.fpsUpdateTime = currentTime;
+            
+            // Update FPS display if element exists
+            const fpsElement = document.getElementById('fps-counter');
+            if (fpsElement) {
+                fpsElement.textContent = `FPS: ${this.fps}`;
+            }
+        }
+    }
+    
+    /**
+     * Get current game state information
+     * @returns {Object} Game state info
+     */
+    getGameState() {
+        return {
+            isRunning: this.isRunning,
+            isPaused: this.isPaused,
+            gameTime: this.gameTime,
+            fps: this.fps,
+            characterCount: this.characterManager?.getAllCharacters().length || 0,
+            worldSize: this.world ? `${this.world.width}x${this.world.height}` : 'N/A'
+        };
+    }
+    
+    /**
+     * Handle game events
+     * @param {string} eventType - Type of event
+     * @param {Object} eventData - Event data
+     */
+    handleEvent(eventType, eventData) {
+        switch (eventType) {
+            case 'character_click':
+                this.handleCharacterClick(eventData.characterId);
+                break;
+            case 'world_click':
+                this.handleWorldClick(eventData.x, eventData.y);
+                break;
+            case 'task_complete':
+                this.handleTaskComplete(eventData.characterId, eventData.taskId);
+                break;
+            default:
+                console.warn(`⚠️ Unknown event type: ${eventType}`);
+        }
+    }
+    
+    /**
+     * Handle character click events
+     * @param {string} characterId - ID of clicked character
+     */
+    handleCharacterClick(characterId) {
+        console.log(`👤 Character clicked: ${characterId}`);
+        
+        // Future: Open character interaction menu
+        // For now, just log character info
+        const character = this.characterManager.getCharacterById(characterId);
+        if (character) {
+            console.log('Character info:', character.getStatus());
+        }
+    }
+    
+    /**
+     * Handle world click events (delegated to main.js handleWorldClick)
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     */
+    handleWorldClick(x, y) {
+        console.log(`🌍 World clicked at: (${x}, ${y})`);
+        // Movement is handled by main.js handleWorldClick function
+    }
+    
+    /**
+     * Handle task completion events
+     * @param {string} characterId - ID of character who completed task
+     * @param {string} taskId - ID of completed task
+     */
+    handleTaskComplete(characterId, taskId) {
+        console.log(`✅ Task completed: ${taskId} by character ${characterId}`);
+        
+        // Assign a new task to the character
+        const character = this.characterManager.getCharacterById(characterId);
+        if (character && this.world) {
+            const tasks = this.world.taskDictionary[character.jobRole];
+            if (tasks && tasks.length > 0) {
+                const newTask = tasks[Math.floor(Math.random() * tasks.length)];
+                character.assignedTask = { ...newTask };
+                console.log(`📋 New task assigned to ${character.name}: ${newTask.displayName}`);
+            }
+        }
+    }
+    
+    /**
+     * Clean up and destroy the game engine
+     */
+    destroy() {
+        this.stop();
+        
+        // Clean up renderer
+        if (this.renderer) {
+            this.renderer.destroy();
+        }
+        
+        // Clear references
+        this.characterManager = null;
+        this.renderer = null;
+        this.world = null;
+        this.movementSystem = null;
+        
+        console.log('🧹 Game engine destroyed');
     }
 }
