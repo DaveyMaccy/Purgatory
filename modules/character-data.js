@@ -1,8 +1,8 @@
 /**
- * Character Data Module - PHASE 2 COMPLETE ALIGNMENT
+ * Character Data Module - FIXED AND COMPLETE
  * 
  * Contains all character-related data structures, constants, and generation functions.
- * Now matches the monolithic version exactly for full feature parity.
+ * This is the corrected version with all exports and functionality intact.
  */
 
 // ENHANCED CONSTANTS - Complete alignment with monolithic version
@@ -71,10 +71,18 @@ export const NAMES_BY_GENDER = {
  * Helper functions - matches monolithic exactly
  */
 export function getRandomItem(array) {
+    if (!array || !Array.isArray(array) || array.length === 0) {
+        console.error('getRandomItem called with invalid array:', array);
+        return null;
+    }
     return array[Math.floor(Math.random() * array.length)];
 }
 
 export function getRandomItems(array, min, max) {
+    if (!array || !Array.isArray(array) || array.length === 0) {
+        console.error('getRandomItems called with invalid array:', array);
+        return [];
+    }
     const count = Math.floor(Math.random() * (max - min + 1)) + min;
     const shuffled = [...array].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, count);
@@ -84,6 +92,10 @@ export function getRandomItems(array, min, max) {
  * Generate name based on gender - matches monolithic exactly
  */
 export function generateNameByGender(gender) {
+    if (!NAMES_BY_GENDER[gender]) {
+        console.error('Invalid gender for name generation:', gender);
+        gender = 'Male'; // Fallback
+    }
     const firstNames = NAMES_BY_GENDER[gender].first;
     const lastNames = NAMES_BY_GENDER[gender].last;
     return `${getRandomItem(firstNames)} ${getRandomItem(lastNames)}`;
@@ -93,6 +105,12 @@ export function generateNameByGender(gender) {
  * Create complete randomized character - matches monolithic exactly
  */
 export function createCompleteRandomCharacter(index, officeType = 'Game Studio') {
+    // Validate office type
+    if (!JOB_ROLES_BY_OFFICE[officeType]) {
+        console.error('Invalid office type:', officeType);
+        officeType = 'Game Studio'; // Fallback to default
+    }
+    
     const gender = getRandomItem(GENDERS);
     const randomTags = getRandomItems(PERSONALITY_TAGS, 3, 6);
     const randomInventory = getRandomItems(INVENTORY_OPTIONS, 1, 3);
@@ -257,4 +275,4 @@ export function finalizeCharacters(characters, globalAPIKey = '') {
     return formatCharactersForGame(characters, globalAPIKey);
 }
 
-console.log('📦 Character Data Module loaded - PHASE 2 COMPLETE ALIGNMENT');
+console.log('📦 Character Data Module loaded - FIXED AND COMPLETE');
