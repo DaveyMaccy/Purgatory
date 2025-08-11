@@ -119,7 +119,7 @@ export class GameEngine {
         
         // Update all characters
         if (this.characterManager) {
-            const characters = this.characterManager.getAllCharacters();
+            const characters = this.characterManager.characters;
             characters.forEach(character => {
                 character.update(deltaTime);
             });
@@ -127,7 +127,7 @@ export class GameEngine {
         
         // PHASE 4: Process character movement
         if (this.movementSystem && this.characterManager && this.world) {
-            const characters = this.characterManager.getAllCharacters();
+            const characters = this.characterManager.characters;
             
             for (const character of characters) {
                 if (character.path && character.path.length > 0) {
@@ -193,7 +193,7 @@ export class GameEngine {
             isPaused: this.isPaused,
             gameTime: this.gameTime,
             fps: this.fps,
-            characterCount: this.characterManager?.getAllCharacters().length || 0,
+            characterCount: this.characterManager?.characters.length || 0,
             worldSize: this.world ? `${this.world.width}x${this.world.height}` : 'N/A'
         };
     }
@@ -284,3 +284,4 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
+
