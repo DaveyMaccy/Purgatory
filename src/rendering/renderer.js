@@ -341,8 +341,8 @@ export class Renderer {
     }
 
     /**
-     * ENHANCED: Render character sprite with conditional sprite loading
-     * ⚠️ SAFE: Falls back to placeholder if enhanced sprites are dormant
+     * FIXED: Render character sprite with basic sprite loading + optional enhancements
+     * ⚠️ ALWAYS works: Loads basic sprites, enhanced features dormant until flag enabled
      * @param {Object} character - Character data
      */
     async renderCharacter(character) {
@@ -359,55 +359,52 @@ export class Renderer {
         try {
             let sprite;
             
-            // CONDITIONAL: Only attempt enhanced sprite loading if enabled
-            if (USE_ENHANCED_SPRITES && character.spriteSheet) {
+            // ALWAYS attempt basic sprite loading if character has spriteSheet
+            if (character.spriteSheet) {
                 try {
-                    console.log(`🎨 Loading enhanced sprite for ${character.name}: ${character.spriteSheet}`);
+                    console.log(`🎨 Loading sprite for ${character.name}: ${character.spriteSheet}`);
                     
-                    // Load the full sprite sheet texture
-                    const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
+                    // Basic sprite loading (ALWAYS enabled)
+                    const texture = await PIXI.Texture.fromURL(character.spriteSheet);
                     
-                    if (fullTexture && fullTexture.valid) {
-                        // SPRITE SHEET SPECIFICATIONS
-                        const SPRITE_WIDTH = 48;
-                        const SPRITE_HEIGHT = 96;
-                        
-                        // Extract the first sprite frame (standing/idle pose)
-                        const frameIndex = 0; // First frame for idle pose
-                        const sourceX = frameIndex * SPRITE_WIDTH;
-                        const sourceY = 0; // First row
-                        
-                        // Create a new texture from the specific frame
-                        const frameTexture = new PIXI.Texture(
-                            fullTexture.baseTexture,
-                            new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT)
-                        );
-                        
-                        // Create sprite from the frame texture
-                        sprite = new PIXI.Sprite(frameTexture);
+                    if (texture && texture.valid) {
+                        // CONDITIONAL: Use enhanced frame extraction if enabled, otherwise use full texture
+                        if (USE_ENHANCED_SPRITES) {
+                            // ENHANCED: Extract specific frame from sprite sheet
+                            const SPRITE_WIDTH = 48;
+                            const SPRITE_HEIGHT = 96;
+                            const frameIndex = 0; // First frame for idle pose
+                            const sourceX = frameIndex * SPRITE_WIDTH;
+                            const sourceY = 0; // First row
+                            
+                            const frameTexture = new PIXI.Texture(
+                                texture.baseTexture,
+                                new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT)
+                            );
+                            sprite = new PIXI.Sprite(frameTexture);
+                            console.log(`✅ Enhanced frame extraction for ${character.name}`);
+                        } else {
+                            // BASIC: Use full texture as-is (current working behavior)
+                            sprite = new PIXI.Sprite(texture);
+                            console.log(`✅ Basic sprite loaded for ${character.name}`);
+                        }
                         
                         // Set sprite properties
                         sprite.width = this.CHARACTER_WIDTH;
                         sprite.height = this.CHARACTER_HEIGHT;
                         sprite.anchor.set(0.5, 1.0); // Bottom center anchor
                         
-                        console.log(`✅ Enhanced sprite loaded for ${character.name}`);
-                        
                     } else {
-                        throw new Error('Enhanced texture failed to load');
+                        throw new Error('Texture failed to load or is invalid');
                     }
                     
                 } catch (error) {
-                    console.warn(`⚠️ Enhanced sprite failed for ${character.name}, using placeholder:`, error);
+                    console.warn(`⚠️ Sprite loading failed for ${character.name}, using placeholder:`, error);
                     sprite = this.createSimpleCharacterSprite(character);
                 }
             } else {
-                // FALLBACK: Use placeholder sprite (dormant mode or no sprite sheet)
-                if (!USE_ENHANCED_SPRITES && character.spriteSheet) {
-                    console.log(`💤 Enhanced sprites dormant - using placeholder for ${character.name}`);
-                } else {
-                    console.log(`🎨 No sprite sheet for ${character.name} - using placeholder`);
-                }
+                // No sprite sheet specified - use placeholder
+                console.log(`🎨 No sprite sheet for ${character.name} - using placeholder`);
                 sprite = this.createSimpleCharacterSprite(character);
             }
 
