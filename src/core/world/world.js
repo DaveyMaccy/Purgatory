@@ -280,7 +280,7 @@ export class World {
             return;
         }
         
-        const characters = this.characterManager.getAllCharacters();
+        const characters = this.characterManager.characters;
         
         characters.forEach(character => {
             const tasks = this.taskDictionary[character.jobRole];
@@ -352,3 +352,4 @@ export class World {
         };
     }
 }
+
