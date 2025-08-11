@@ -1,12 +1,13 @@
 /**
  * STAGE 3 COMPLETE: Character Manager - Handles character lifecycle and positioning
- * 
+ *
  * Handles all character-related operations including:
  * - Loading characters from character creator
  * - Character initialization and positioning
  * - Character updates and state management
  * - Integration with world navigation grid
  * - Player character identification
+ * CHANGE: Removed redundant initializeNeeds() call.
  */
 
 import { Character } from './character.js';
@@ -15,7 +16,7 @@ export class CharacterManager {
     constructor() {
         this.characters = [];
         this.playerCharacter = null;
-        
+
         console.log('👥 CharacterManager initialized');
     }
 
@@ -25,33 +26,33 @@ export class CharacterManager {
      */
     loadCharacters(charactersData) {
         console.log('📝 Loading characters from character creator:', charactersData);
-        
+
         // Clear existing characters
         this.characters = [];
         this.playerCharacter = null;
-        
+
         // Convert character creator data to Character instances
         charactersData.forEach((charData, index) => {
             try {
                 // Create Character instance
                 const character = new Character(charData);
-                
+
                 // Set as player character if it's the first one or explicitly marked
                 if (index === 0 || charData.isPlayer) {
                     character.isPlayer = true;
                     this.playerCharacter = character;
                     console.log(`🎯 Set ${character.name} as player character`);
                 }
-                
+
                 // Add to characters array
                 this.characters.push(character);
                 console.log(`✅ Created character: ${character.name} (${character.jobRole})`);
-                
+
             } catch (error) {
                 console.error(`❌ Failed to create character from data:`, charData, error);
             }
         });
-        
+
         console.log(`📋 Loaded ${this.characters.length} characters total`);
     }
 
@@ -60,19 +61,20 @@ export class CharacterManager {
      */
     initializeCharacters() {
         console.log('🔧 Initializing characters...');
-        
+
         this.characters.forEach(character => {
             try {
-                // Initialize character systems
-                character.initializeNeeds();
+                // *** THIS IS THE FIX ***
+                // The character.initializeNeeds() call was removed because the Character
+                // constructor already initializes the needs, making this call redundant.
                 
                 // Set initial action state
                 if (!character.actionState) {
                     character.setActionState('idle');
                 }
-                
+
                 console.log(`✅ Initialized character: ${character.name}`);
-                
+
             } catch (error) {
                 console.error(`❌ Failed to initialize character ${character.name}:`, error);
             }
@@ -93,10 +95,10 @@ export class CharacterManager {
         }
 
         console.log('📍 Initializing character positions...');
-        
+
         this.characters.forEach((character, index) => {
             let position;
-            
+
             // Try to get a random walkable position from the world
             if (world.getRandomWalkablePosition) {
                 try {
@@ -107,7 +109,7 @@ export class CharacterManager {
                     position = null;
                 }
             }
-            
+
             // Fallback position calculation if world positioning fails
             if (!position) {
                 const fallbackX = 100 + (index * 100) % 600; // Spread characters across width
@@ -115,12 +117,12 @@ export class CharacterManager {
                 position = { x: fallbackX, y: fallbackY };
                 console.warn(`⚠️ Using fallback position for ${character.name}: (${position.x}, ${position.y})`);
             }
-            
+
             // Set character position
             character.setPosition(position);
             console.log(`✅ Positioned ${character.name} at (${position.x}, ${position.y})`);
         });
-        
+
         console.log('📍 Character positioning complete');
     }
 
@@ -176,12 +178,12 @@ export class CharacterManager {
     getCharactersNearPosition(position, radius = 100) {
         return this.characters.filter(char => {
             if (!char.position) return false;
-            
+
             const distance = Math.sqrt(
-                Math.pow(char.position.x - position.x, 2) + 
+                Math.pow(char.position.x - position.x, 2) +
                 Math.pow(char.position.y - position.y, 2)
             );
-            
+
             return distance <= radius;
         });
     }
@@ -222,12 +224,12 @@ export class CharacterManager {
         if (index !== -1) {
             const character = this.characters[index];
             this.characters.splice(index, 1);
-            
+
             // Clear player reference if this was the player
             if (this.playerCharacter && this.playerCharacter.id === characterId) {
                 this.playerCharacter = null;
             }
-            
+
             console.log(`➖ Removed character: ${character.name}`);
             return true;
         }
