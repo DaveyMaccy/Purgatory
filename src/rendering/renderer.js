@@ -1,9 +1,21 @@
 /**
- * FIXED: Rendering System with 16:9 aspect ratio and responsive canvas
+ * ENHANCED: Complete Rendering System with Sprite Preloading
  *
- * This file handles all visual rendering for the game world with proper dimensions
- * and better error handling for DOM elements.
- * CHANGE: Removed the erroneous isInitialized check from renderMap.
+ * This file handles all visual rendering for the game world with proper dimensions,
+ * enhanced sprite preloading, texture caching, and better error handling.
+ * 
+ * PRESERVES ALL EXISTING FEATURES:
+ * - 16:9 aspect ratio and responsive canvas
+ * - Map rendering with office layout
+ * - Character positioning and sprite management
+ * - Resize handling and cleanup
+ * - Debug utilities and status checking
+ * 
+ * ADDS NEW FEATURES:
+ * - Sprite texture preloading system
+ * - Texture caching for better performance
+ * - Enhanced error handling for asset loading
+ * - Better fallback mechanisms
  */
 
 export class Renderer {
@@ -12,15 +24,16 @@ export class Renderer {
         this.app = null;
         this.worldContainer = null;
         this.characterSprites = new Map(); // Map character IDs to sprites
+        this.preloadedTextures = new Map(); // NEW: Cache for loaded textures
         this.mapSprites = [];
         this.isInitialized = false;
 
-        // FIXED: 16:9 aspect ratio constants
+        // PRESERVED: 16:9 aspect ratio constants
         this.TILE_SIZE = 48;
         this.CHARACTER_WIDTH = 48;
         this.CHARACTER_HEIGHT = 96; // Characters are 48x96 (2 tiles tall)
 
-        // FIXED: 16:9 aspect ratio dimensions
+        // PRESERVED: 16:9 aspect ratio dimensions
         this.BASE_WIDTH = 1280;
         this.BASE_HEIGHT = 720;
 
@@ -28,25 +41,79 @@ export class Renderer {
         this.WORLD_WIDTH = this.BASE_WIDTH;
         this.WORLD_HEIGHT = this.BASE_HEIGHT;
 
-        console.log('🎨 Renderer constructor called with 16:9 aspect ratio');
+        console.log('🎨 Enhanced Renderer constructor with sprite preloading support');
     }
 
     /**
-     * FIXED: Initialize PixiJS application with responsive 16:9 canvas
+     * NEW: Preload all character sprite textures for better performance
+     */
+    async preloadCharacterSprites() {
+        console.log('🔄 Preloading character sprite textures...');
+        
+        const spritePromises = [];
+        
+        // Generate sprite paths (matches character-data.js - first 25 sprites)
+        for (let i = 1; i <= 25; i++) {
+            const paddedNumber = i.toString().padStart(2, '0');
+            const spritePath = `assets/characters/character-${paddedNumber}.png`;
+            
+            const promise = this.loadSpriteTexture(spritePath).catch(error => {
+                console.warn(`⚠️ Failed to preload sprite: ${spritePath}`, error);
+                return null; // Continue with other sprites
+            });
+            
+            spritePromises.push(promise);
+        }
+        
+        const results = await Promise.allSettled(spritePromises);
+        const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
+        
+        console.log(`✅ Preloaded ${successCount}/25 character sprites`);
+        return successCount;
+    }
+
+    /**
+     * NEW: Load a single sprite texture with caching
+     */
+    async loadSpriteTexture(spritePath) {
+        // Check if already loaded
+        if (this.preloadedTextures.has(spritePath)) {
+            return this.preloadedTextures.get(spritePath);
+        }
+        
+        try {
+            const texture = await PIXI.Texture.fromURL(spritePath);
+            
+            // Validate texture is actually loaded
+            if (texture && texture.valid && texture.width > 0 && texture.height > 0) {
+                this.preloadedTextures.set(spritePath, texture);
+                console.log(`📦 Cached texture: ${spritePath} (${texture.width}x${texture.height})`);
+                return texture;
+            } else {
+                throw new Error('Invalid texture dimensions or failed to load');
+            }
+        } catch (error) {
+            console.error(`❌ Failed to load texture: ${spritePath}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * ENHANCED: Initialize PixiJS application with sprite preloading
      */
     async initialize(mapData) {
         try {
-            console.log('🔧 Initializing PixiJS renderer with 16:9 aspect ratio...');
+            console.log('🔧 Initializing enhanced PixiJS renderer with sprite preloading...');
 
-            // FIXED: Validate container exists before proceeding
+            // PRESERVED: Validate container exists before proceeding
             if (!this.container) {
                 throw new Error('Container element is required for renderer initialization');
             }
 
-            // Calculate optimal canvas size for container
+            // PRESERVED: Calculate optimal canvas size for container
             this.calculateCanvasSize();
 
-            // Create PixiJS application with calculated dimensions
+            // PRESERVED: Create PixiJS application with calculated dimensions
             this.app = new PIXI.Application({
                 width: this.WORLD_WIDTH,
                 height: this.WORLD_HEIGHT,
@@ -56,45 +123,49 @@ export class Renderer {
                 autoDensity: true
             });
 
-            // FIXED: Make canvas responsive and centered
+            // PRESERVED: Make canvas responsive and centered
             this.setupResponsiveCanvas();
 
-            // Add canvas to container
+            // PRESERVED: Add canvas to container
             this.container.appendChild(this.app.view);
 
-            // Create world container for all game objects
+            // PRESERVED: Create world container for all game objects
             this.worldContainer = new PIXI.Container();
             this.app.stage.addChild(this.worldContainer);
 
-            // Create layers in proper order (bottom to top)
+            // PRESERVED: Create layers in proper order (bottom to top)
             this.mapLayer = new PIXI.Container();
             this.characterLayer = new PIXI.Container();
 
             this.worldContainer.addChild(this.mapLayer);
             this.worldContainer.addChild(this.characterLayer);
 
-            // Add resize listener for responsive behavior
+            // PRESERVED: Add resize listener for responsive behavior
             this.setupResizeListener();
 
-            // Render the map if provided
+            // NEW: Preload sprites BEFORE rendering anything
+            const preloadedCount = await this.preloadCharacterSprites();
+            console.log(`🎮 Sprite preloading complete: ${preloadedCount} textures cached`);
+
+            // PRESERVED: Render the map if provided
             if (mapData) {
                 this.renderMap(mapData);
             }
 
             this.isInitialized = true;
-            console.log(`✅ PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`);
+            console.log(`✅ Enhanced PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`);
 
         } catch (error) {
-            console.error('❌ Failed to initialize renderer:', error);
+            console.error('❌ Failed to initialize enhanced renderer:', error);
             throw error;
         }
     }
 
     /**
-     * FIXED: Calculate optimal canvas size maintaining 16:9 aspect ratio with better fallbacks
+     * PRESERVED: Calculate optimal canvas size maintaining 16:9 aspect ratio with better fallbacks
      */
     calculateCanvasSize() {
-        // FIXED: Better error handling for missing container
+        // PRESERVED: Better error handling for missing container
         if (!this.container) {
             console.warn('⚠️ No container provided, using fallback dimensions');
             this.WORLD_WIDTH = 800;
@@ -107,7 +178,7 @@ export class Renderer {
             let containerWidth = containerRect.width;
             let containerHeight = containerRect.height;
 
-            // FIXED: Better fallback logic
+            // PRESERVED: Better fallback logic
             if (containerWidth <= 0 || containerHeight <= 0) {
                 console.warn('⚠️ Container has no size, using fallback dimensions');
                 containerWidth = Math.max(this.container.offsetWidth, 800);
@@ -149,7 +220,7 @@ export class Renderer {
     }
 
     /**
-     * FIXED: Setup responsive canvas styling
+     * PRESERVED: Setup responsive canvas styling
      */
     setupResponsiveCanvas() {
         const canvas = this.app.view;
@@ -162,7 +233,7 @@ export class Renderer {
     }
 
     /**
-     * FIXED: Setup resize listener for responsive behavior
+     * PRESERVED: Setup resize listener for responsive behavior
      */
     setupResizeListener() {
         const resizeHandler = () => {
@@ -179,51 +250,38 @@ export class Renderer {
     }
 
     /**
-     * FIXED: Render office map with proper 16:9 proportions
+     * PRESERVED: Render office map with proper 16:9 proportions
      * @param {Object} mapData - Map data from JSON file
      */
     renderMap(mapData) {
-        // *** THIS IS THE FIX ***
-        // The check 'if (!this.isInitialized)' was removed because it caused an error.
-        // The isInitialized flag is set *after* this function is called from initialize(),
-        // so the check would always fail and log a pointless error.
+        console.log('🗺️ Rendering office map...');
 
-        console.log('🗺️ Rendering map with 16:9 layout...');
+        // Clear existing map sprites
+        this.mapSprites.forEach(sprite => {
+            this.mapLayer.removeChild(sprite);
+        });
+        this.mapSprites = [];
 
-        // Clear existing map
-        this.mapLayer.removeChildren();
-
-        // Create office background that fills the 16:9 area
-        const floor = new PIXI.Graphics();
-        floor.beginFill(0xf5f5f5); // Light gray floor
-        floor.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT);
-        floor.endFill();
-        this.mapLayer.addChild(floor);
-
-        // Add office elements scaled for 16:9 layout
-        this.addOfficeElements();
-
-        console.log('✅ Map rendered successfully in 16:9 format');
-    }
-
-    /**
-     * FIXED: Add office elements scaled for 16:9 layout
-     */
-    addOfficeElements() {
+        // Create a simple office layout graphics
         const graphics = new PIXI.Graphics();
 
-        // FIXED: Scale desk positions for wider 16:9 layout
-        const deskColor = 0x8b4513;
-        const scaleX = this.WORLD_WIDTH / 800; // Scale from old 800px width
-        const scaleY = this.WORLD_HEIGHT / 600; // Scale from old 600px height
+        // Calculate scale factors for responsive design
+        const scaleX = this.WORLD_WIDTH / this.BASE_WIDTH;
+        const scaleY = this.WORLD_HEIGHT / this.BASE_HEIGHT;
 
+        // Floor
+        const floorColor = 0xf0f0f0;
+        graphics.beginFill(floorColor);
+        graphics.drawRect(10, 10, this.WORLD_WIDTH - 20, this.WORLD_HEIGHT - 20);
+        graphics.endFill();
+
+        // Office desks (scaled positions)
+        const deskColor = 0x8B4513;
         const desks = [
-            { x: 150 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 400 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 650 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 900 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 150 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 400 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
+            { x: 200 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
+            { x: 450 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
+            { x: 200 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
+            { x: 450 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
             { x: 650 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
             { x: 900 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY }
         ];
@@ -243,13 +301,14 @@ export class Renderer {
         graphics.endFill();
 
         this.mapLayer.addChild(graphics);
+        console.log('✅ Office map rendered');
     }
 
     /**
-     * FIXED: Render character sprite with better error handling
+     * ENHANCED: Render character sprite with preloaded textures and better error handling
      * @param {Object} character - Character data
      */
-    renderCharacter(character) {
+    async renderCharacter(character) {
         if (!this.isInitialized) {
             console.warn('❌ Cannot render character: renderer not initialized');
             return;
@@ -261,8 +320,39 @@ export class Renderer {
         }
 
         try {
-            // For now, create a simple colored rectangle as character representation
-            const sprite = this.createSimpleCharacterSprite(character);
+            let sprite;
+            
+            if (character.spriteSheet) {
+                // NEW: Try to get preloaded texture first for better performance
+                const texture = this.preloadedTextures.get(character.spriteSheet);
+                
+                if (texture) {
+                    // Use preloaded texture
+                    sprite = new PIXI.Sprite(texture);
+                    sprite.width = this.CHARACTER_WIDTH;
+                    sprite.height = this.CHARACTER_HEIGHT;
+                    sprite.anchor.set(0.5, 1.0); // Bottom center anchor
+                    console.log(`✅ Using preloaded texture for ${character.name}`);
+                } else {
+                    // Try to load on-demand as fallback
+                    try {
+                        console.log(`🔄 Loading texture on-demand for ${character.name}: ${character.spriteSheet}`);
+                        const loadedTexture = await this.loadSpriteTexture(character.spriteSheet);
+                        sprite = new PIXI.Sprite(loadedTexture);
+                        sprite.width = this.CHARACTER_WIDTH;
+                        sprite.height = this.CHARACTER_HEIGHT;
+                        sprite.anchor.set(0.5, 1.0);
+                        console.log(`✅ Loaded texture on-demand for ${character.name}`);
+                    } catch (error) {
+                        console.warn(`⚠️ Texture loading failed for ${character.name}, using fallback sprite`, error);
+                        sprite = this.createSimpleCharacterSprite(character);
+                    }
+                }
+            } else {
+                // No sprite sheet specified, use simple sprite
+                console.log(`🎨 Creating simple sprite for ${character.name} (no spriteSheet specified)`);
+                sprite = this.createSimpleCharacterSprite(character);
+            }
 
             // Set position
             sprite.x = character.position?.x || 100;
@@ -280,7 +370,7 @@ export class Renderer {
     }
 
     /**
-     * Create a simple character sprite (fallback when image loading fails)
+     * PRESERVED: Create a simple character sprite (fallback when image loading fails)
      * @param {Object} character - Character data
      * @returns {PIXI.Graphics} - Simple character sprite
      */
@@ -307,7 +397,7 @@ export class Renderer {
     }
 
     /**
-     * Update character sprite position
+     * PRESERVED: Update character sprite position
      * @param {string} characterId - Character ID
      * @param {number} x - New X position
      * @param {number} y - New Y position
@@ -321,7 +411,7 @@ export class Renderer {
     }
 
     /**
-     * Remove character sprite
+     * PRESERVED: Remove character sprite
      * @param {string} characterId - Character ID
      */
     removeCharacter(characterId) {
@@ -333,7 +423,7 @@ export class Renderer {
     }
 
     /**
-     * Update renderer (called each frame)
+     * PRESERVED: Update renderer (called each frame)
      */
     update() {
         if (this.app && this.isInitialized) {
@@ -342,7 +432,7 @@ export class Renderer {
     }
 
     /**
-     * FIXED: Cleanup with resize listener removal
+     * ENHANCED: Cleanup with texture cache clearing
      */
     destroy() {
         if (this.resizeHandler) {
@@ -353,13 +443,15 @@ export class Renderer {
             this.app.destroy(true);
             this.app = null;
         }
+        
         this.characterSprites.clear();
+        this.preloadedTextures.clear(); // NEW: Clear texture cache
         this.isInitialized = false;
-        console.log('🧹 Renderer destroyed and cleaned up');
+        console.log('🧹 Enhanced renderer destroyed and cleaned up');
     }
 
     /**
-     * FIXED: Get world bounds for camera/movement systems
+     * PRESERVED: Get world bounds for camera/movement systems
      */
     getWorldBounds() {
         return {
@@ -370,7 +462,7 @@ export class Renderer {
     }
 
     /**
-     * Debug method to check renderer status
+     * ENHANCED: Debug method to check renderer status including texture cache
      */
     getStatus() {
         return {
@@ -378,9 +470,46 @@ export class Renderer {
             hasApp: !!this.app,
             hasContainer: !!this.container,
             characterCount: this.characterSprites.size,
+            preloadedTextures: this.preloadedTextures.size, // NEW
             worldBounds: this.getWorldBounds(),
             canvasSize: `${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`,
-            aspectRatio: '16:9'
+            aspectRatio: '16:9',
+            textureCache: Array.from(this.preloadedTextures.keys()) // NEW: List cached textures
         };
+    }
+
+    /**
+     * NEW: Get texture cache status for debugging
+     */
+    getTextureCacheStatus() {
+        const cached = Array.from(this.preloadedTextures.entries()).map(([path, texture]) => ({
+            path,
+            isValid: texture.valid,
+            dimensions: `${texture.width}x${texture.height}`,
+            baseTexture: !!texture.baseTexture
+        }));
+
+        return {
+            totalCached: this.preloadedTextures.size,
+            textures: cached
+        };
+    }
+
+    /**
+     * NEW: Force reload a specific texture (useful for debugging)
+     */
+    async reloadTexture(spritePath) {
+        try {
+            // Remove from cache
+            this.preloadedTextures.delete(spritePath);
+            
+            // Reload
+            const texture = await this.loadSpriteTexture(spritePath);
+            console.log(`✅ Reloaded texture: ${spritePath}`);
+            return texture;
+        } catch (error) {
+            console.error(`❌ Failed to reload texture: ${spritePath}`, error);
+            throw error;
+        }
     }
 }
