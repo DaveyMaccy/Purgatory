@@ -1,289 +1,199 @@
 /**
- * Character Class - Represents an NPC or player character
- * Based on the SSOT documentation (Chapter 2: The Character Object)
- * Enhanced with complete observer pattern implementation for Stage 3
- * Updated with standardized naming conventions
+ * Character Class - Core character definition
+ * Based on SSOT Chapter 2 specifications
+ * 
+ * PHASE 4 ADDITIONS:
+ * - facingDirection property for animation
+ * - actionState property for movement states
+ * - path property for pathfinding
+ * - setActionState method with animation support
  */
+
 export class Character {
-    constructor(config) {
-        // Core Identity
-        this.id = config.id || `char_${Date.now()}`;
-        this.name = config.name || 'Unnamed';
-        this.isPlayer = config.isPlayer || false;
-        this.isEnabled = config.isEnabled !== undefined ? config.isEnabled : true;
-        this.jobRole = config.jobRole || 'Employee';
-
-        // Core Attributes
+    /**
+     * Create a new character
+     * @param {Object} characterData - Character initialization data from character creator
+     */
+    constructor(characterData) {
+        // Essential properties from character creator
+        this.id = characterData.id || `char_${Date.now()}`;
+        this.name = characterData.name || 'Unknown';
+        
+        // Physical attributes
         this.physicalAttributes = {
-            age: config.physicalAttributes?.age || 30,
-            height: config.physicalAttributes?.height || 175,
-            weight: config.physicalAttributes?.weight || 70,
-            build: config.physicalAttributes?.build || 'Average',
-            looks: config.physicalAttributes?.looks || 5
+            age: characterData.age || 25,
+            height: characterData.height || 'average',
+            build: characterData.build || 'average'
         };
-
-        // Skills
+        
+        // Job and role
+        this.jobRole = characterData.jobRole || 'Intern';
+        this.experienceTags = characterData.experienceTags || [];
+        
+        // Skills (0-10 scale)
         this.skills = {
-            competence: config.skills?.competence || 5,
-            laziness: config.skills?.laziness || 5,
-            charisma: config.skills?.charisma || 5,
-            leadership: config.skills?.leadership || 5
+            competence: characterData.competence || 5,
+            laziness: characterData.laziness || 5,
+            charisma: characterData.charisma || 5
         };
-
-        // Tag System
-        this.personalityTags = config.personalityTags || [];
-        this.experienceTags = config.experienceTags || [];
-
-        // Dynamic State
+        
+        // Personality
+        this.personalityTags = characterData.personalityTags || [];
+        
+        // Needs (0-10 scale, 10 = fully satisfied)
         this.needs = {
-            energy: config.needs?.energy || 8,
-            hunger: config.needs?.hunger || 8,
-            social: config.needs?.social || 8,
-            comfort: config.needs?.comfort || 8,
-            stress: config.needs?.stress || 2
+            energy: 10,
+            hunger: 10,
+            social: 10
         };
-        this.mood = config.mood || 'Neutral';
-
-        // Action & Interaction State
-        this.actionState = config.actionState || 'DEFAULT';
-        this.facingAngle = config.facingAngle || 90;
-        this.maxSightRange = config.maxSightRange || 250;
-        this.isBusy = config.isBusy || false;
-        this.currentAction = config.currentAction || null;
-        this.currentActionTranscript = config.currentActionTranscript || [];
-        this.pendingIntent = config.pendingIntent || null;
-        this.heldItem = config.heldItem || null;
-        this.conversationId = config.conversationId || null;
-
-        // Memory & Goals
-        this.shortTermMemory = config.shortTermMemory || [];
-        this.longTermMemory = config.longTermMemory || [];
-        this.longTermGoal = config.longTermGoal || null;
-        this.assignedTask = config.assignedTask || null;
-
-        // Backend & Visuals
-        this.inventory = config.inventory || [];
-        this.deskItems = config.deskItems || [];
-        this.relationships = config.relationships || {};
-        this.position = config.position || { x: 0, y: 0 };
-        this.portrait = config.portrait || null;
-        this.spriteColors = config.spriteColors || null;
-
+        
+        // Relationships (map of characterId -> relationship score)
+        this.relationships = new Map();
+        
+        // Inventory and items
+        this.inventory = characterData.personalItems || [];
+        this.deskItems = characterData.deskItems || [];
+        this.heldItem = null;
+        
+        // State and status
+        this.mood = 'neutral'; // happy, neutral, sad, angry
+        this.currentAction = null;
+        this.assignedTask = null;
+        this.isBusy = false;
+        
+        // Memory systems (based on SSOT Chapter 7)
+        this.shortTermMemory = []; // Last 20 events
+        this.longTermMemory = []; // Up to 100 significant events
+        this.currentActionTranscript = []; // Current action steps
+        
+        // Position and movement
+        this.position = { x: 0, y: 0 };
+        this.targetPosition = null;
+        
+        // PHASE 4 ADDITIONS: Animation and pathfinding support
+        this.facingDirection = 'down'; // 'up', 'down', 'left', 'right'
+        this.actionState = 'idle'; // 'idle', 'walking', 'working', etc.
+        this.path = []; // Array of {x, y} waypoints for movement
+        
+        // Sprite and visual
+        this.spriteSheet = characterData.spriteSheet || 'assets/characters/character-01.png';
+        this.portrait = characterData.portrait || null;
+        
+        // Player flag
+        this.isPlayer = characterData.isPlayer || false;
+        
         // Observer pattern for UI updates
         this.observers = [];
-
-        // Enhanced appearance system for Stage 3
-        this.appearance = config.appearance || {
-            body: 'body_skin_tone_1',
-            hair: 'hair_style_4_blonde',
-            shirt: 'shirt_style_2_red',
-            pants: 'pants_style_1_jeans'
-        };
-
-        // Visual components
-        this.pixiArmature = config.pixiArmature || null;
-        this.spriteSheet = config.spriteSheet || null; // For character creator compatibility
+        
+        // Perception and awareness
+        this.maxSightRange = 200; // pixels
+        this.facingAngle = 180; // degrees (0 = north, 90 = east, 180 = south, 270 = west)
+        
+        console.log(`👤 Character created: ${this.name} (${this.jobRole})`);
     }
-
+    
     /**
-     * Update character needs over time with decay
-     * @param {number} deltaTime - Time passed in milliseconds
-     */
-    updateNeeds(deltaTime) {
-        const decayRate = 0.001; // Adjust this value to control decay speed
-        const timeInSeconds = deltaTime / 1000;
-        
-        const oldNeeds = { ...this.needs };
-        
-        // Energy decreases over time
-        this.needs.energy = Math.max(1, this.needs.energy - (decayRate * timeInSeconds));
-        
-        // Hunger decreases over time
-        this.needs.hunger = Math.max(1, this.needs.hunger - (decayRate * timeInSeconds));
-        
-        // Social decreases over time (slower)
-        this.needs.social = Math.max(1, this.needs.social - (decayRate * 0.5 * timeInSeconds));
-        
-        // Stress increases slightly over time
-        this.needs.stress = Math.min(10, this.needs.stress + (decayRate * 0.3 * timeInSeconds));
-        
-        // Comfort decreases slowly
-        this.needs.comfort = Math.max(1, this.needs.comfort - (decayRate * 0.3 * timeInSeconds));
-        
-        // Notify observers if needs changed significantly
-        if (this.needsChangedSignificantly(oldNeeds, this.needs)) {
-            this.notifyObservers('needs');
-        }
-    }
-
-    /**
-     * Check if needs have changed significantly enough to warrant UI update
-     */
-    needsChangedSignificantly(oldNeeds, newNeeds) {
-        const threshold = 0.1; // 10% of a point
-        
-        for (const need in oldNeeds) {
-            if (Math.abs(oldNeeds[need] - newNeeds[need]) >= threshold) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Update a specific need value
-     * @param {string} needType - The type of need (energy, hunger, social, comfort, stress)
-     * @param {number} change - The change amount (can be positive or negative)
-     */
-    updateNeed(needType, change) {
-        if (!this.needs.hasOwnProperty(needType)) {
-            console.warn(`Unknown need type: ${needType}`);
-            return;
-        }
-        
-        const oldValue = this.needs[needType];
-        
-        if (needType === 'stress') {
-            // Stress is inverse - higher is worse
-            this.needs[needType] = Math.max(1, Math.min(10, this.needs[needType] + change));
-        } else {
-            // Other needs - higher is better
-            this.needs[needType] = Math.max(1, Math.min(10, this.needs[needType] + change));
-        }
-        
-        // Notify observers if the change was significant
-        if (Math.abs(this.needs[needType] - oldValue) >= 0.1) {
-            this.notifyObservers('needs');
-        }
-    }
-
-    /**
-     * Update relationship with another character
-     * @param {string} characterId - The other character's ID
-     * @param {number} change - Relationship change value (-10 to +10)
-     */
-    updateRelationship(characterId, change) {
-        if (!this.relationships[characterId]) {
-            this.relationships[characterId] = 50; // Neutral starting point
-        }
-        
-        const oldValue = this.relationships[characterId];
-        this.relationships[characterId] = Math.min(100, 
-            Math.max(0, this.relationships[characterId] + change));
-        
-        // Notify observers if relationship changed significantly
-        if (Math.abs(this.relationships[characterId] - oldValue) >= 5) {
-            this.notifyObservers('relationships');
-        }
-    }
-
-    /**
-     * Add an item to inventory
-     * @param {Object} item - The item to add
-     */
-    addToInventory(item) {
-        this.inventory.push(item);
-        this.notifyObservers('inventory');
-    }
-
-    /**
-     * Remove an item from inventory
-     * @param {string} itemId - The item ID to remove
-     */
-    removeFromInventory(itemId) {
-        const initialLength = this.inventory.length;
-        this.inventory = this.inventory.filter(item => 
-            (typeof item === 'string' ? item : item.id) !== itemId);
-        
-        if (this.inventory.length !== initialLength) {
-            this.notifyObservers('inventory');
-        }
-    }
-
-    /**
-     * Set the character's held item
-     * @param {Object|null} item - The item to hold, or null to drop
-     */
-    setHeldItem(item) {
-        const hadItem = !!this.heldItem;
-        this.heldItem = item;
-        
-        // Update action state based on held item
-        if (item && !hadItem) {
-            this.setActionState('HoldingItem');
-        } else if (!item && hadItem) {
-            this.setActionState('DEFAULT');
-        }
-        
-        this.notifyObservers('heldItem');
-    }
-
-    /**
-     * Set the character's current action
-     * @param {Object|null} action - The action object or null
-     */
-    setCurrentAction(action) {
-        this.currentAction = action;
-        this.notifyObservers('currentAction');
-    }
-
-    /**
-     * Set the character's assigned task
-     * @param {Object|null} task - The task object or null
-     */
-    setAssignedTask(task) {
-        this.assignedTask = task;
-        this.notifyObservers('assignedTask');
-    }
-
-    /**
-     * Set the character's long-term goal
-     * @param {Object|null} goal - The goal object or null
-     */
-    setLongTermGoal(goal) {
-        this.longTermGoal = goal;
-        this.notifyObservers('longTermGoal');
-    }
-
-    /**
-     * Observer pattern methods
+     * Observer pattern methods for UI updates
      */
     addObserver(observer) {
-        if (!this.observers.includes(observer)) {
-            this.observers.push(observer);
-        }
+        this.observers.push(observer);
     }
     
     removeObserver(observer) {
         const index = this.observers.indexOf(observer);
-        if (index !== -1) {
+        if (index > -1) {
             this.observers.splice(index, 1);
         }
     }
     
     notifyObservers(property) {
-        for (const observer of this.observers) {
-            if (typeof observer.onCharacterStateChange === 'function') {
-                try {
-                    observer.onCharacterStateChange(this, property);
-                } catch (error) {
-                    console.error(`Error notifying observer about ${property}:`, error);
-                }
+        this.observers.forEach(observer => {
+            if (observer.update) {
+                observer.update(this, property);
+            }
+        });
+    }
+    
+    /**
+     * Update character needs over time
+     * Based on SSOT Chapter 2.5 - Need Decay System
+     * @param {number} deltaTime - Time passed in milliseconds
+     */
+    updateNeeds(deltaTime) {
+        const decayRate = deltaTime / 1000 / 60; // Convert to minutes
+        
+        // Energy decreases over time (gets tired)
+        this.needs.energy = Math.max(0, this.needs.energy - decayRate * 0.5);
+        
+        // Hunger decreases over time (gets hungry)
+        this.needs.hunger = Math.max(0, this.needs.hunger - decayRate * 0.3);
+        
+        // Social decreases over time (gets lonely)
+        this.needs.social = Math.max(0, this.needs.social - decayRate * 0.2);
+        
+        // Update mood based on needs
+        this.updateMood();
+        
+        // Notify observers of need changes
+        this.notifyObservers('needs');
+    }
+    
+    /**
+     * Update mood based on current needs
+     * Low needs lead to negative moods
+     */
+    updateMood() {
+        const avgNeed = (this.needs.energy + this.needs.hunger + this.needs.social) / 3;
+        
+        let newMood;
+        if (avgNeed > 7) {
+            newMood = 'happy';
+        } else if (avgNeed > 4) {
+            newMood = 'neutral';
+        } else if (avgNeed > 2) {
+            newMood = 'sad';
+        } else {
+            newMood = 'angry';
+        }
+        
+        if (newMood !== this.mood) {
+            this.mood = newMood;
+            this.notifyObservers('mood');
+        }
+    }
+    
+    /**
+     * Set current action
+     * @param {Object} action - Action object with type and parameters
+     */
+    setCurrentAction(action) {
+        this.currentAction = action;
+        this.isBusy = !!action;
+        this.notifyObservers('currentAction');
+    }
+    
+    /**
+     * PHASE 4 ADD: Set action state with animation support
+     * @param {string} newState - The new action state
+     */
+    setActionState(newState) {
+        const oldState = this.actionState;
+        this.actionState = newState;
+        
+        if (oldState !== newState) {
+            this.notifyObservers('actionState');
+            
+            // Update sprite animation if renderer supports it
+            if (window.renderer && window.renderer.updateCharacterAnimation) {
+                window.renderer.updateCharacterAnimation(this.id, newState, this.facingDirection);
             }
         }
     }
     
     /**
-     * Enhanced wrapper methods for state changes with observer notifications
+     * Set mood with observer notifications
+     * @param {string} newMood - The new mood state
      */
-    setActionState(newState) {
-        const oldState = this.actionState;
-        this.actionState = newState;
-        if (oldState !== newState) {
-            this.notifyObservers('actionState');
-        }
-    }
-    
     setMood(newMood) {
         const oldMood = this.mood;
         this.mood = newMood;
@@ -335,57 +245,109 @@ export class Character {
             if (this.currentAction.elapsedTime >= this.currentAction.duration) {
                 // Action completed
                 this.setCurrentAction(null);
-                
-                // Process pending intent if any
-                if (this.pendingIntent) {
-                    this.setCurrentAction(this.pendingIntent);
-                    this.pendingIntent = null;
-                }
-            } else {
-                // Notify observers of action progress
-                this.notifyObservers('currentAction');
+                this.notifyObservers('actionComplete');
             }
         }
     }
-
+    
     /**
-     * Get character data for serialization
-     * @returns {Object} Serializable character data
+     * Add event to short-term memory
+     * Maintains a maximum of 20 events
+     * @param {string} event - Event description
+     */
+    addToShortTermMemory(event) {
+        this.shortTermMemory.push({
+            timestamp: Date.now(),
+            event: event
+        });
+        
+        // Keep only last 20 events
+        if (this.shortTermMemory.length > 20) {
+            this.shortTermMemory.shift();
+        }
+    }
+    
+    /**
+     * Add significant event to long-term memory
+     * Maintains a maximum of 100 events
+     * @param {string} event - Event description
+     */
+    addToLongTermMemory(event) {
+        this.longTermMemory.push({
+            timestamp: Date.now(),
+            event: event
+        });
+        
+        // Keep only last 100 events
+        if (this.longTermMemory.length > 100) {
+            this.longTermMemory.shift();
+        }
+    }
+    
+    /**
+     * Get character status for UI display
+     * @returns {Object} Character status information
+     */
+    getStatus() {
+        return {
+            name: this.name,
+            jobRole: this.jobRole,
+            mood: this.mood,
+            needs: { ...this.needs },
+            currentAction: this.currentAction?.displayName || 'Idle',
+            assignedTask: this.assignedTask?.displayName || 'None',
+            position: { ...this.position },
+            isPlayer: this.isPlayer,
+            actionState: this.actionState // PHASE 4: Include action state
+        };
+    }
+    
+    /**
+     * Serialize character data for saving
+     * @returns {Object} Serialized character data
      */
     toJSON() {
         return {
             id: this.id,
             name: this.name,
-            isPlayer: this.isPlayer,
-            isEnabled: this.isEnabled,
-            jobRole: this.jobRole,
             physicalAttributes: this.physicalAttributes,
+            jobRole: this.jobRole,
+            experienceTags: this.experienceTags,
             skills: this.skills,
             personalityTags: this.personalityTags,
-            experienceTags: this.experienceTags,
             needs: this.needs,
-            mood: this.mood,
-            actionState: this.actionState,
-            facingAngle: this.facingAngle,
-            maxSightRange: this.maxSightRange,
-            isBusy: this.isBusy,
-            currentAction: this.currentAction,
-            currentActionTranscript: this.currentActionTranscript,
-            pendingIntent: this.pendingIntent,
-            heldItem: this.heldItem,
-            conversationId: this.conversationId,
-            shortTermMemory: this.shortTermMemory,
-            longTermMemory: this.longTermMemory,
-            longTermGoal: this.longTermGoal,
-            assignedTask: this.assignedTask,
+            relationships: Array.from(this.relationships.entries()),
             inventory: this.inventory,
             deskItems: this.deskItems,
-            relationships: this.relationships,
+            mood: this.mood,
             position: this.position,
+            spriteSheet: this.spriteSheet,
             portrait: this.portrait,
-            spriteColors: this.spriteColors,
-            appearance: this.appearance,
-            spriteSheet: this.spriteSheet
+            isPlayer: this.isPlayer,
+            longTermMemory: this.longTermMemory,
+            facingDirection: this.facingDirection, // PHASE 4: Save facing direction
+            actionState: this.actionState // PHASE 4: Save action state
         };
+    }
+    
+    /**
+     * Load character data from saved state
+     * @param {Object} data - Saved character data
+     */
+    fromJSON(data) {
+        Object.assign(this, data);
+        
+        // Restore relationships as Map
+        if (data.relationships) {
+            this.relationships = new Map(data.relationships);
+        }
+        
+        // Reset runtime state
+        this.observers = [];
+        this.currentAction = null;
+        this.isBusy = false;
+        this.shortTermMemory = [];
+        this.currentActionTranscript = [];
+        this.path = []; // PHASE 4: Reset path
     }
 }
