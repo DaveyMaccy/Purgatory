@@ -1,5 +1,5 @@
 /**
- * Main Application Entry Point
+ * Main Application Entry Point - PHASE 1 FIXED
  * 
  * Coordinates the initialization of all game systems and manages the main game loop.
  * This file serves as the primary entry point and orchestrator for the entire application.
@@ -178,6 +178,7 @@ async function loadMapData() {
 /**
  * Start the actual game with finalized characters
  * Called by the character creator when ready
+ * PHASE 1 FIX: Use loadCharacters instead of initialize
  */
 async function startGame(characters) {
     console.log('🚀 Starting game with', characters.length, 'characters');
@@ -194,9 +195,9 @@ async function startGame(characters) {
         // Initialize game engine
         gameEngine = new GameEngine();
         
-        // Initialize character manager with created characters
+        // PHASE 1 FIX: Use loadCharacters instead of initialize
         characterManager = new CharacterManager();
-        await characterManager.initialize(characters);
+        characterManager.loadCharacters(characters);  // FIXED: Was characterManager.initialize(characters)
         
         // Load map data
         const mapData = await loadMapData();
@@ -209,7 +210,7 @@ async function startGame(characters) {
         uiUpdater = new UIUpdater();
         await uiUpdater.initialize();
         
-        // Connect all systems
+        // Connect all systems to game engine
         gameEngine.setCharacterManager(characterManager);
         gameEngine.setRenderer(renderer);
         gameEngine.setUIUpdater(uiUpdater);
