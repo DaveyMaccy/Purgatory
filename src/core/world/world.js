@@ -238,47 +238,63 @@ export class World {
 
     /**
      * Create task dictionary for character assignments
-     * Based on SSOT task system design
+     * Based on SSOT task system design - PRESERVED: Original task structure by job role
      */
     createTaskDictionary() {
         return {
-            'work': {
-                type: 'work',
-                description: 'Working at desk',
-                requiredLocation: 'desk',
-                duration: 30000, // 30 seconds
-                energy: -10,
-                productivity: +5,
-                relationships: {}
-            },
-            'break': {
-                type: 'social',
-                description: 'Taking a break',
-                requiredLocation: 'break_area',
-                duration: 15000, // 15 seconds
-                energy: +5,
-                productivity: 0,
-                relationships: {}
-            },
-            'meeting': {
-                type: 'social',
-                description: 'In a meeting',
-                requiredLocation: 'meeting_room',
-                duration: 20000, // 20 seconds
-                energy: -5,
-                productivity: +3,
-                relationships: {}
-            },
-            'coffee': {
-                type: 'personal',
-                description: 'Getting coffee',
-                requiredLocation: 'kitchen',
-                duration: 10000, // 10 seconds
-                energy: +8,
-                productivity: +2,
-                relationships: {}
-            }
+            'Manager': [
+                { displayName: 'Review Reports', requiredLocation: 'desk', duration: 30000 },
+                { displayName: 'Attend Meeting', requiredLocation: 'meeting_room', duration: 45000 },
+                { displayName: 'Plan Strategy', requiredLocation: 'desk', duration: 60000 }
+            ],
+            'Developer': [
+                { displayName: 'Write Code', requiredLocation: 'desk', duration: 120000 },
+                { displayName: 'Debug Issues', requiredLocation: 'desk', duration: 90000 },
+                { displayName: 'Code Review', requiredLocation: 'desk', duration: 60000 }
+            ],
+            'Designer': [
+                { displayName: 'Create Mockups', requiredLocation: 'desk', duration: 90000 },
+                { displayName: 'Review Designs', requiredLocation: 'meeting_room', duration: 45000 },
+                { displayName: 'Update Style Guide', requiredLocation: 'desk', duration: 60000 }
+            ],
+            'HR': [
+                { displayName: 'Review Resumes', requiredLocation: 'desk', duration: 45000 },
+                { displayName: 'Conduct Interview', requiredLocation: 'meeting_room', duration: 60000 },
+                { displayName: 'Update Policies', requiredLocation: 'desk', duration: 90000 }
+            ],
+            'Intern': [
+                { displayName: 'Make Coffee', requiredLocation: 'break_room', duration: 15000 },
+                { displayName: 'File Documents', requiredLocation: 'desk', duration: 30000 },
+                { displayName: 'Shadow Senior Staff', requiredLocation: 'desk', duration: 60000 }
+            ]
         };
+    }
+
+    /**
+     * PRESERVED: Assign tasks to characters based on their roles
+     * This is called at game start to give everyone initial tasks
+     */
+    assignInitialTasks() {
+        console.log('📋 Assigning initial tasks to characters...');
+        
+        if (!this.characterManager) {
+            console.warn('⚠️ Cannot assign tasks: characterManager not available');
+            return;
+        }
+        
+        const characters = this.characterManager.characters;
+        
+        characters.forEach(character => {
+            const tasks = this.taskDictionary[character.jobRole];
+            if (tasks && tasks.length > 0) {
+                // Assign a random task from the available ones
+                const task = tasks[Math.floor(Math.random() * tasks.length)];
+                character.assignedTask = { ...task };
+                console.log(`✅ Assigned "${task.displayName}" to ${character.name} (${character.jobRole})`);
+            } else {
+                console.warn(`⚠️ No tasks available for role: ${character.jobRole}`);
+            }
+        });
     }
 
     /**
@@ -312,6 +328,38 @@ export class World {
     }
 
     /**
+     * PRESERVED: Get a random walkable position in the world
+     * Used for initial character placement
+     * @returns {Object} Position object with x and y coordinates in pixels
+     */
+    getRandomWalkablePosition() {
+        const maxAttempts = 100;
+        let attempts = 0;
+        
+        while (attempts < maxAttempts) {
+            const tileX = Math.floor(Math.random() * this.width);
+            const tileY = Math.floor(Math.random() * this.height);
+            
+            if (this.navGrid[tileY][tileX] === 0) {
+                // Convert tile position to pixel position (center of tile)
+                return {
+                    x: (tileX * this.TILE_SIZE) + (this.TILE_SIZE / 2),
+                    y: (tileY * this.TILE_SIZE) + (this.TILE_SIZE / 2)
+                };
+            }
+            
+            attempts++;
+        }
+        
+        // Fallback to a safe position if no walkable position found
+        console.warn('⚠️ Could not find random walkable position, using fallback');
+        return {
+            x: this.worldWidth / 2,
+            y: this.worldHeight / 2
+        };
+    }
+
+    /**
      * PRESERVED: Get the task dictionary for UI display
      */
     getTaskDictionary() {
@@ -326,6 +374,20 @@ export class World {
         
         // Future: Update world objects, environmental effects, etc.
         // This is where time-based world changes would be processed
+    }
+
+    /**
+     * PRESERVED: Get world information for UI display
+     * @returns {Object} World state information
+     */
+    getWorldInfo() {
+        return {
+            officeType: this.officeType,
+            gameTime: this.gameTime,
+            width: this.worldWidth,
+            height: this.worldHeight,
+            tileSize: this.TILE_SIZE
+        };
     }
 
     /**
