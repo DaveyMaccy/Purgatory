@@ -165,6 +165,10 @@
 }
 
 /* Form Group Styles */
+.form-group {
+    margin-bottom: 1rem;
+}
+
 .form-group label {
     display: block;
     margin-bottom: 0.5rem;
@@ -179,4 +183,41 @@
     color: var(--text-primary);
     padding: 0.5rem;
     border-radius: 0.25rem;
+}
+
+/* Character Creator Panel Layout */
+.creator-panel {
+    display: flex;
+    gap: 1.5rem;
+    height: 100%;
+    padding: 1.5rem;
+}
+
+/* Two-column layout for character creator */
+.creator-panel .flex {
+    display: flex;
+}
+
+.creator-panel .gap-6 {
+    gap: 1.5rem;
+}
+
+.creator-panel .h-full {
+    height: 100%;
+}
+
+.creator-panel .flex-1 {
+    flex: 1;
+}
+
+.creator-panel .space-y-4 > * + * {
+    margin-top: 1rem;
+}
+
+.creator-panel .overflow-y-auto {
+    overflow-y: auto;
+}
+
+.creator-panel .w-80 {
+    width: 20rem;
 }
