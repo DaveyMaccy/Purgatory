@@ -547,7 +547,7 @@ function handleStartSimulation() {
         updateCharactersFromForms();
         
         // Validate characters
-        validateCharacters();
+        validateCharacters(characters);
         
         // Convert to game format
         const gameCharacters = formatCharactersForGame();
