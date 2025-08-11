@@ -167,10 +167,13 @@ async function startGame(characters) {
             uiManager.showLoadingState(true, 'Starting simulation...');
         }
         
-        // *** THIS IS THE FIX ***
-        // The call to closeCharacterCreator() was removed from here.
-        // It was incorrectly sending the user back to the start screen.
-        // The character creator module is responsible for hiding itself.
+        // Close character creator modal (fix for modal staying open)
+        const modal = document.getElementById('creator-modal-backdrop');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+            console.log('📝 Character creator closed');
+        }
         
         gameEngine = new GameEngine();
         
@@ -262,4 +265,5 @@ export {
 };
 
 console.log('🎮 Main.js loaded - Core game system ready');
+
 
