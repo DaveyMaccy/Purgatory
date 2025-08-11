@@ -1,8 +1,9 @@
 /**
- * UI Generator Module
+ * UI Generator Module - PHASE 3 COMPLETE UI OVERHAUL
  * 
- * Handles all HTML generation for the character creator interface.
- * Creates tabs, panels, forms, and all visual elements.
+ * Generates the exact same UI layout as the monolithic version.
+ * This includes the enhanced two-column layout, all interactive elements,
+ * and pixel-perfect styling to match the original implementation.
  */
 
 import { 
@@ -11,20 +12,20 @@ import {
     GENDERS, 
     PERSONALITY_TAGS, 
     INVENTORY_OPTIONS, 
-    DESK_ITEM_OPTIONS 
+    DESK_ITEM_OPTIONS,
+    SPRITE_OPTIONS
 } from './character-data.js';
 import { EventHandlers } from './event-handlers.js';
 import { SpriteManager } from './sprite-manager.js';
 
 class UIGenerator {
     /**
-     * Create a character tab
+     * Create a character tab - matches monolithic exactly
      */
     static createCharacterTab(index, character, container) {
-        const tab = document.createElement('div');
-        tab.id = `character-tab-${index}`;
-        tab.className = `character-tab ${index === 0 ? 'active' : ''}`;
-        tab.textContent = `${character.firstName} ${character.lastName}`;
+        const tab = document.createElement('button');
+        tab.textContent = `Character ${index + 1}`;
+        tab.className = index === 0 ? 'active' : '';
         tab.onclick = () => window.switchTab(index);
         
         if (container) {
@@ -35,14 +36,26 @@ class UIGenerator {
     }
     
     /**
-     * Create a character panel
+     * Update tab name when character name changes
+     */
+    static updateTabName(index, name) {
+        const tab = document.querySelector(`#character-tabs button:nth-child(${index + 1})`);
+        if (tab && name) {
+            // Show first name only for tab
+            const firstName = name.split(' ')[0];
+            tab.textContent = firstName || `Character ${index + 1}`;
+        }
+    }
+    
+    /**
+     * Create a character panel - matches monolithic exactly
      */
     static createCharacterPanel(index, character, container, officeType) {
         const panel = document.createElement('div');
         panel.id = `character-panel-${index}`;
         panel.className = `creator-panel ${index === 0 ? '' : 'hidden'}`;
         
-        panel.innerHTML = this.generatePanelHTML(index, character, officeType);
+        panel.innerHTML = this.generateEnhancedPanelHTML(index, character, officeType);
         
         if (container) {
             container.appendChild(panel);
@@ -58,9 +71,9 @@ class UIGenerator {
     }
     
     /**
-     * Generate complete panel HTML
+     * Generate complete enhanced panel HTML - EXACT MATCH to monolithic version
      */
-    static generatePanelHTML(index, charData, officeType) {
+    static generateEnhancedPanelHTML(index, charData, officeType) {
         const jobRoleOptions = JOB_ROLES_BY_OFFICE[officeType]
             .map(role => `<option value="${role}" ${role === charData.jobRole ? 'selected' : ''}>${role}</option>`)
             .join('');
@@ -93,317 +106,170 @@ class UIGenerator {
                 ${item}
             </label>`)
             .join('');
-        
+
         return `
-            <div class="character-form">
-                <!-- Player Character Badge -->
-                ${charData.isPlayerCharacter ? '<div class="player-badge">👤 PLAYER CHARACTER</div>' : ''}
-                
-                <!-- Basic Information Section -->
-                <div class="form-section">
-                    <h3>Basic Information</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="first-name-${index}">First Name:</label>
-                            <input type="text" id="first-name-${index}" value="${charData.firstName}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="last-name-${index}">Last Name:</label>
-                            <input type="text" id="last-name-${index}" value="${charData.lastName}" />
+            <div class="flex gap-6 h-full">
+                <!-- Left Column: Form Fields -->
+                <div class="flex-1 space-y-4 overflow-y-auto" style="max-height: 500px; padding-right: 10px;">
+                    <!-- Basic Info -->
+                    <div class="form-group">
+                        <label for="name-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Character Name</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="name-${index}" value="${charData.name}" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            <button type="button" id="generate-name-${index}" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Generate</button>
                         </div>
                     </div>
-                    <div class="form-row">
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div class="form-group">
-                            <label for="age-${index}">Age: <span id="age-val-${index}">${charData.age}</span></label>
-                            <input type="range" id="age-${index}" min="18" max="65" value="${charData.age}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="job-role-${index}">Job Role:</label>
-                            <select id="job-role-${index}">
-                                ${jobRoleOptions}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Physical Attributes Section -->
-                <div class="form-section">
-                    <h3>Physical Attributes</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="gender-${index}">Gender:</label>
-                            <select id="gender-${index}">
-                                ${genderOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="build-${index}">Build:</label>
-                            <select id="build-${index}">
-                                ${buildOptions}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="height-${index}">Height: <span id="height-val-${index}">${charData.physicalAttributes.height} cm</span></label>
-                            <input type="range" id="height-${index}" min="140" max="210" value="${charData.physicalAttributes.height}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="weight-${index}">Weight: <span id="weight-val-${index}">${charData.physicalAttributes.weight} kg</span></label>
-                            <input type="range" id="weight-${index}" min="40" max="150" value="${charData.physicalAttributes.weight}" />
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="looks-${index}">Looks: <span id="looks-val-${index}">${charData.physicalAttributes.looks}/10</span></label>
-                            <input type="range" id="looks-${index}" min="1" max="10" value="${charData.physicalAttributes.looks}" />
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Skills Section -->
-                <div class="form-section">
-                    <h3>Skills & Abilities</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="competence-${index}">Competence: <span id="competence-val-${index}">${charData.skills.competence}/10</span></label>
-                            <input type="range" id="competence-${index}" min="1" max="10" value="${charData.skills.competence}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="laziness-${index}">Laziness: <span id="laziness-val-${index}">${charData.skills.laziness}/10</span></label>
-                            <input type="range" id="laziness-${index}" min="1" max="10" value="${charData.skills.laziness}" />
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="charisma-${index}">Charisma: <span id="charisma-val-${index}">${charData.skills.charisma}/10</span></label>
-                            <input type="range" id="charisma-${index}" min="1" max="10" value="${charData.skills.charisma}" />
-                        </div>
-                        <div class="form-group">
-                            <label for="leadership-${index}">Leadership: <span id="leadership-val-${index}">${charData.skills.leadership}/10</span></label>
-                            <input type="range" id="leadership-${index}" min="1" max="10" value="${charData.skills.leadership}" />
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Appearance Section -->
-                <div class="form-section">
-                    <h3>Appearance</h3>
-                    <div class="sprite-selector">
-                        <div class="sprite-navigation">
-                            <button type="button" id="sprite-prev-${index}" class="sprite-nav-btn">◀</button>
-                            <div class="sprite-preview">
-                                <canvas id="preview-canvas-${index}" width="96" height="128"></canvas>
-                                <div id="sprite-info-${index}" class="sprite-info">Character ${index + 1}</div>
-                            </div>
-                            <button type="button" id="sprite-next-${index}" class="sprite-nav-btn">▶</button>
+                            <label for="jobRole-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Job Role</label>
+                            <select id="jobRole-${index}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">${jobRoleOptions}</select>
                         </div>
                         
-                        <!-- Custom Portrait Upload -->
-                        <div class="portrait-upload">
-                            <label for="portrait-upload-${index}">Custom Portrait:</label>
-                            <input type="file" id="portrait-upload-${index}" accept="image/*" />
-                            <button type="button" id="clear-custom-${index}" class="clear-btn">Clear Custom</button>
+                        <div class="form-group">
+                            <label for="gender-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Gender</label>
+                            <select id="gender-${index}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">${genderOptions}</select>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Personality Section -->
-                <div class="form-section">
-                    <h3>Personality Tags (Select 2-5)</h3>
-                    <div class="checkbox-grid" style="max-height: 200px; overflow-y: auto;">
-                        ${tagOptions}
-                    </div>
-                </div>
-                
-                <!-- Inventory Section -->
-                <div class="form-section">
-                    <h3>Inventory Items (Select 3-6)</h3>
-                    <div class="checkbox-grid" style="max-height: 150px; overflow-y: auto;">
-                        ${inventoryOptions}
-                    </div>
-                </div>
-                
-                <!-- Desk Items Section -->
-                <div class="form-section">
-                    <h3>Desk Items (Select 3-6)</h3>
-                    <div class="checkbox-grid" style="max-height: 150px; overflow-y: auto;">
-                        ${deskItemOptions}
-                    </div>
-                </div>
-                
-                <!-- Bio Section -->
-                <div class="form-section">
-                    <h3>Biography</h3>
-                    <textarea id="bio-${index}" placeholder="Character background and personality..." rows="4" style="width: 100%;">${charData.bio}</textarea>
-                </div>
-                
-                <!-- API Configuration Section -->
-                <div class="form-section">
-                    <h3>AI Configuration</h3>
+
                     <div class="form-group">
-                        <label for="api-key-${index}">API Key (leave empty to use global):</label>
-                        <input type="password" id="api-key-${index}" value="${charData.apiKey}" placeholder="Individual API key override" />
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="isPlayer-${index}" ${charData.isPlayer ? 'checked' : ''}>
+                            <span style="font-weight: bold;">Player Character</span>
+                        </label>
                     </div>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="form-section">
-                    <div class="action-buttons">
-                        <button type="button" onclick="randomizeCurrentCharacter()" class="randomize-btn">🎲 Randomize All</button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    /**
-     * Update a character tab's display name
-     */
-    static updateTabName(index, firstName, lastName) {
-        const tab = document.getElementById(`character-tab-${index}`);
-        if (tab) {
-            tab.textContent = `${firstName} ${lastName}`;
-        }
-    }
-    
-    /**
-     * Create character management controls HTML
-     */
-    static generateManagementControlsHTML() {
-        return `
-            <div class="character-management">
-                <button id="add-character-btn" type="button" class="management-btn">➕ Add Character</button>
-                <button id="remove-character-btn" type="button" class="management-btn">➖ Remove Character</button>
-                <span class="character-count">Characters: <span id="character-count-display">3</span>/5</span>
-            </div>
-        `;
-    }
-    
-    /**
-     * Update character count display
-     */
-    static updateCharacterCount(count) {
-        const display = document.getElementById('character-count-display');
-        if (display) {
-            display.textContent = count;
-        }
-    }
-    
-    /**
-     * Create global settings HTML
-     */
-    static generateGlobalSettingsHTML() {
-        return `
-            <div class="global-settings">
-                <div class="form-section">
-                    <h3>Global Settings</h3>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="office-type-select">Office Type:</label>
-                            <select id="office-type-select">
-                                <option value="Tech Startup">Tech Startup</option>
-                                <option value="Law Firm">Law Firm</option>
-                                <option value="Medical Practice">Medical Practice</option>
-                                <option value="Accounting Firm">Accounting Firm</option>
-                                <option value="Marketing Agency">Marketing Agency</option>
-                            </select>
+                    
+                    <!-- Physical Attributes -->
+                    <div class="form-group">
+                        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Physical Attributes</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Age: <span id="age-val-${index}">${charData.physicalAttributes.age}</span></label>
+                                <input type="range" id="age-${index}" min="22" max="65" value="${charData.physicalAttributes.age}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Height: <span id="height-val-${index}">${charData.physicalAttributes.height} cm</span></label>
+                                <input type="range" id="height-${index}" min="150" max="200" value="${charData.physicalAttributes.height}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Weight: <span id="weight-val-${index}">${charData.physicalAttributes.weight} kg</span></label>
+                                <input type="range" id="weight-${index}" min="45" max="120" value="${charData.physicalAttributes.weight}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Looks: <span id="looks-val-${index}">${charData.physicalAttributes.looks}/10</span></label>
+                                <input type="range" id="looks-${index}" min="1" max="10" value="${charData.physicalAttributes.looks}" style="width: 100%;">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="global-api-key">Global API Key:</label>
-                            <input type="password" id="global-api-key" placeholder="Default API key for all characters" />
+                        <div style="margin-top: 10px;">
+                            <label for="build-${index}" style="display: block; margin-bottom: 5px;">Build</label>
+                            <select id="build-${index}" style="width: 100%; padding: 4px;">${buildOptions}</select>
                         </div>
                     </div>
+
+                    <!-- Skills -->
+                    <div class="form-group">
+                        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Skills</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Competence: <span id="competence-val-${index}">${charData.skills.competence}/10</span></label>
+                                <input type="range" id="competence-${index}" min="1" max="10" value="${charData.skills.competence}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Laziness: <span id="laziness-val-${index}">${charData.skills.laziness}/10</span></label>
+                                <input type="range" id="laziness-${index}" min="1" max="10" value="${charData.skills.laziness}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Charisma: <span id="charisma-val-${index}">${charData.skills.charisma}/10</span></label>
+                                <input type="range" id="charisma-${index}" min="1" max="10" value="${charData.skills.charisma}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Leadership: <span id="leadership-val-${index}">${charData.skills.leadership}/10</span></label>
+                                <input type="range" id="leadership-${index}" min="1" max="10" value="${charData.skills.leadership}" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Personality Tags -->
+                    <div class="form-group">
+                        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Personality (Max 6)</h3>
+                        <div style="max-height: 120px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
+                            ${tagOptions}
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <!-- Inventory -->
+                        <div class="form-group">
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Inventory (Max 3)</h3>
+                            <div style="max-height: 100px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
+                                ${inventoryOptions}
+                            </div>
+                        </div>
+                        
+                        <!-- Desk Items -->
+                        <div class="form-group">
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Desk Items (Max 2)</h3>
+                            <div style="max-height: 100px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
+                                ${deskItemOptions}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Portraits and Settings -->
+                <div class="w-80" style="width: 320px;">
+                    <div class="space-y-4">
+                        <!-- Character Portrait with Sprite Navigation -->
+                        <div class="form-group">
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Character Portrait</h3>
+                            <div style="text-align: center;">
+                                <!-- Sprite Navigation Arrows -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <button type="button" id="sprite-prev-${index}" style="padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">◀ Prev</button>
+                                    <span id="sprite-info-${index}" style="font-size: 12px; color: #6c757d;">Sprite 1 of ${SPRITE_OPTIONS.length}</span>
+                                    <button type="button" id="sprite-next-${index}" style="padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Next ▶</button>
+                                </div>
+                                
+                                <!-- Centered portrait canvas -->
+                                <div style="display: flex; justify-content: center;">
+                                    <canvas id="preview-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f0f0f0;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Portrait Upload -->
+                        <div class="form-group">
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Custom Portrait</h3>
+                            <div style="text-align: center;">
+                                <!-- Centered custom canvas -->
+                                <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                                    <canvas id="custom-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f8f9fa;"></canvas>
+                                </div>
+                                <input type="file" id="portrait-upload-${index}" accept="image/*" style="width: 100%; padding: 4px; font-size: 12px; margin-bottom: 5px;">
+                                <button type="button" id="clear-custom-${index}" style="padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear Custom</button>
+                            </div>
+                        </div>
+
+                        <!-- API Key Override -->
+                        <div class="form-group">
+                            <label for="api-key-input-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Individual API Key</label>
+                            <input type="text" id="api-key-input-${index}" value="${charData.apiKey}" placeholder="Override global key..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-family: monospace;">
+                            <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Leave empty to use global key</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
     }
     
     /**
-     * Show/hide loading state
+     * Generate complete panel HTML - legacy support for existing code
      */
-    static setLoadingState(isLoading, message = 'Loading...') {
-        const existingLoader = document.getElementById('character-creator-loader');
-        
-        if (isLoading) {
-            if (!existingLoader) {
-                const loader = document.createElement('div');
-                loader.id = 'character-creator-loader';
-                loader.className = 'loading-overlay';
-                loader.innerHTML = `
-                    <div class="loading-content">
-                        <div class="spinner"></div>
-                        <div class="loading-message">${message}</div>
-                    </div>
-                `;
-                document.body.appendChild(loader);
-            }
-        } else {
-            if (existingLoader) {
-                existingLoader.remove();
-            }
-        }
-    }
-    
-    /**
-     * Show error message
-     */
-    static showError(message, duration = 5000) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.textContent = message;
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #ff4444;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 10000;
-            max-width: 300px;
-            word-wrap: break-word;
-        `;
-        
-        document.body.appendChild(errorDiv);
-        
-        setTimeout(() => {
-            if (errorDiv.parentNode) {
-                errorDiv.parentNode.removeChild(errorDiv);
-            }
-        }, duration);
-    }
-    
-    /**
-     * Show success message
-     */
-    static showSuccess(message, duration = 3000) {
-        const successDiv = document.createElement('div');
-        successDiv.className = 'success-message';
-        successDiv.textContent = message;
-        successDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #44aa44;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 10000;
-            max-width: 300px;
-            word-wrap: break-word;
-        `;
-        
-        document.body.appendChild(successDiv);
-        
-        setTimeout(() => {
-            if (successDiv.parentNode) {
-                successDiv.parentNode.removeChild(successDiv);
-            }
-        }, duration);
+    static generatePanelHTML(index, charData, officeType) {
+        return this.generateEnhancedPanelHTML(index, charData, officeType);
     }
 }
 
 export { UIGenerator };
 
-console.log('🎨 UI Generator Module loaded');
+console.log('📦 UI Generator Module loaded - PHASE 3 COMPLETE UI OVERHAUL');
