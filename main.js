@@ -1,12 +1,12 @@
 /**
- * Main.js - Game initialization and coordination
- * CORRECT FIX: Use the actual method names that exist in the codebase
- * - characterManager.initializeCharacterPositions() EXISTS and is kept
- * - renderer.addCharacter() does NOT exist, replaced with renderer.renderCharacter()
- * * PHASE 4 ADDITIONS:
- * - Enhanced handleWorldClick for click-to-move functionality
+ * OFFICE PURGATORY - MAIN GAME FILE
+ * PHASE 3 COMPATIBLE - COMPLETE VERSION WITH ALL FUNCTIONS
+ * 
+ * CRITICAL FIX: Updated all UI functions to use correct HTML element IDs
+ * COMPLETE: Includes ALL functions from the original main.js
  */
 
+// Import statements - Module-based loading
 import { GameEngine } from './src/core/game-engine.js';
 import { CharacterManager } from './src/core/characters/character-manager.js';
 import { UIUpdater } from './src/ui/ui-updater.js';
@@ -14,12 +14,14 @@ import { Renderer } from './src/rendering/renderer.js';
 import { loadMapData } from './src/core/world/world.js';
 import { initializeCharacterCreator } from './character-creator.js';
 
-// Global game state for Stage 3
+// Global game state variables
 let gameEngine = null;
 let characterManager = null;
 let uiUpdater = null;
 let renderer = null;
 let focusTargetId = null;
+
+console.log('🎮 Office Purgatory - Game Loading...');
 
 /**
  * DOM Ready Event - Main initialization
@@ -63,6 +65,53 @@ function initializeUIElements() {
     showStartScreen();
     
     console.log('✅ UI elements initialized');
+}
+
+/**
+ * Setup New Game button with proper event handling
+ */
+function setupNewGameButton() {
+    const newGameButton = document.getElementById('new-game-button');
+    if (newGameButton) {
+        // Remove any existing listeners by cloning
+        const newButton = newGameButton.cloneNode(true);
+        newGameButton.parentNode.replaceChild(newButton, newGameButton);
+        
+        // Enable and add event listener
+        newButton.disabled = false;
+        newButton.addEventListener('click', handleNewGameClick);
+        
+        console.log('✅ New Game button enabled and connected');
+    } else {
+        console.warn('⚠️ New Game button not found');
+        // Auto-start for testing if button missing
+        setTimeout(handleNewGameClick, 1000);
+    }
+}
+
+/**
+ * Handle New Game button click
+ */
+function handleNewGameClick() {
+    console.log('🎭 New Game clicked - Opening character creator...');
+    
+    try {
+        // Hide start screen
+        hideStartScreen();
+        
+        // Show character creator
+        showCharacterCreator();
+        
+        // Initialize the character creator with Game Studio office type
+        initializeCharacterCreator('Game Studio');
+        
+        console.log('✅ Character creator opened');
+        
+    } catch (error) {
+        console.error('❌ Failed to open character creator:', error);
+        // Fallback: start with default characters
+        startGameWithFallbackCharacters();
+    }
 }
 
 /**
@@ -115,10 +164,6 @@ function injectTabCSS() {
             margin-top: -1px;
         }
         
-        .tab-content.active {
-            display: block;
-        }
-        
         /* Ensure the widget container has proper flex layout */
         .widget.flex-grow {
             display: flex;
@@ -135,99 +180,9 @@ function injectTabCSS() {
 }
 
 /**
- * Setup New Game button with proper event handling
- */
-function setupNewGameButton() {
-    const newGameButton = document.getElementById('new-game-button');
-    if (newGameButton) {
-        // Remove any existing listeners by cloning
-        const newButton = newGameButton.cloneNode(true);
-        newGameButton.parentNode.replaceChild(newButton, newGameButton);
-        
-        // Enable and add event listener
-        newButton.disabled = false;
-        newButton.addEventListener('click', handleNewGameClick);
-        
-        console.log('✅ New Game button enabled and connected');
-    } else {
-        console.warn('⚠️ New Game button not found');
-        // Auto-start for testing if button missing
-        setTimeout(handleNewGameClick, 1000);
-    }
-}
-
-/**
- * Handle New Game button click
- */
-function handleNewGameClick() {
-    console.log('🎭 New Game clicked - Opening character creator...');
-    
-    try {
-        // Hide start screen
-        hideStartScreen();
-        
-        // Show character creator
-        showCharacterCreator();
-        
-        // Initialize the character creator with Game Studio office type
-        initializeCharacterCreator('Game Studio');
-        
-        console.log('✅ Character creator opened');
-        
-    } catch (error) {
-        console.error('❌ Failed to open character creator:', error);
-        // Fallback: start with default characters
-        startGameWithFallbackCharacters();
-    }
-}
-
-/**
- * PHASE 4 ENHANCED: Handle clicks on the game world for movement
- */
-function handleWorldClick(event) {
-    // PHASE 4: Implement click-to-move for player character
-    if (!gameEngine || !characterManager || !renderer) {
-        console.warn('⚠️ Game not fully initialized');
-        return;
-    }
-    
-    const player = characterManager.getPlayerCharacter();
-    if (!player) {
-        console.warn('⚠️ No player character found');
-        return;
-    }
-    
-    // Get click position relative to canvas
-    const rect = event.target.getBoundingClientRect();
-    const clickX = event.clientX - rect.left;
-    const clickY = event.clientY - rect.top;
-    
-    // Convert to world coordinates (accounting for any camera offset)
-    const worldX = clickX;
-    const worldY = clickY;
-    
-    console.log(`🖱️ Click at world position: (${worldX}, ${worldY})`);
-    
-    // Find path from player position to click position
-    const path = gameEngine.world.findPath(
-        player.position,
-        { x: worldX, y: worldY }
-    );
-    
-    if (path && path.length > 0) {
-        // Set the path on the player character
-        player.path = path;
-        console.log(`🚶 Player path set with ${path.length} waypoints`);
-    } else {
-        console.log('❌ No valid path to destination');
-    }
-}
-
-/**
  * Set up status panel tab switching
  */
 function setupStatusPanelTabs() {
-    // FIXED: Proper tab switching implementation
     console.log('🔧 Setting up status panel tabs...');
     
     // Make openTab function available globally (as required by HTML onclick)
@@ -298,10 +253,10 @@ window.startGameSimulation = async function(charactersFromCreator) {
         characterManager.initializeFromCreatorData(charactersFromCreator);
         console.log('✅ Character manager initialized');
         
-        // Initialize renderer with world container
-        const worldContainer = document.getElementById('world-view');
+        // Initialize renderer with world container - FIXED: Use correct container ID
+        const worldContainer = document.getElementById('world-canvas-container');
         if (!worldContainer) {
-            throw new Error('World view container not found');
+            throw new Error('World canvas container not found');
         }
         
         renderer = new Renderer(worldContainer);
@@ -358,17 +313,55 @@ window.startGameSimulation = async function(charactersFromCreator) {
         showSuccessMessage('Game started! Click to move your character.');
         
     } catch (error) {
-        console.error('❌ Failed to start game:', error);
+        console.log('❌ Failed to start game:', error.message);
         showErrorMessage(`Failed to start game: ${error.message}`);
-        
-        // Return to character creator on error
-        hideGameView();
-        showCharacterCreator();
     }
 };
 
 /**
- * Start game with fallback characters (testing/error recovery)
+ * PHASE 4 ENHANCED: Handle clicks on the game world for movement
+ */
+function handleWorldClick(event) {
+    // PHASE 4: Implement click-to-move for player character
+    if (!gameEngine || !characterManager || !renderer) {
+        console.warn('⚠️ Game not fully initialized');
+        return;
+    }
+    
+    const player = characterManager.getPlayerCharacter();
+    if (!player) {
+        console.warn('⚠️ No player character found');
+        return;
+    }
+    
+    // Get click position relative to canvas
+    const rect = event.target.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+    
+    // Convert to world coordinates (accounting for any camera offset)
+    const worldX = clickX;
+    const worldY = clickY;
+    
+    console.log(`🖱️ Click at world position: (${worldX}, ${worldY})`);
+    
+    // Find path from player position to click position
+    const path = gameEngine.world.findPath(
+        player.position,
+        { x: worldX, y: worldY }
+    );
+    
+    if (path && path.length > 0) {
+        // Set the path on the player character
+        player.path = path;
+        console.log(`🚶 Player path set with ${path.length} waypoints`);
+    } else {
+        console.log('❌ No valid path to destination');
+    }
+}
+
+/**
+ * Fallback function when character creator fails
  */
 function startGameWithFallbackCharacters() {
     console.log('🔧 Starting with fallback characters...');
@@ -376,61 +369,61 @@ function startGameWithFallbackCharacters() {
     const fallbackCharacters = [
         {
             id: 'player',
-            name: 'Test Player',
-            age: 30,
-            jobRole: 'Developer',
+            name: 'Manager',
+            age: 35,
+            jobRole: 'Manager',
             competence: 7,
             laziness: 3,
-            charisma: 5,
-            personalityTags: ['focused', 'quiet'],
-            experienceTags: ['5+ Years Experience'],
-            personalItems: ['coffee mug'],
-            deskItems: ['laptop'],
+            charisma: 8,
+            personalityTags: ['organized', 'decisive'],
+            experienceTags: ['Leadership'],
+            personalItems: ['clipboard'],
+            deskItems: ['computer'],
             spriteSheet: 'assets/characters/character-01.png',
             isPlayer: true
         },
         {
             id: 'npc1',
-            name: 'Office Manager',
-            age: 35,
-            jobRole: 'Manager',
-            competence: 8,
-            laziness: 2,
-            charisma: 7,
-            personalityTags: ['friendly', 'organized'],
-            experienceTags: ['10+ Years Experience'],
-            personalItems: ['planner'],
-            deskItems: ['reports'],
+            name: 'Developer',
+            age: 28,
+            jobRole: 'Software Developer',
+            competence: 9,
+            laziness: 4,
+            charisma: 5,
+            personalityTags: ['logical', 'introverted'],
+            experienceTags: ['Programming'],
+            personalItems: ['laptop'],
+            deskItems: ['code'],
             spriteSheet: 'assets/characters/character-02.png',
             isPlayer: false
         },
         {
             id: 'npc2',
             name: 'Designer',
-            age: 28,
-            jobRole: 'Designer',
-            competence: 6,
-            laziness: 4,
-            charisma: 8,
-            personalityTags: ['creative', 'chatty'],
-            experienceTags: ['3+ Years Experience'],
-            personalItems: ['sketchbook'],
-            deskItems: ['tablet'],
+            age: 26,
+            jobRole: 'UI/UX Designer',
+            competence: 8,
+            laziness: 2,
+            charisma: 7,
+            personalityTags: ['creative', 'detail-oriented'],
+            experienceTags: ['Design'],
+            personalItems: ['tablet'],
+            deskItems: ['sketches'],
             spriteSheet: 'assets/characters/character-03.png',
             isPlayer: false
         },
         {
             id: 'npc3',
-            name: 'HR Rep',
+            name: 'Sales Rep',
             age: 32,
-            jobRole: 'HR',
-            competence: 7,
-            laziness: 3,
+            jobRole: 'Sales Representative',
+            competence: 6,
+            laziness: 5,
             charisma: 9,
-            personalityTags: ['empathetic', 'professional'],
-            experienceTags: ['5+ Years Experience'],
-            personalItems: ['calendar'],
-            deskItems: ['policies'],
+            personalityTags: ['outgoing', 'persuasive'],
+            experienceTags: ['Sales'],
+            personalItems: ['phone'],
+            deskItems: ['contracts'],
             spriteSheet: 'assets/characters/character-04.png',
             isPlayer: false
         },
@@ -468,62 +461,71 @@ function setFocusTarget(characterId) {
     console.log(`👁️ Focus set on character: ${characterId}`);
 }
 
-// UI Visibility Helper Functions
+// UI Visibility Helper Functions - FIXED to use correct HTML element IDs
 
 function showStartScreen() {
-    const startScreen = document.getElementById('start-screen');
+    const startScreen = document.getElementById('start-screen-backdrop');
     if (startScreen) {
+        startScreen.classList.remove('hidden');
         startScreen.style.display = 'flex';
     } else {
-        console.warn('UI Warning: Element with ID "start-screen" not found.');
+        console.warn('UI Warning: Element with ID "start-screen-backdrop" not found.');
     }
 }
 
 function hideStartScreen() {
-    const startScreen = document.getElementById('start-screen');
+    const startScreen = document.getElementById('start-screen-backdrop');
     if (startScreen) {
+        startScreen.classList.add('hidden');
         startScreen.style.display = 'none';
     } else {
-        console.warn('UI Warning: Element with ID "start-screen" not found.');
+        console.warn('UI Warning: Element with ID "start-screen-backdrop" not found.');
     }
 }
 
 function showCharacterCreator() {
-    const creator = document.getElementById('character-creator');
+    const creator = document.getElementById('creator-modal-backdrop');
     if (creator) {
+        creator.classList.remove('hidden');
         creator.style.display = 'block';
     } else {
-        throw new Error('UI Error: Element with ID "character-creator" not found. Cannot open character creator.');
+        throw new Error('UI Error: Element with ID "creator-modal-backdrop" not found. Cannot open character creator.');
     }
 }
 
 function hideCharacterCreator() {
-    const creator = document.getElementById('character-creator');
+    const creator = document.getElementById('creator-modal-backdrop');
     if (creator) {
+        creator.classList.add('hidden');
         creator.style.display = 'none';
     } else {
-        console.warn('UI Warning: Element with ID "character-creator" not found.');
+        console.warn('UI Warning: Element with ID "creator-modal-backdrop" not found.');
     }
 }
 
 function showGameView() {
-    const gameView = document.getElementById('game-view');
+    const gameView = document.getElementById('main-game-ui');
     if (gameView) {
+        gameView.classList.remove('hidden');
         gameView.style.display = 'flex';
     } else {
-        throw new Error('UI Error: Element with ID "game-view" not found. Cannot show game view.');
+        throw new Error('UI Error: Element with ID "main-game-ui" not found. Cannot show game view.');
     }
 }
 
 function hideGameView() {
-    const gameView = document.getElementById('game-view');
+    const gameView = document.getElementById('main-game-ui');
     if (gameView) {
+        gameView.classList.add('hidden');
         gameView.style.display = 'none';
     } else {
-        console.warn('UI Warning: Element with ID "game-view" not found.');
+        console.warn('UI Warning: Element with ID "main-game-ui" not found.');
     }
 }
 
+/**
+ * Show error message to user
+ */
 function showErrorMessage(message) {
     console.error('❌ ERROR:', message);
     
@@ -541,6 +543,9 @@ function showErrorMessage(message) {
     alert(`Error: ${message}`);
 }
 
+/**
+ * Show success message to user
+ */
 function showSuccessMessage(message) {
     console.log('✅ SUCCESS:', message);
     
@@ -561,3 +566,5 @@ export {
     showErrorMessage,
     showSuccessMessage
 };
+
+console.log('✅ Main.js loaded - Complete version with all functions');
