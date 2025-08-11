@@ -257,4 +257,4 @@ export function finalizeCharacters(characters, globalAPIKey = '') {
     return formatCharactersForGame(characters, globalAPIKey);
 }
 
-console.log('📦 Character Data Module loaded - PHASE 2 COMPLETE ALIGNMENT');
+console.log('📦 Character Data Module loaded - PHASE 4 FINAL');
