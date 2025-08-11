@@ -1,8 +1,8 @@
 /**
  * Main.js - Game initialization and coordination
- * PHASE 1: Defensive UI Integration - TEMPORARILY DISABLED DUE TO IMPORT ERRORS
- * * SAFETY: Character creator functionality is COMPLETELY UNTOUCHED
- * Defensive UI commented out until file structure is properly set up
+ * CORRECT FIX: Use the actual method names that exist in the codebase
+ * - characterManager.initializeCharacterPositions() EXISTS and is kept
+ * - renderer.addCharacter() does NOT exist, replaced with renderer.renderCharacter()
  */
 
 import { GameEngine } from './src/core/game-engine.js';
@@ -12,18 +12,12 @@ import { Renderer } from './src/rendering/renderer.js';
 import { loadMapData } from './src/core/world/world.js';
 import { initializeCharacterCreator } from './character-creator.js';
 
-// PHASE 1: Defensive UI imports - COMMENTED OUT UNTIL FILES EXIST
-// import { DefensiveUIManager } from './src/ui/defensive-ui-manager.js';
-
 // Global game state for Stage 3
 let gameEngine = null;
 let characterManager = null;
 let uiUpdater = null;
 let renderer = null;
 let focusTargetId = null;
-
-// PHASE 1: Defensive UI instance - COMMENTED OUT
-// let defensiveUI = null;
 
 /**
  * DOM Ready Event - Main initialization
@@ -246,7 +240,7 @@ function setupStatusPanelTabs() {
 
 /**
  * MAIN GAME START FUNCTION - Called from character creator
- * FIXED: Removed defensive UI temporarily, added missing setCharacterManager
+ * FIXED: Use correct method names that actually exist in the codebase
  */
 window.startGameSimulation = async function(charactersFromCreator) {
     try {
@@ -326,15 +320,15 @@ window.startGameSimulation = async function(charactersFromCreator) {
         gameEngine.initialize(mapData);
         console.log('✅ Game engine initialized');
         
-        // Initialize character positions AFTER world is created
+        // Initialize character positions AFTER world is created - THIS METHOD EXISTS
         if (gameEngine.world) {
             characterManager.initializeCharacterPositions(gameEngine.world);
             console.log('📍 Character positions initialized');
             
-            // Add characters to renderer
+            // Add characters to renderer using the CORRECT method name
             console.log('👤 Adding characters to renderer...');
             for (const character of characterManager.characters) {
-                await renderer.addCharacter(character);
+                renderer.renderCharacter(character); // FIXED: Use renderCharacter, not addCharacter
             }
             console.log('✅ Characters added to renderer');
         } else {
