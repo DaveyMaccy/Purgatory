@@ -10,7 +10,6 @@ import {
     MAX_CHARACTERS,
     generateDefaultCharacters,
     createCompleteRandomCharacter,
-    validateCharacters as validateCharactersImported,
     finalizeCharacters,
     SPRITE_OPTIONS,
     generateNameByGender,
@@ -374,7 +373,45 @@ function refreshSingleCharacterPanel(index) {
 }
 
 /**
- * Handle Start Simulation button click - FIXED VERSION
+ * ENHANCED: Validate characters before starting game
+ */
+function validateCharacters() {
+    if (characters.length < MIN_CHARACTERS) {
+        throw new Error(`Minimum ${MIN_CHARACTERS} characters required`);
+    }
+    
+    if (characters.length > MAX_CHARACTERS) {
+        throw new Error(`Maximum ${MAX_CHARACTERS} characters allowed`);
+    }
+    
+    // Ensure exactly one player
+    const playerCount = characters.filter(char => char.isPlayer).length;
+    if (playerCount === 0) {
+        characters[0].isPlayer = true;
+        console.log('⚠️ No player character found, making first character the player');
+    } else if (playerCount > 1) {
+        // Keep only first player
+        let foundFirst = false;
+        characters.forEach(char => {
+            if (char.isPlayer && foundFirst) {
+                char.isPlayer = false;
+            } else if (char.isPlayer) {
+                foundFirst = true;
+            }
+        });
+        console.log('⚠️ Multiple player characters found, using first one');
+    }
+    
+    // Ensure all have names
+    characters.forEach((char, index) => {
+        if (!char.name || char.name.trim() === '') {
+            char.name = `Character ${index + 1}`;
+        }
+    });
+}
+
+/**
+ * Handle Start Simulation button click - EXACT from Phase-3
  */
 function handleStartSimulation() {
     console.log('🚀 Start Simulation clicked!');
@@ -383,11 +420,8 @@ function handleStartSimulation() {
         // Update characters from form data
         updateCharactersFromForms();
         
-        // FIXED: Pass the characters array to the validation function
-        const validationResult = validateCharactersImported(characters);
-        if (!validationResult.isValid) {
-            throw new Error(validationResult.errors.join(', '));
-        }
+        // Validate characters
+        validateCharacters();
         
         // Convert to game format
         const gameCharacters = formatCharactersForGame();
