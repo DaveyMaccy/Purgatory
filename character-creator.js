@@ -1,11 +1,11 @@
 /**
- * Character Creator - Core Module - PHASE 3 ENHANCED UI
+ * Character Creator - Core Module - PHASE 3 EXACT MATCH
  * 
- * Fixed import syntax error and integrated with the complete UI overhaul.
- * Now matches the monolithic version exactly with enhanced two-column layout.
+ * Uses the modular system but maintains the EXACT functionality and structure
+ * from the working Phase-3 monolithic version.
  */
 
-// FIXED: Import individual functions instead of non-existent CharacterData object
+// Import modular components
 import { 
     JOB_ROLES_BY_OFFICE,
     MIN_CHARACTERS,
@@ -13,21 +13,28 @@ import {
     generateDefaultCharacters,
     createCompleteRandomCharacter,
     validateCharacters,
-    finalizeCharacters
+    finalizeCharacters,
+    SPRITE_OPTIONS,
+    generateNameByGender,
+    PERSONALITY_TAGS,
+    INVENTORY_OPTIONS,
+    DESK_ITEM_OPTIONS,
+    PHYSICAL_BUILDS,
+    GENDERS
 } from './modules/character-data.js';
 import { UIGenerator } from './modules/ui-generator.js';
 import { EventHandlers } from './modules/event-handlers.js';
 import { SpriteManager } from './modules/sprite-manager.js';
 import { ValidationUtils } from './modules/validation-utils.js';
 
-// Global state - aligned with monolithic version
+// Global state - EXACT from Phase-3
 let characters = [];
 let currentCharacterIndex = 0;
 let officeType = 'Game Studio'; // Default to Game Studio
 let globalAPIKey = 'sk-placeholder-key-for-development-testing-only';
 
 /**
- * Initialize the character creator system - PHASE 3 ENHANCED UI
+ * Initialize the character creator system - EXACT from Phase-3 but modular
  */
 function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
     console.log('🎭 Initializing enhanced character creator with complete UI...');
@@ -54,10 +61,10 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
         panelsContainer.innerHTML = '';
         characters.length = 0;
         
-        // Create initial characters using new data structure (start with 3)
+        // Create initial characters (start with 3)
         const initialCharacterCount = 3;
         for (let i = 0; i < initialCharacterCount; i++) {
-            characters.push(createCompleteRandomCharacter(i, officeType));
+            characters.push(createCharacter(i));
         }
         
         // Set first character as player
@@ -69,16 +76,16 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
             UIGenerator.createCharacterPanel(index, character, panelsContainer, officeType);
         });
         
-        // Make characters globally accessible for sprite manager
-        window.characters = characters;
-        
         // Set first tab as active
         switchToTab(0);
         
-        // Initialize enhanced buttons
+        // Initialize buttons
         initializeCharacterCreatorButtons();
         
-        console.log('✅ Enhanced character creator with complete UI initialized successfully');
+        // Make characters available globally for event handlers
+        window.characters = characters;
+        
+        console.log('✅ Enhanced character creator initialized successfully');
         
     } catch (error) {
         console.error('❌ Character creator initialization failed:', error);
@@ -87,7 +94,37 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
 }
 
 /**
- * Create office type selector - matches monolithic exactly
+ * Create global API key section - EXACT from Phase-3
+ */
+function createGlobalAPIKeySection() {
+    const creatorHeader = document.querySelector('.creator-header');
+    if (!creatorHeader) return;
+    
+    const apiSection = document.createElement('div');
+    apiSection.style.cssText = 'margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e9ecef;';
+    
+    apiSection.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <label style="font-weight: bold; color: #495057;">Global API Key:</label>
+            <input type="text" id="global-api-key" value="${globalAPIKey}" placeholder="Enter global API key for all NPCs..." 
+                style="flex: 1; min-width: 300px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-family: monospace; font-size: 12px;">
+            <span style="font-size: 12px; color: #6c757d;">Used for all NPCs unless individual key specified</span>
+        </div>
+    `;
+    
+    creatorHeader.appendChild(apiSection);
+    
+    // Add event listener
+    const globalAPIInput = document.getElementById('global-api-key');
+    if (globalAPIInput) {
+        globalAPIInput.addEventListener('input', function() {
+            globalAPIKey = this.value;
+        });
+    }
+}
+
+/**
+ * Create office type selector - EXACT from Phase-3
  */
 function createOfficeTypeSelector() {
     const creatorHeader = document.querySelector('.creator-header');
@@ -125,45 +162,37 @@ function createOfficeTypeSelector() {
         officeSelector.addEventListener('change', function() {
             officeType = this.value;
             console.log(`🏢 Office type changed to: ${officeType}`);
-            
-            // Update all characters' job roles to match new office type
             updateAllCharacterJobRoles();
         });
     }
 }
 
 /**
- * Create global API key section - matches monolithic exactly
+ * Update all character job roles when office type changes - EXACT from Phase-3
  */
-function createGlobalAPIKeySection() {
-    const creatorHeader = document.querySelector('.creator-header');
-    if (!creatorHeader) return;
+function updateAllCharacterJobRoles() {
+    const availableRoles = JOB_ROLES_BY_OFFICE[officeType];
     
-    const apiSection = document.createElement('div');
-    apiSection.style.cssText = 'margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e9ecef;';
+    characters.forEach((character, index) => {
+        // Set to first available role for new office type
+        character.jobRole = availableRoles[0];
+        
+        // Update the dropdown if panel exists
+        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
+        if (jobRoleSelect) {
+            // Rebuild options
+            jobRoleSelect.innerHTML = availableRoles
+                .map(role => `<option value="${role}">${role}</option>`)
+                .join('');
+            jobRoleSelect.value = character.jobRole;
+        }
+    });
     
-    apiSection.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-            <label style="font-weight: bold; color: #495057;">Global API Key:</label>
-            <input type="text" id="global-api-key" value="${globalAPIKey}" placeholder="Enter global API key for all NPCs..." 
-                style="flex: 1; min-width: 300px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-family: monospace; font-size: 12px;">
-            <span style="font-size: 12px; color: #6c757d;">Used for all NPCs unless individual key specified</span>
-        </div>
-    `;
-    
-    creatorHeader.appendChild(apiSection);
-    
-    // Add event listener
-    const globalAPIInput = document.getElementById('global-api-key');
-    if (globalAPIInput) {
-        globalAPIInput.addEventListener('input', function() {
-            globalAPIKey = this.value;
-        });
-    }
+    console.log(`📋 Updated all character job roles for ${officeType} office`);
 }
 
 /**
- * Initialize character creator buttons - enhanced with character count controls
+ * Initialize character creator buttons with enhanced functionality - EXACT from Phase-3
  */
 function initializeCharacterCreatorButtons() {
     console.log('🔧 Setting up enhanced character creator buttons...');
@@ -206,7 +235,7 @@ function initializeCharacterCreatorButtons() {
 }
 
 /**
- * Create character count controls (add/remove) - matches monolithic exactly
+ * Create character count controls (add/remove) - EXACT from Phase-3
  */
 function createCharacterCountControls() {
     const creatorFooter = document.querySelector('.creator-footer');
@@ -234,31 +263,52 @@ function createCharacterCountControls() {
 }
 
 /**
- * Update all character job roles when office type changes
+ * Create character with full SSOT attributes - EXACT from Phase-3
  */
-function updateAllCharacterJobRoles() {
-    const availableRoles = JOB_ROLES_BY_OFFICE[officeType];
+function createCharacter(index) {
+    const gender = getRandomItem(GENDERS);
     
-    characters.forEach((character, index) => {
-        // Set to first available role for new office type
-        character.jobRole = availableRoles[0];
-        
-        // Update the dropdown if panel exists
-        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
-        if (jobRoleSelect) {
-            // Rebuild options
-            jobRoleSelect.innerHTML = availableRoles
-                .map(role => `<option value="${role}">${role}</option>`)
-                .join('');
-            jobRoleSelect.value = character.jobRole;
+    return {
+        id: `char_${index}`,
+        name: generateNameByGender(gender),
+        isPlayer: index === 0,
+        spriteSheet: SPRITE_OPTIONS[index % SPRITE_OPTIONS.length] || SPRITE_OPTIONS[0],
+        spriteIndex: index % SPRITE_OPTIONS.length, // Track current sprite
+        portrait: null, // Generated from sprite
+        customPortrait: null, // Custom uploaded image
+        apiKey: '', // Individual API key override
+        jobRole: JOB_ROLES_BY_OFFICE[officeType][0],
+        physicalAttributes: { 
+            age: Math.floor(Math.random() * 20) + 25,
+            height: Math.floor(Math.random() * 30) + 160,
+            weight: Math.floor(Math.random() * 40) + 60,
+            build: getRandomItem(PHYSICAL_BUILDS),
+            looks: Math.floor(Math.random() * 6) + 5,
+            gender: gender
+        },
+        skills: { 
+            competence: Math.floor(Math.random() * 6) + 5, 
+            laziness: Math.floor(Math.random() * 6) + 3, 
+            charisma: Math.floor(Math.random() * 6) + 4, 
+            leadership: Math.floor(Math.random() * 6) + 4 
+        },
+        personalityTags: getRandomItems(PERSONALITY_TAGS, 2, 4),
+        experienceTags: [],
+        needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 },
+        inventory: getRandomItems(INVENTORY_OPTIONS, 1, 2),
+        deskItems: getRandomItems(DESK_ITEM_OPTIONS, 1, 2),
+        relationships: {},
+        appearance: {
+            body: 'body_skin_tone_1',
+            hair: 'hair_style_4_blonde',
+            shirt: 'shirt_style_2_red',
+            pants: 'pants_style_1_jeans'
         }
-    });
-    
-    console.log(`📋 Updated all character job roles for ${officeType} office`);
+    };
 }
 
 /**
- * Add a new character - matches monolithic exactly
+ * Add a new character - EXACT from Phase-3
  */
 function addCharacter() {
     if (characters.length >= MAX_CHARACTERS) {
@@ -267,10 +317,9 @@ function addCharacter() {
     }
     
     const newIndex = characters.length;
-    const newCharacter = createCompleteRandomCharacter(newIndex, officeType);
+    const newCharacter = createCharacter(newIndex);
     characters.push(newCharacter);
     
-    // Update UI
     const tabsContainer = document.getElementById('character-tabs');
     const panelsContainer = document.getElementById('character-panels');
     
@@ -280,11 +329,14 @@ function addCharacter() {
     updateCharacterCountControls();
     switchToTab(newIndex);
     
+    // Update global reference
+    window.characters = characters;
+    
     console.log(`➕ Added character ${newIndex + 1}`);
 }
 
 /**
- * Remove the current character - matches monolithic exactly
+ * Remove the current character - EXACT from Phase-3
  */
 function removeCharacter() {
     if (characters.length <= MIN_CHARACTERS) {
@@ -316,7 +368,7 @@ function removeCharacter() {
 }
 
 /**
- * Rebuild character UI after removal
+ * Rebuild character UI after removal - EXACT from Phase-3
  */
 function rebuildCharacterUI() {
     const tabsContainer = document.getElementById('character-tabs');
@@ -337,7 +389,7 @@ function rebuildCharacterUI() {
 }
 
 /**
- * Update character count controls state
+ * Update character count controls state - EXACT from Phase-3
  */
 function updateCharacterCountControls() {
     const countDisplay = document.getElementById('character-count');
@@ -350,31 +402,14 @@ function updateCharacterCountControls() {
 }
 
 /**
- * Enhanced randomize handling - matches monolithic exactly
- */
-function handleRandomize() {
-    const randomizeAllCheckbox = document.getElementById('randomize-all-checkbox');
-    const isRandomizeAll = randomizeAllCheckbox && randomizeAllCheckbox.checked;
-    
-    if (isRandomizeAll) {
-        console.log('🎲 Randomizing all characters...');
-        characters.forEach((char, index) => {
-            const wasPlayer = char.isPlayer;
-            characters[index] = createCompleteRandomCharacter(index, officeType);
-            characters[index].isPlayer = wasPlayer; // Preserve player status
-            refreshSingleCharacterPanel(index);
-        });
-        console.log('✅ All characters randomized');
-    } else {
-        console.log(`🎲 Randomizing character ${currentCharacterIndex + 1}...`);
-        randomizeCurrentCharacter();
-    }
-}
-
-/**
- * Switch to a specific character tab
+ * Switch to a character tab - EXACT from Phase-3
  */
 function switchToTab(index) {
+    // Update character data from current form before switching
+    if (currentCharacterIndex !== index) {
+        updateCharactersFromForms();
+    }
+    
     currentCharacterIndex = index;
     
     // Update tab appearances
@@ -386,99 +421,10 @@ function switchToTab(index) {
     document.querySelectorAll('.creator-panel').forEach((panel, i) => {
         panel.classList.toggle('hidden', i !== index);
     });
-    
-    console.log(`🔄 Switched to character ${index + 1}`);
 }
 
 /**
- * Randomize the current character - updated to use new data structure
- */
-function randomizeCurrentCharacter() {
-    try {
-        if (currentCharacterIndex >= 0 && currentCharacterIndex < characters.length) {
-            const wasPlayer = characters[currentCharacterIndex].isPlayer;
-            characters[currentCharacterIndex] = createCompleteRandomCharacter(currentCharacterIndex, officeType);
-            characters[currentCharacterIndex].isPlayer = wasPlayer; // Preserve player status
-            
-            // Refresh the current panel
-            refreshSingleCharacterPanel(currentCharacterIndex);
-            
-            console.log(`✅ Randomized character ${currentCharacterIndex + 1}`);
-        }
-        
-    } catch (error) {
-        console.error('❌ Failed to randomize character:', error);
-    }
-}
-
-/**
- * Refresh a single character panel
- */
-function refreshSingleCharacterPanel(index) {
-    const panel = document.getElementById(`character-panel-${index}`);
-    if (panel) {
-        const character = characters[index];
-        panel.innerHTML = UIGenerator.generateEnhancedPanelHTML(index, character, officeType);
-        EventHandlers.setupPanelEventListeners(index, characters, globalAPIKey);
-        SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
-        
-        // Initialize custom portrait canvas
-        SpriteManager.clearCustomPortrait(index, characters);
-        
-        // Initialize checkbox states after refresh
-        setTimeout(() => {
-            EventHandlers.updateCheckboxStates(index, 'personalityTags', 6);
-            EventHandlers.updateCheckboxStates(index, 'inventory', 3);
-            EventHandlers.updateCheckboxStates(index, 'deskItems', 2);
-        }, 50);
-    }
-}
-
-/**
- * Handle start simulation - PHASE 3 ENHANCED with new validation
- */
-function handleStartSimulation() {
-    console.log('🚀 Starting simulation with characters:', characters.length);
-    
-    try {
-        // Update characters from form data before validation
-        updateCharactersFromForms();
-        
-        // Validate all characters using new validation
-        const validation = validateCharacters(characters);
-        if (!validation.isValid) {
-            alert(`Cannot start simulation: ${validation.errors.join(', ')}`);
-            return;
-        }
-        
-        // Finalize character data using new finalization
-        const finalizedCharacters = finalizeCharacters(characters, globalAPIKey);
-        
-        // Close character creator modal using correct ID
-        const modal = document.getElementById('creator-modal-backdrop');
-        if (modal) {
-            modal.style.display = 'none';
-            modal.classList.add('hidden');
-            console.log('📝 Character creator modal closed');
-        }
-        
-        // Call the global startGame function
-        if (window.startGame && typeof window.startGame === 'function') {
-            console.log('🎯 Calling window.startGame with characters:', finalizedCharacters);
-            window.startGame(finalizedCharacters);
-        } else {
-            console.error('❌ window.startGame function not found');
-            alert('Failed to start simulation. Game initialization error.');
-        }
-        
-    } catch (error) {
-        console.error('❌ Failed to start simulation:', error);
-        alert(`Failed to start simulation: ${error.message}`);
-    }
-}
-
-/**
- * Update characters from all form inputs - matches monolithic exactly
+ * Update characters from all form inputs - EXACT from Phase-3
  */
 function updateCharactersFromForms() {
     characters.forEach((char, index) => {
@@ -515,7 +461,201 @@ function updateCharactersFromForms() {
     });
 }
 
-// Export functions for global access (needed for HTML onclick handlers)
+/**
+ * Enhanced randomize handling with proper checkbox separation - EXACT from Phase-3
+ */
+function handleRandomize() {
+    const randomizeAllCheckbox = document.getElementById('randomize-all-checkbox');
+    const isRandomizeAll = randomizeAllCheckbox && randomizeAllCheckbox.checked;
+    
+    if (isRandomizeAll) {
+        console.log('🎲 Randomizing all characters...');
+        characters.forEach((char, index) => {
+            const wasPlayer = char.isPlayer;
+            characters[index] = createCompleteRandomCharacter(index, officeType);
+            characters[index].isPlayer = wasPlayer; // Preserve player status
+            refreshSingleCharacterPanel(index);
+        });
+        console.log('✅ All characters randomized');
+    } else {
+        console.log(`🎲 Randomizing character ${currentCharacterIndex + 1}...`);
+        randomizeCurrentCharacter();
+    }
+}
+
+/**
+ * Randomize current character only - EXACT from Phase-3
+ */
+function randomizeCurrentCharacter() {
+    try {
+        if (currentCharacterIndex >= 0 && currentCharacterIndex < characters.length) {
+            const wasPlayer = characters[currentCharacterIndex].isPlayer;
+            characters[currentCharacterIndex] = createCompleteRandomCharacter(currentCharacterIndex, officeType);
+            characters[currentCharacterIndex].isPlayer = wasPlayer; // Preserve player status
+            
+            // Refresh the current panel
+            refreshSingleCharacterPanel(currentCharacterIndex);
+            
+            console.log(`✅ Randomized character ${currentCharacterIndex + 1}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to randomize character:', error);
+    }
+}
+
+/**
+ * Refresh a single character panel - EXACT from Phase-3
+ */
+function refreshSingleCharacterPanel(index) {
+    const panel = document.getElementById(`character-panel-${index}`);
+    if (panel) {
+        const character = characters[index];
+        panel.innerHTML = UIGenerator.generateEnhancedPanelHTML(index, character, officeType);
+        EventHandlers.setupPanelEventListeners(index, characters);
+        SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+        
+        // Reset custom portrait display
+        const canvas = document.getElementById(`custom-canvas-${index}`);
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#6c757d';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('No Custom', canvas.width / 2, canvas.height / 2);
+        }
+        
+        // Update all checkbox states after refresh
+        setTimeout(() => {
+            EventHandlers.updateCheckboxStates(index, 'personalityTags', 6, characters);
+            EventHandlers.updateCheckboxStates(index, 'inventory', 3, characters);
+            EventHandlers.updateCheckboxStates(index, 'deskItems', 2, characters);
+        }, 50);
+    }
+}
+
+/**
+ * Handle Start Simulation button click - EXACT from Phase-3
+ */
+function handleStartSimulation() {
+    console.log('🚀 Start Simulation clicked!');
+    
+    try {
+        // Update characters from form data
+        updateCharactersFromForms();
+        
+        // Validate characters
+        validateCharacters();
+        
+        // Convert to game format
+        const gameCharacters = formatCharactersForGame();
+        
+        // Call the global game start function
+        if (window.startGameSimulation) {
+            window.startGameSimulation(gameCharacters);
+        } else {
+            console.error('❌ startGameSimulation function not found on window object');
+            alert('Failed to start simulation. Game initialization error.');
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to start simulation:', error);
+        alert(`Failed to start simulation: ${error.message}`);
+    }
+}
+
+/**
+ * Validate characters before starting game - EXACT from Phase-3
+ */
+function validateCharacters() {
+    if (characters.length < MIN_CHARACTERS) {
+        throw new Error(`Minimum ${MIN_CHARACTERS} characters required`);
+    }
+    
+    if (characters.length > MAX_CHARACTERS) {
+        throw new Error(`Maximum ${MAX_CHARACTERS} characters allowed`);
+    }
+    
+    // Ensure exactly one player
+    const playerCount = characters.filter(char => char.isPlayer).length;
+    if (playerCount === 0) {
+        characters[0].isPlayer = true;
+        console.log('⚠️ No player character found, making first character the player');
+    } else if (playerCount > 1) {
+        // Keep only first player
+        let foundFirst = false;
+        characters.forEach(char => {
+            if (char.isPlayer && foundFirst) {
+                char.isPlayer = false;
+            } else if (char.isPlayer) {
+                foundFirst = true;
+            }
+        });
+        console.log('⚠️ Multiple player characters found, using first one');
+    }
+    
+    // Ensure all have names
+    characters.forEach((char, index) => {
+        if (!char.name || char.name.trim() === '') {
+            char.name = `Character ${index + 1}`;
+        }
+    });
+}
+
+/**
+ * Format characters for game engine with custom portrait priority - EXACT from Phase-3
+ */
+function formatCharactersForGame() {
+    return characters.map(char => ({
+        ...char,
+        // Use custom portrait if available, otherwise use sprite portrait
+        portrait: char.customPortrait || char.portrait,
+        // Use individual API key if set, otherwise use global for NPCs
+        apiKey: char.apiKey || (char.isPlayer ? '' : globalAPIKey),
+        // Game engine required fields
+        position: { x: 0, y: 0 },
+        actionState: 'idle',
+        mood: 'Neutral',
+        facingAngle: 90,
+        maxSightRange: 250,
+        isBusy: false,
+        currentAction: null,
+        currentActionTranscript: [],
+        pendingIntent: null,
+        heldItem: null,
+        conversationId: null,
+        shortTermMemory: [],
+        longTermMemory: [],
+        longTermGoal: null,
+        assignedTask: null,
+        pixiArmature: null,
+        // Initialize relationships with other characters
+        relationships: characters.reduce((rel, otherChar) => {
+            if (otherChar.id !== char.id) {
+                rel[otherChar.id] = 50; // Neutral starting relationship
+            }
+            return rel;
+        }, {})
+    }));
+}
+
+/**
+ * Helper functions - EXACT from Phase-3
+ */
+function getRandomItem(array) {
+    return array[Math.floor(Math.random() * array.length)];
+}
+
+function getRandomItems(array, min, max) {
+    const count = Math.floor(Math.random() * (max - min + 1)) + min;
+    const shuffled = [...array].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+}
+
+// Make functions available globally for HTML onclick handlers - EXACT from Phase-3
 window.switchTab = switchToTab;
 window.randomizeCurrentCharacter = randomizeCurrentCharacter;
 window.startSimulation = handleStartSimulation;
@@ -523,4 +663,4 @@ window.startSimulation = handleStartSimulation;
 // Export main initialization function
 export { initializeCharacterCreator };
 
-console.log('📦 Character Creator Core Module loaded - PHASE 3 ENHANCED UI');
+console.log('🎭 Enhanced character creator loaded and ready - PHASE 3 EXACT MATCH');
