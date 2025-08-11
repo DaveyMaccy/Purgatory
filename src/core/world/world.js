@@ -28,7 +28,7 @@ export async function loadMapData() {
         
         if (!response.ok) {
             throw new Error(`Failed to load map: HTTP ${response.status}`);
-    }
+        }
         
         const mapData = await response.json();
         
@@ -344,3 +344,4 @@ export class World {
             taskTypes: Object.keys(this.taskDictionary).length
         };
     }
+}
