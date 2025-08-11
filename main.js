@@ -1,11 +1,10 @@
 /**
  * Main Application Entry Point - MINIMAL FIX VERSION
- * 
+ *
  * This is a MINIMAL fix that only addresses the two specific errors:
  * 1. Map file path (office-layout.json → purgatorygamemap.json)
  * 2. Missing DOM element for renderer
- * 
- * KEEPS ALL EXISTING FUNCTIONALITY INTACT!
+ * CHANGE: Corrected UIUpdater instantiation.
  */
 
 // Import core systems
@@ -32,17 +31,17 @@ let uiUpdater = null;
  */
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🎮 Purgatory Office Simulator - Initializing...');
-    
+
     try {
         await initializeGame();
         console.log('🚀 Game initialization complete');
-        
+
         // Update loading status
         const loadingStatus = document.getElementById('loading-status');
         if (loadingStatus) {
             loadingStatus.textContent = 'Ready to start!';
         }
-        
+
     } catch (error) {
         console.error('❌ Failed to initialize game:', error);
         showErrorMessage('Failed to initialize game. Please refresh the page.');
@@ -54,25 +53,25 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 async function initializeGame() {
     console.log('🚀 Initializing game systems...');
-    
+
     // Initialize UI Manager first (handles all UI setup)
     uiManager = new UIManager();
     await uiManager.initialize();
-    
+
     // Initialize Input Manager
     inputManager = new InputManager();
     inputManager.initialize();
-    
+
     // Initialize Game State Manager
     gameStateManager = new GameStateManager();
     gameStateManager.initialize();
-    
+
     // Initialize Character Creator
     initializeCharacterCreator();
-    
+
     // Setup new game button
     setupNewGameButton();
-    
+
     console.log('✅ All systems initialized successfully');
 }
 
@@ -83,7 +82,7 @@ function setupNewGameButton() {
     // Try multiple possible button IDs to ensure compatibility
     const buttonIds = ['new-game-btn', 'new-game-button'];
     let newGameBtn = null;
-    
+
     for (const id of buttonIds) {
         newGameBtn = document.getElementById(id);
         if (newGameBtn) {
@@ -91,21 +90,21 @@ function setupNewGameButton() {
             break;
         }
     }
-    
+
     if (newGameBtn) {
         // Enable the button
         newGameBtn.disabled = false;
-        
+
         // Remove any existing event listeners by cloning the node
         const newButton = newGameBtn.cloneNode(true);
         newGameBtn.parentNode.replaceChild(newButton, newGameBtn);
-        
+
         // Add our event listener
         newButton.addEventListener('click', function() {
             console.log('🎯 New Game button clicked');
             showCharacterCreator();
         });
-        
+
         console.log('✅ New Game button setup complete');
     } else {
         console.error('❌ New Game button not found! Checked IDs:', buttonIds);
@@ -123,7 +122,7 @@ function showCharacterCreator() {
         startScreen.style.display = 'none';
         console.log('📝 Start screen hidden');
     }
-    
+
     // Show the character creator modal (using correct ID from HTML)
     const modal = document.getElementById('creator-modal-backdrop');
     if (modal) {
@@ -145,7 +144,7 @@ function closeCharacterCreator() {
         modal.style.display = 'none';
         modal.classList.add('hidden');
         console.log('📝 Character creator closed');
-        
+
         // Show start screen again
         const startScreen = document.getElementById('start-screen-backdrop');
         if (startScreen) {
@@ -188,26 +187,26 @@ async function loadMapData() {
  */
 async function startGame(characters) {
     console.log('🚀 Starting game with', characters.length, 'characters');
-    
+
     try {
         // Show loading state
         if (uiManager) {
             uiManager.showLoadingState(true, 'Starting simulation...');
         }
-        
+
         // Hide the character creator modal
         closeCharacterCreator();
-        
+
         // Initialize game engine
         gameEngine = new GameEngine();
-        
+
         // PHASE 1 FIX: Use loadCharacters instead of initialize
         characterManager = new CharacterManager();
         characterManager.loadCharacters(characters);  // FIXED: Was characterManager.initialize(characters)
-        
+
         // Load map data
         const mapData = await loadMapData();
-        
+
         // MINIMAL FIX: Ensure the game world container exists before initializing renderer
         let gameWorldContainer = document.getElementById('world-canvas-container');
         if (!gameWorldContainer) {
@@ -216,7 +215,7 @@ async function startGame(characters) {
             gameWorldContainer = document.createElement('div');
             gameWorldContainer.id = 'world-canvas-container';
             gameWorldContainer.style.cssText = 'width: 100%; height: 500px; background: #000; border: 2px solid #333; margin: 20px 0;';
-            
+
             // Try to find a good place to insert it
             const gameUI = document.getElementById('main-game-ui');
             if (gameUI) {
@@ -227,45 +226,46 @@ async function startGame(characters) {
                 console.log('⚠️ Added world-canvas-container to body as fallback');
             }
         }
-        
+
         // Initialize renderer with the container
         renderer = new Renderer(gameWorldContainer);
         await renderer.initialize(mapData);
-        
-        // Initialize UI updater
-        uiUpdater = new UIUpdater();
-        await uiUpdater.initialize();
-        
+
+        // *** THIS IS THE FIX ***
+        // 1. Pass characterManager to the UIUpdater constructor.
+        // 2. Removed the call to the non-existent .initialize() method.
+        uiUpdater = new UIUpdater(characterManager);
+
         // Connect all systems to game engine
         gameEngine.setCharacterManager(characterManager);
         gameEngine.setRenderer(renderer);
         gameEngine.setUIUpdater(uiUpdater);
-        
+
         // Start the game loop
         await gameEngine.start();
-        
+
         // Update game state
         if (gameStateManager) {
             gameStateManager.setState('playing');
         }
-        
+
         // Show main game UI
         const gameUI = document.getElementById('main-game-ui');
         if (gameUI) {
             gameUI.classList.remove('hidden');
             gameUI.style.display = 'block';
         }
-        
+
         // Hide loading state
         if (uiManager) {
             uiManager.showLoadingState(false);
         }
-        
+
         console.log('🎮 Game started successfully!');
-        
+
     } catch (error) {
         console.error('❌ Failed to start game:', error);
-        
+
         if (uiManager) {
             uiManager.showLoadingState(false);
             uiManager.showError('Failed to start game: ' + error.message);
@@ -330,9 +330,9 @@ window.setFocusTarget = setFocusTarget;
 window.setSimulationSpeed = setSimulationSpeed;
 
 // Export main functions for module usage
-export { 
-    startGame, 
-    showCharacterCreator, 
+export {
+    startGame,
+    showCharacterCreator,
     closeCharacterCreator,
     togglePause,
     setFocusTarget,
