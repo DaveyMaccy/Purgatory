@@ -1,5 +1,5 @@
 /**
- * UI Generator Module - PHASE 3 COMPLETE UI OVERHAUL
+ * UI Generator Module - PHASE 4 FINAL
  * 
  * Generates the exact same UI layout as the monolithic version.
  * This includes the enhanced two-column layout, all interactive elements,
@@ -62,7 +62,7 @@ class UIGenerator {
         }
         
         // Setup event listeners for this panel
-        EventHandlers.setupPanelEventListeners(index);
+        EventHandlers.setupPanelEventListeners(index, window.characters, '');
         
         // Initialize sprite and portrait - pass characters array
         SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
