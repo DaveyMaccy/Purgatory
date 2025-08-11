@@ -69,6 +69,9 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
             UIGenerator.createCharacterPanel(index, character, panelsContainer, officeType);
         });
         
+        // Make characters globally accessible for sprite manager
+        window.characters = characters;
+        
         // Set first tab as active
         switchToTab(0);
         
@@ -328,6 +331,9 @@ function rebuildCharacterUI() {
         UIGenerator.createCharacterTab(index, char, tabsContainer);
         UIGenerator.createCharacterPanel(index, char, panelsContainer, officeType);
     });
+    
+    // Update global reference
+    window.characters = characters;
 }
 
 /**
