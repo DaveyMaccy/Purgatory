@@ -16,7 +16,13 @@
  * - Texture caching for better performance
  * - Enhanced error handling for asset loading
  * - Better fallback mechanisms
+ * 
+ * ⚠️ DORMANT MODE: Enhanced sprite rendering is DISABLED by default
+ * Set USE_ENHANCED_SPRITES = true to enable when movement system is ready
  */
+
+// DORMANT CONTROL FLAG - Set to true when ready to enable enhanced sprites
+const USE_ENHANCED_SPRITES = false;
 
 export class Renderer {
     constructor(containerElement) {
@@ -41,13 +47,23 @@ export class Renderer {
         this.WORLD_WIDTH = this.BASE_WIDTH;
         this.WORLD_HEIGHT = this.BASE_HEIGHT;
 
-        console.log('🎨 Enhanced Renderer constructor with sprite preloading support');
+        if (USE_ENHANCED_SPRITES) {
+            console.log('🎨 Enhanced Renderer constructor with sprite preloading support');
+        } else {
+            console.log('🎨 Renderer constructor (enhanced sprites DORMANT)');
+        }
     }
 
     /**
      * NEW: Preload all character sprite textures for better performance
+     * ⚠️ DORMANT: Only runs when USE_ENHANCED_SPRITES = true
      */
     async preloadCharacterSprites() {
+        if (!USE_ENHANCED_SPRITES) {
+            console.log('💤 Sprite preloading DORMANT - skipping');
+            return 0;
+        }
+
         console.log('🔄 Preloading character sprite textures...');
         
         const spritePromises = [];
@@ -74,8 +90,13 @@ export class Renderer {
 
     /**
      * NEW: Load a single sprite texture with caching
+     * ⚠️ DORMANT: Only runs when USE_ENHANCED_SPRITES = true
      */
     async loadSpriteTexture(spritePath) {
+        if (!USE_ENHANCED_SPRITES) {
+            throw new Error('Enhanced sprites are dormant');
+        }
+
         // Check if already loaded
         if (this.preloadedTextures.has(spritePath)) {
             return this.preloadedTextures.get(spritePath);
@@ -99,11 +120,16 @@ export class Renderer {
     }
 
     /**
-     * ENHANCED: Initialize PixiJS application with sprite preloading
+     * ENHANCED: Initialize PixiJS application with optional sprite preloading
+     * ⚠️ SAFE: Sprite preloading only runs if USE_ENHANCED_SPRITES = true
      */
     async initialize(mapData) {
         try {
-            console.log('🔧 Initializing enhanced PixiJS renderer with sprite preloading...');
+            if (USE_ENHANCED_SPRITES) {
+                console.log('🔧 Initializing enhanced PixiJS renderer with sprite preloading...');
+            } else {
+                console.log('🔧 Initializing PixiJS renderer (enhanced sprites dormant)...');
+            }
 
             // PRESERVED: Validate container exists before proceeding
             if (!this.container) {
@@ -143,9 +169,14 @@ export class Renderer {
             // PRESERVED: Add resize listener for responsive behavior
             this.setupResizeListener();
 
-            // NEW: Preload sprites BEFORE rendering anything
-            const preloadedCount = await this.preloadCharacterSprites();
-            console.log(`🎮 Sprite preloading complete: ${preloadedCount} textures cached`);
+            // CONDITIONAL: Only preload sprites if enhanced mode is enabled
+            let preloadedCount = 0;
+            if (USE_ENHANCED_SPRITES) {
+                preloadedCount = await this.preloadCharacterSprites();
+                console.log(`🎮 Sprite preloading complete: ${preloadedCount} textures cached`);
+            } else {
+                console.log('💤 Sprite preloading skipped (dormant mode)');
+            }
 
             // PRESERVED: Render the map if provided
             if (mapData) {
@@ -153,10 +184,15 @@ export class Renderer {
             }
 
             this.isInitialized = true;
-            console.log(`✅ Enhanced PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`);
+            
+            if (USE_ENHANCED_SPRITES) {
+                console.log(`✅ Enhanced PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`);
+            } else {
+                console.log(`✅ PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9) - Enhanced sprites DORMANT`);
+            }
 
         } catch (error) {
-            console.error('❌ Failed to initialize enhanced renderer:', error);
+            console.error('❌ Failed to initialize renderer:', error);
             throw error;
         }
     }
@@ -305,98 +341,102 @@ export class Renderer {
     }
 
     /**
- * FIXED: Render character sprite with proper texture loading from sprite sheets
- * @param {Object} character - Character data with spriteSheet property
- */
-async renderCharacter(character) {
-    if (!this.isInitialized) {
-        console.warn('❌ Cannot render character: renderer not initialized');
-        return;
-    }
+     * ENHANCED: Render character sprite with conditional sprite loading
+     * ⚠️ SAFE: Falls back to placeholder if enhanced sprites are dormant
+     * @param {Object} character - Character data
+     */
+    async renderCharacter(character) {
+        if (!this.isInitialized) {
+            console.warn('❌ Cannot render character: renderer not initialized');
+            return;
+        }
 
-    // Remove existing sprite if it exists
-    if (this.characterSprites.has(character.id)) {
-        this.removeCharacter(character.id);
-    }
+        // Remove existing sprite if it exists
+        if (this.characterSprites.has(character.id)) {
+            this.removeCharacter(character.id);
+        }
 
-    try {
-        let sprite;
-        
-        // Check if character has a valid sprite sheet
-        if (character.spriteSheet) {
-            try {
-                console.log(`🎨 Loading sprite sheet for ${character.name}: ${character.spriteSheet}`);
-                
-                // Load the full sprite sheet texture
-                const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
-                
-                if (fullTexture && fullTexture.valid) {
-                    // SPRITE SHEET SPECIFICATIONS (from sprite-manager.js analysis)
-                    const SPRITE_WIDTH = 48;
-                    const SPRITE_HEIGHT = 96;
+        try {
+            let sprite;
+            
+            // CONDITIONAL: Only attempt enhanced sprite loading if enabled
+            if (USE_ENHANCED_SPRITES && character.spriteSheet) {
+                try {
+                    console.log(`🎨 Loading enhanced sprite for ${character.name}: ${character.spriteSheet}`);
                     
-                    // Extract the first sprite frame (standing/idle pose)
-                    // Using frame 0 for game world (frame 3 is used for portraits)
-                    const frameIndex = 0; // First frame for idle pose
-                    const sourceX = frameIndex * SPRITE_WIDTH;
-                    const sourceY = 0; // First row
+                    // Load the full sprite sheet texture
+                    const fullTexture = await PIXI.Texture.fromURL(character.spriteSheet);
                     
-                    // Create a new texture from the specific frame
-                    const frameTexture = new PIXI.Texture(
-                        fullTexture.baseTexture,
-                        new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT)
-                    );
+                    if (fullTexture && fullTexture.valid) {
+                        // SPRITE SHEET SPECIFICATIONS
+                        const SPRITE_WIDTH = 48;
+                        const SPRITE_HEIGHT = 96;
+                        
+                        // Extract the first sprite frame (standing/idle pose)
+                        const frameIndex = 0; // First frame for idle pose
+                        const sourceX = frameIndex * SPRITE_WIDTH;
+                        const sourceY = 0; // First row
+                        
+                        // Create a new texture from the specific frame
+                        const frameTexture = new PIXI.Texture(
+                            fullTexture.baseTexture,
+                            new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT)
+                        );
+                        
+                        // Create sprite from the frame texture
+                        sprite = new PIXI.Sprite(frameTexture);
+                        
+                        // Set sprite properties
+                        sprite.width = this.CHARACTER_WIDTH;
+                        sprite.height = this.CHARACTER_HEIGHT;
+                        sprite.anchor.set(0.5, 1.0); // Bottom center anchor
+                        
+                        console.log(`✅ Enhanced sprite loaded for ${character.name}`);
+                        
+                    } else {
+                        throw new Error('Enhanced texture failed to load');
+                    }
                     
-                    // Create sprite from the frame texture
-                    sprite = new PIXI.Sprite(frameTexture);
-                    
-                    // Set sprite properties to match renderer constants
-                    sprite.width = this.CHARACTER_WIDTH;
-                    sprite.height = this.CHARACTER_HEIGHT;
-                    sprite.anchor.set(0.5, 1.0); // Bottom center anchor for proper positioning
-                    
-                    console.log(`✅ Loaded sprite frame for ${character.name} (${SPRITE_WIDTH}x${SPRITE_HEIGHT})`);
-                    
-                } else {
-                    throw new Error('Texture failed to load or is invalid');
+                } catch (error) {
+                    console.warn(`⚠️ Enhanced sprite failed for ${character.name}, using placeholder:`, error);
+                    sprite = this.createSimpleCharacterSprite(character);
                 }
-                
-            } catch (error) {
-                console.warn(`⚠️ Failed to load sprite sheet for ${character.name}:`, error);
-                console.warn(`⚠️ Falling back to placeholder sprite`);
+            } else {
+                // FALLBACK: Use placeholder sprite (dormant mode or no sprite sheet)
+                if (!USE_ENHANCED_SPRITES && character.spriteSheet) {
+                    console.log(`💤 Enhanced sprites dormant - using placeholder for ${character.name}`);
+                } else {
+                    console.log(`🎨 No sprite sheet for ${character.name} - using placeholder`);
+                }
                 sprite = this.createSimpleCharacterSprite(character);
             }
-        } else {
-            console.log(`🎨 No sprite sheet specified for ${character.name}, using placeholder`);
-            sprite = this.createSimpleCharacterSprite(character);
-        }
 
-        // Set character position
-        sprite.x = character.position?.x || 100;
-        sprite.y = character.position?.y || 100;
+            // Set character position
+            sprite.x = character.position?.x || 100;
+            sprite.y = character.position?.y || 100;
 
-        // Add to character layer
-        this.characterLayer.addChild(sprite);
-        this.characterSprites.set(character.id, sprite);
+            // Add to character layer
+            this.characterLayer.addChild(sprite);
+            this.characterSprites.set(character.id, sprite);
 
-        console.log(`✅ Character sprite rendered: ${character.name} at (${sprite.x}, ${sprite.y})`);
+            console.log(`✅ Character rendered: ${character.name} at (${sprite.x}, ${sprite.y})`);
 
-    } catch (error) {
-        console.error('❌ Failed to render character:', character.name, error);
-        
-        // Emergency fallback - create placeholder sprite
-        try {
-            const fallbackSprite = this.createSimpleCharacterSprite(character);
-            fallbackSprite.x = character.position?.x || 100;
-            fallbackSprite.y = character.position?.y || 100;
-            this.characterLayer.addChild(fallbackSprite);
-            this.characterSprites.set(character.id, fallbackSprite);
-            console.log(`🔧 Emergency fallback sprite created for ${character.name}`);
-        } catch (fallbackError) {
-            console.error('❌ Even fallback sprite failed:', fallbackError);
+        } catch (error) {
+            console.error('❌ Failed to render character:', character.name, error);
+            
+            // Emergency fallback - create placeholder sprite
+            try {
+                const fallbackSprite = this.createSimpleCharacterSprite(character);
+                fallbackSprite.x = character.position?.x || 100;
+                fallbackSprite.y = character.position?.y || 100;
+                this.characterLayer.addChild(fallbackSprite);
+                this.characterSprites.set(character.id, fallbackSprite);
+                console.log(`🔧 Emergency fallback sprite created for ${character.name}`);
+            } catch (fallbackError) {
+                console.error('❌ Even fallback sprite failed:', fallbackError);
+            }
         }
     }
-}
 
     /**
      * PRESERVED: Create a simple character sprite (fallback when image loading fails)
@@ -474,9 +514,14 @@ async renderCharacter(character) {
         }
         
         this.characterSprites.clear();
-        this.preloadedTextures.clear(); // NEW: Clear texture cache
+        this.preloadedTextures.clear(); // Clear texture cache
         this.isInitialized = false;
-        console.log('🧹 Enhanced renderer destroyed and cleaned up');
+        
+        if (USE_ENHANCED_SPRITES) {
+            console.log('🧹 Enhanced renderer destroyed and cleaned up');
+        } else {
+            console.log('🧹 Renderer destroyed and cleaned up');
+        }
     }
 
     /**
@@ -499,18 +544,27 @@ async renderCharacter(character) {
             hasApp: !!this.app,
             hasContainer: !!this.container,
             characterCount: this.characterSprites.size,
-            preloadedTextures: this.preloadedTextures.size, // NEW
+            enhancedSpritesEnabled: USE_ENHANCED_SPRITES, // NEW: Show dormant status
+            preloadedTextures: this.preloadedTextures.size,
             worldBounds: this.getWorldBounds(),
             canvasSize: `${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`,
             aspectRatio: '16:9',
-            textureCache: Array.from(this.preloadedTextures.keys()) // NEW: List cached textures
+            textureCache: USE_ENHANCED_SPRITES ? Array.from(this.preloadedTextures.keys()) : 'DORMANT'
         };
     }
 
     /**
      * NEW: Get texture cache status for debugging
+     * ⚠️ CONDITIONAL: Only provides data when enhanced sprites are enabled
      */
     getTextureCacheStatus() {
+        if (!USE_ENHANCED_SPRITES) {
+            return {
+                status: 'DORMANT',
+                message: 'Enhanced sprites are dormant. Set USE_ENHANCED_SPRITES = true to enable.'
+            };
+        }
+
         const cached = Array.from(this.preloadedTextures.entries()).map(([path, texture]) => ({
             path,
             isValid: texture.valid,
@@ -519,6 +573,7 @@ async renderCharacter(character) {
         }));
 
         return {
+            status: 'ACTIVE',
             totalCached: this.preloadedTextures.size,
             textures: cached
         };
@@ -526,8 +581,13 @@ async renderCharacter(character) {
 
     /**
      * NEW: Force reload a specific texture (useful for debugging)
+     * ⚠️ CONDITIONAL: Only works when enhanced sprites are enabled
      */
     async reloadTexture(spritePath) {
+        if (!USE_ENHANCED_SPRITES) {
+            throw new Error('Cannot reload texture: Enhanced sprites are dormant');
+        }
+
         try {
             // Remove from cache
             this.preloadedTextures.delete(spritePath);
@@ -541,4 +601,29 @@ async renderCharacter(character) {
             throw error;
         }
     }
+
+    /**
+     * NEW: Enable enhanced sprites (for future use)
+     * ⚠️ WARNING: This cannot be changed at runtime safely
+     */
+    static enableEnhancedSprites() {
+        console.warn('⚠️ Enhanced sprites can only be enabled by changing USE_ENHANCED_SPRITES at the top of renderer.js');
+        console.warn('⚠️ Runtime enabling is not supported - restart required after code change');
+        return USE_ENHANCED_SPRITES;
+    }
 }
+
+/*
+ * ⚠️ USAGE NOTES FOR ENHANCED SPRITE ACTIVATION:
+ * 
+ * When ready to enable enhanced sprite rendering:
+ * 1. Change `const USE_ENHANCED_SPRITES = false;` to `const USE_ENHANCED_SPRITES = true;` at the top
+ * 2. Ensure character sprite sheets are properly configured in character-data.js
+ * 3. Test with debug functions:
+ *    - window.game.renderer.getStatus()
+ *    - window.game.renderer.getTextureCacheStatus()
+ * 4. Characters will automatically use sprite sheets instead of placeholders
+ * 
+ * The system is fully backwards compatible and will gracefully fall back to
+ * placeholder sprites if any enhanced feature fails.
+ */
