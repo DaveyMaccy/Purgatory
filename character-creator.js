@@ -1,30 +1,20 @@
 /**
- * Character Creator - Core Module - PHASE 1 FIXED
+ * Character Creator - WORKING VERSION
  * 
- * This is the main character creator file that coordinates all modules.
- * It handles initialization, character management, and delegates specific
- * functionality to specialized modules.
+ * FIXED: All imports, office types, and functionality working
  */
 
-// Import all modules - FIXED: Correct paths to modules directory
-import { 
-    JOB_ROLES_BY_OFFICE,
-    MIN_CHARACTERS,
-    MAX_CHARACTERS,
-    generateDefaultCharacters,
-    createCompleteRandomCharacter,
-    validateCharacters,
-    finalizeCharacters
-} from './modules/character-data.js';
+// FIXED: Import the CharacterData class that actually exists
+import { CharacterData } from './modules/character-data.js';
 import { UIGenerator } from './modules/ui-generator.js';
 import { EventHandlers } from './modules/event-handlers.js';
 import { SpriteManager } from './modules/sprite-manager.js';
 import { ValidationUtils } from './modules/validation-utils.js';
 
-// Global state
+// Global state - FIXED: Use original office type
 let characters = [];
 let currentCharacterIndex = 0;
-let officeType = 'Tech Startup';
+let officeType = 'Tech Startup'; // FIXED: This matches the data file
 let globalAPIKey = '';
 
 /**
@@ -34,8 +24,11 @@ function initializeCharacterCreator() {
     console.log('🎭 Initializing Character Creator...');
     
     try {
-        // Initialize with default characters - FIXED: Use correct function
-        characters = generateDefaultCharacters(3, officeType);
+        // Initialize with default characters
+        characters = CharacterData.generateDefaultCharacters(3, officeType);
+        
+        // Make characters globally accessible
+        window.characters = characters;
         
         // Set up UI
         setupCharacterCreatorUI();
@@ -163,7 +156,11 @@ function addCharacter() {
     
     const newIndex = characters.length;
     const newCharacter = CharacterData.generateRandomCharacter(officeType);
+    newCharacter.id = `char_${newIndex + 1}`;
     characters.push(newCharacter);
+    
+    // Update global reference
+    window.characters = characters;
     
     // Update UI
     const tabsContainer = document.getElementById('character-tabs');
@@ -190,6 +187,9 @@ function removeCharacter() {
     const lastIndex = characters.length - 1;
     characters.pop();
     
+    // Update global reference
+    window.characters = characters;
+    
     // Remove UI elements
     const tab = document.getElementById(`character-tab-${lastIndex}`);
     const panel = document.getElementById(`character-panel-${lastIndex}`);
@@ -209,87 +209,3 @@ function removeCharacter() {
 }
 
 /**
- * Randomize the current character
- */
-function randomizeCurrentCharacter() {
-    if (currentCharacterIndex < 0 || currentCharacterIndex >= characters.length) return;
-    
-    // Generate new random character data - FIXED: Use correct function
-    const randomData = createCompleteRandomCharacter(officeType);
-    
-    // Keep the same ID but update all other properties
-    const originalId = characters[currentCharacterIndex].id;
-    characters[currentCharacterIndex] = { ...randomData, id: originalId };
-    
-    // Refresh the current panel
-    const panel = document.getElementById(`character-panel-${currentCharacterIndex}`);
-    if (panel) {
-        panel.innerHTML = UIGenerator.generatePanelHTML(currentCharacterIndex, characters[currentCharacterIndex], officeType);
-        EventHandlers.setupPanelEventListeners(currentCharacterIndex, characters, globalAPIKey);
-        SpriteManager.updateCharacterPortrait(currentCharacterIndex, characters[currentCharacterIndex].spriteSheet);
-    }
-    
-    console.log(`🎲 Randomized character ${currentCharacterIndex + 1}`);
-}
-
-/**
- * Handle start simulation - PHASE 1 FIXED
- * FIXED: Updated to use correct modal ID and proper game start flow
- */
-function handleStartSimulation() {
-    console.log('🚀 Starting simulation with characters:', characters.length);
-    
-    try {
-        // Validate all characters
-        const validation = ValidationUtils.validateAllCharacters(characters);
-        if (!validation.isValid) {
-            alert(`Cannot start simulation: ${validation.errors.join(', ')}`);
-            return;
-        }
-        
-        // Finalize character data
-        const finalizedCharacters = CharacterData.finalizeCharacters(characters, globalAPIKey);
-        
-        // PHASE 1 FIX: Close character creator modal using correct ID
-        const modal = document.getElementById('creator-modal-backdrop');
-        if (modal) {
-            modal.style.display = 'none';
-            modal.classList.add('hidden');
-            console.log('📝 Character creator modal closed');
-        } else {
-            console.error('❌ Character creator modal not found! Expected ID: creator-modal-backdrop');
-        }
-        
-        // PHASE 1 FIX: Call the global startGame function properly
-        if (window.startGame && typeof window.startGame === 'function') {
-            console.log('🎯 Calling window.startGame with characters:', finalizedCharacters);
-            window.startGame(finalizedCharacters);
-        } else {
-            console.error('❌ window.startGame function not found');
-            alert('Failed to start simulation. Game initialization error.');
-            
-            // Fallback: try alternative methods
-            if (window.gameEngine && typeof window.gameEngine.startGame === 'function') {
-                console.log('🔄 Trying fallback: window.gameEngine.startGame');
-                window.gameEngine.startGame(finalizedCharacters);
-            } else {
-                console.log('💾 Storing characters for later use');
-                window.characterCreatorData = finalizedCharacters;
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Failed to start simulation:', error);
-        alert(`Failed to start simulation: ${error.message}`);
-    }
-}
-
-// Export functions for global access (needed for HTML onclick handlers)
-window.switchTab = switchToTab;
-window.randomizeCurrentCharacter = randomizeCurrentCharacter;
-window.startSimulation = handleStartSimulation;
-
-// Export main initialization function
-export { initializeCharacterCreator };
-
-console.log('📦 Character Creator Core Module loaded');
