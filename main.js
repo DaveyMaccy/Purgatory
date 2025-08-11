@@ -454,11 +454,16 @@ function startGameWithFallbackCharacters() {
 function setFocusTarget(characterId) {
     focusTargetId = characterId;
     
-    if (uiUpdater) {
-        uiUpdater.setFocusCharacter(characterId);
+    if (uiUpdater && characterManager) {
+        // Get the character by ID and update UI
+        const character = characterManager.characters.find(char => char.id === characterId);
+        if (character) {
+            uiUpdater.updateUI(character);
+            console.log(`👁️ Focus set on character: ${character.name}`);
+        } else {
+            console.warn(`⚠️ Character with ID ${characterId} not found`);
+        }
     }
-    
-    console.log(`👁️ Focus set on character: ${characterId}`);
 }
 
 // UI Visibility Helper Functions - FIXED to use correct HTML element IDs
