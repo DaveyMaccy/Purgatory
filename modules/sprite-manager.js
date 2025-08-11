@@ -1,5 +1,5 @@
 /**
- * Sprite Manager Module - PHASE 4 FINAL
+ * Sprite Manager Module - PHASE 3 COMPLETE ENHANCEMENT
  * 
  * Handles all sprite-related operations including navigation, portrait generation,
  * and custom portrait uploads. Matches monolithic implementation exactly.
@@ -25,9 +25,6 @@ class SpriteManager {
         // Update portrait and info
         this.updateCharacterPortrait(index, character.spriteSheet);
         this.updateSpriteInfo(index, characters);
-        
-        // Update global reference
-        window.characters = characters;
     }
     
     /**
@@ -78,9 +75,6 @@ class SpriteManager {
                     
                     // Store custom portrait
                     characters[index].customPortrait = canvas.toDataURL();
-                    
-                    // Update global reference
-                    window.characters = characters;
                 }
             };
             img.src = e.target.result;
@@ -94,8 +88,6 @@ class SpriteManager {
     static clearCustomPortrait(index, characters) {
         if (characters && characters[index]) {
             characters[index].customPortrait = null;
-            // Update global reference
-            window.characters = characters;
         }
         
         const canvas = document.getElementById(`custom-canvas-${index}`);
