@@ -64,8 +64,11 @@ class UIGenerator {
         // Setup event listeners for this panel
         EventHandlers.setupPanelEventListeners(index);
         
-        // Initialize sprite and portrait
+        // Initialize sprite and portrait - pass characters array
         SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+        if (window.characters) {
+            SpriteManager.updateSpriteInfo(index, window.characters);
+        }
         
         return panel;
     }
