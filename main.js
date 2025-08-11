@@ -5,6 +5,7 @@
  * 1. Map file path (office-layout.json → purgatorygamemap.json)
  * 2. Missing DOM element for renderer
  * CHANGE: Corrected UIUpdater instantiation.
+ * CHANGE: Corrected gameEngine.start() to gameEngine.initialize(mapData).
  */
 
 // Import core systems
@@ -231,9 +232,7 @@ async function startGame(characters) {
         renderer = new Renderer(gameWorldContainer);
         await renderer.initialize(mapData);
 
-        // *** THIS IS THE FIX ***
-        // 1. Pass characterManager to the UIUpdater constructor.
-        // 2. Removed the call to the non-existent .initialize() method.
+        // Pass characterManager to the UIUpdater constructor.
         uiUpdater = new UIUpdater(characterManager);
 
         // Connect all systems to game engine
@@ -241,8 +240,9 @@ async function startGame(characters) {
         gameEngine.setRenderer(renderer);
         gameEngine.setUIUpdater(uiUpdater);
 
-        // Start the game loop
-        await gameEngine.start();
+        // *** THIS IS THE FIX ***
+        // Changed from gameEngine.start() to the correct gameEngine.initialize() method.
+        gameEngine.initialize(mapData);
 
         // Update game state
         if (gameStateManager) {
