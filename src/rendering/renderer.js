@@ -22,6 +22,8 @@
  * 
  * ⚠️ DORMANT MODE: Enhanced sprite rendering is DISABLED by default
  * Set USE_ENHANCED_SPRITES = true to enable when movement system is ready
+ * 
+ * ANIMATION FIX: Updated sprite dimensions and frame cycling
  */
 
 // DORMANT CONTROL FLAG - Set to true when ready to enable enhanced sprites
@@ -71,67 +73,58 @@ export class Renderer {
         
         const spritePromises = [];
         
-        // Generate sprite paths (matches character-data.js - first 25 sprites)
-        for (let i = 1; i <= 25; i++) {
-            const paddedNumber = i.toString().padStart(2, '0');
-            const spritePath = `assets/characters/character-${paddedNumber}.png`;
+        // Generate sprite paths (matches character-data.js - first 20 sprites)
+        for (let i = 1; i <= 20; i++) {
+            const spriteId = i.toString().padStart(2, '0');
+            const spritePath = `assets/characters/character-${spriteId}.png`;
             
-            const promise = this.loadSpriteTexture(spritePath).catch(error => {
-                console.warn(`⚠️ Failed to preload sprite: ${spritePath}`, error);
-                return null; // Continue with other sprites
-            });
+            console.log(`📥 Preloading: ${spritePath}`);
             
-            spritePromises.push(promise);
-        }
-        
-        const results = await Promise.allSettled(spritePromises);
-        const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
-        
-        console.log(`✅ Preloaded ${successCount}/25 character sprites`);
-        return successCount;
-    }
-
-    /**
-     * NEW: Load a single sprite texture with caching
-     * ⚠️ DORMANT: Only runs when USE_ENHANCED_SPRITES = true
-     */
-    async loadSpriteTexture(spritePath) {
-        if (!USE_ENHANCED_SPRITES) {
-            throw new Error('Enhanced sprites are dormant');
-        }
-
-        // Check if already loaded
-        if (this.preloadedTextures.has(spritePath)) {
-            return this.preloadedTextures.get(spritePath);
+            const spritePromise = PIXI.Texture.fromURL(spritePath)
+                .then(texture => {
+                    if (texture && texture.valid) {
+                        this.preloadedTextures.set(spritePath, texture);
+                        console.log(`✅ Preloaded: ${spritePath}`);
+                        return texture;
+                    } else {
+                        console.warn(`⚠️ Failed to preload: ${spritePath}`);
+                        return null;
+                    }
+                })
+                .catch(error => {
+                    console.warn(`⚠️ Error preloading ${spritePath}:`, error);
+                    return null;
+                });
+            
+            spritePromises.push(spritePromise);
         }
         
         try {
-            const texture = await PIXI.Texture.fromURL(spritePath);
+            const textures = await Promise.allSettled(spritePromises);
+            const successCount = textures.filter(result => 
+                result.status === 'fulfilled' && result.value !== null
+            ).length;
             
-            // Validate texture is actually loaded
-            if (texture && texture.valid && texture.width > 0 && texture.height > 0) {
-                this.preloadedTextures.set(spritePath, texture);
-                console.log(`📦 Cached texture: ${spritePath} (${texture.width}x${texture.height})`);
-                return texture;
-            } else {
-                throw new Error('Invalid texture dimensions or failed to load');
-            }
+            console.log(`🎨 Preloading complete: ${successCount}/20 textures loaded`);
+            return successCount;
+            
         } catch (error) {
-            console.error(`❌ Failed to load texture: ${spritePath}`, error);
-            throw error;
+            console.error('❌ Error during sprite preloading:', error);
+            return 0;
         }
     }
 
     /**
-     * ENHANCED: Initialize PixiJS application with optional sprite preloading
-     * ⚠️ SAFE: Sprite preloading only runs if USE_ENHANCED_SPRITES = true
+     * ENHANCED: Initialize renderer with proper error handling and optional sprite preloading
      */
     async initialize(mapData) {
         try {
+            console.log('🎨 Initializing renderer...');
+            
             if (USE_ENHANCED_SPRITES) {
-                console.log('🔧 Initializing enhanced PixiJS renderer with sprite preloading...');
+                console.log('🎨 Enhanced renderer initializing (with sprite preloading)...');
             } else {
-                console.log('🔧 Initializing PixiJS renderer (enhanced sprites dormant)...');
+                console.log('🎨 Basic renderer initializing (enhanced sprites dormant)...');
             }
 
             // PRESERVED: Validate container exists before proceeding
@@ -248,20 +241,18 @@ export class Renderer {
             canvas.style.margin = '0 auto';
             canvas.style.maxWidth = '100%';
             canvas.style.maxHeight = '100%';
-            canvas.style.border = '2px solid #34495e';
-            canvas.style.borderRadius = '8px';
+            canvas.style.border = '1px solid #ccc';
         }
     }
 
     /**
-     * PRESERVED: Setup window resize listener
+     * PRESERVED: Setup resize listener for responsive behavior
      */
     setupResizeListener() {
         this.resizeHandler = () => {
             this.calculateCanvasSize();
             if (this.app) {
                 this.app.renderer.resize(this.WORLD_WIDTH, this.WORLD_HEIGHT);
-                this.setupResponsiveCanvas();
             }
         };
         
@@ -269,44 +260,30 @@ export class Renderer {
     }
 
     /**
-     * PRESERVED: Render basic office map with desks and environment
+     * PRESERVED: Render basic map with office layout
      */
     renderMap(mapData) {
         console.log('🗺️ Rendering office map...');
-
-        // PRESERVED: Clear existing map sprites
-        this.mapSprites.forEach(sprite => {
-            this.mapLayer.removeChild(sprite);
-        });
-        this.mapSprites = [];
-
-        // PRESERVED: Create background
+        
+        // Create office background
         const background = new PIXI.Graphics();
-        background.beginFill(0x95a5a6); // Light gray floor
+        background.beginFill(0xf0f0f0); // Light gray office floor
         background.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT);
         background.endFill();
         this.mapLayer.addChild(background);
         this.mapSprites.push(background);
 
-        // PRESERVED: Create walls
+        // Add office walls
         const walls = new PIXI.Graphics();
-        walls.beginFill(0x2c3e50); // Dark walls
+        walls.lineStyle(4, 0x666666); // Dark gray walls
         
-        const wallThickness = 20;
-        // Top wall
-        walls.drawRect(0, 0, this.WORLD_WIDTH, wallThickness);
-        // Bottom wall  
-        walls.drawRect(0, this.WORLD_HEIGHT - wallThickness, this.WORLD_WIDTH, wallThickness);
-        // Left wall
-        walls.drawRect(0, 0, wallThickness, this.WORLD_HEIGHT);
-        // Right wall
-        walls.drawRect(this.WORLD_WIDTH - wallThickness, 0, wallThickness, this.WORLD_HEIGHT);
+        // Outer walls
+        walls.drawRect(10, 10, this.WORLD_WIDTH - 20, this.WORLD_HEIGHT - 20);
         
-        walls.endFill();
         this.mapLayer.addChild(walls);
         this.mapSprites.push(walls);
 
-        // PRESERVED: Create desks (simple rectangles for now)
+        // Add desks (simple rectangles for now)
         const deskPositions = [
             { x: 100, y: 150, width: 120, height: 60 },
             { x: 300, y: 150, width: 120, height: 60 },
@@ -369,8 +346,8 @@ export class Renderer {
                         // CONDITIONAL: Use enhanced frame extraction if enabled, otherwise use full texture
                         if (USE_ENHANCED_SPRITES) {
                             // ENHANCED: Extract specific frame from sprite sheet
-                            const SPRITE_WIDTH = 48;
-                            const SPRITE_HEIGHT = 96;
+                            const SPRITE_WIDTH = 46;  // FIXED: Actual sprite width
+                            const SPRITE_HEIGHT = 92; // FIXED: Actual sprite height
                             const frameIndex = 0; // First frame for idle pose
                             const sourceX = frameIndex * SPRITE_WIDTH;
                             const sourceY = 0; // First row
@@ -504,68 +481,100 @@ export class Renderer {
     }
 
     /**
-     * PHASE 4 ADD: Update sprite frame for enhanced sprite sheets
+     * ANIMATION FIX: Enhanced sprite frame animation with 6-frame system
      */
     updateSpriteFrame(sprite, actionState, facingDirection) {
-        const SPRITE_WIDTH = 48;
-        const SPRITE_HEIGHT = 96;
+        // FIXED: Correct sprite dimensions based on actual sprite sheet
+        const SPRITE_WIDTH = 46;   // FIXED: Actual frame width
+        const SPRITE_HEIGHT = 92;  // FIXED: Actual frame height (2 stacked tiles)
         
         // Direction mapping (row in sprite sheet)
         const directionRows = {
-            'down': 0,
-            'left': 1, 
-            'right': 2,
-            'up': 3
+            'down': 0,   // Front-facing
+            'left': 1,   // Left-facing  
+            'right': 2,  // Right-facing
+            'up': 3      // Back-facing
         };
         
-        // Animation frame mapping (column in sprite sheet)
-        const animationFrames = {
-            'idle': 0,
-            'walking': 1, // Could cycle through 1,2,3 for walking animation
-            'working': 0
-        };
+        // FIXED: 6-frame animation system based on actual sprite sheet
+        let frame = 0;
+        
+        if (actionState === 'walking') {
+            // 4-frame walking cycle: frames 1→2→3→4→1...
+            const now = Date.now();
+            const frameIndex = Math.floor(now / 150) % 4; // 150ms per frame for smooth walking
+            frame = frameIndex + 1; // Use frames 1,2,3,4 for walking
+        } else if (actionState === 'working' || actionState === 'interacting') {
+            frame = 5; // Frame 5 for interactions/working
+        } else {
+            frame = 0; // Frame 0 for idle
+        }
         
         const row = directionRows[facingDirection] || 0;
-        const frame = animationFrames[actionState] || 0;
         
         // Calculate source rectangle
         const sourceX = frame * SPRITE_WIDTH;
         const sourceY = row * SPRITE_HEIGHT;
         
-        // Update texture rectangle
+        // FIXED: Update texture rectangle with proper dimensions
         if (sprite.texture && sprite.texture.baseTexture) {
-            sprite.texture.frame = new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT);
-            sprite.texture.updateUvs();
+            try {
+                sprite.texture.frame = new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT);
+                sprite.texture.updateUvs();
+                
+                // FIXED: Ensure sprite uses correct dimensions
+                sprite.width = this.CHARACTER_WIDTH;
+                sprite.height = this.CHARACTER_HEIGHT;
+                
+                console.log(`🎭 Updated ${sprite.characterId}: ${actionState} ${facingDirection} frame ${frame}`);
+            } catch (error) {
+                console.warn(`⚠️ Failed to update sprite frame:`, error);
+            }
         }
     }
 
     /**
-     * PHASE 4 ADD: Basic animation for simple sprites
+     * ANIMATION FIX: Basic animation with proper left/right handling
      */
     updateBasicAnimation(sprite, actionState, facingDirection) {
-        // Simple visual feedback without sprite sheets
-        
-        // Direction changes: Flip sprite horizontally for left/right
+        // FIXED: Better direction handling to prevent moonwalking
         if (facingDirection === 'left') {
             sprite.scale.x = -Math.abs(sprite.scale.x); // Face left
+            sprite.anchor.x = 1.0; // FIXED: Adjust anchor for flipped sprite
         } else if (facingDirection === 'right') {
             sprite.scale.x = Math.abs(sprite.scale.x); // Face right
+            sprite.anchor.x = 0.5; // FIXED: Normal anchor
+        } else {
+            // Up/down - no flipping needed
+            sprite.scale.x = Math.abs(sprite.scale.x);
+            sprite.anchor.x = 0.5;
         }
         
-        // Animation state changes: Subtle visual effects
+        // FIXED: Better walking animation with cycling
         if (actionState === 'walking') {
-            // Slight bounce effect for walking
-            sprite.y -= 2;
-            setTimeout(() => {
-                if (this.characterSprites.get(sprite.characterId) === sprite) {
-                    sprite.y += 2;
-                }
-            }, 200);
+            // Create a subtle walking bob animation
+            const now = Date.now();
+            const bobSpeed = 200; // milliseconds
+            const bobAmount = 2;
+            const bob = Math.sin(now / bobSpeed) * bobAmount;
+            sprite.y = (sprite.baseY || sprite.y) + bob;
+            
+            // Store base Y position for consistent bobbing
+            if (!sprite.baseY) {
+                sprite.baseY = sprite.y;
+            }
+        } else {
+            // Reset to base position when not walking
+            if (sprite.baseY) {
+                sprite.y = sprite.baseY;
+            }
         }
         
-        // Optional: Tint changes for different states
+        // FIXED: Better state visual feedback
         if (actionState === 'working') {
             sprite.tint = 0xffffaa; // Slight yellow tint
+        } else if (actionState === 'walking') {
+            sprite.tint = 0xffffff; // Normal color
         } else {
             sprite.tint = 0xffffff; // Normal color
         }
