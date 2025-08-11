@@ -1,9 +1,9 @@
 /**
  * Main.js - Game initialization and coordination
- * PHASE 1: Defensive UI Integration
+ * PHASE 1: Defensive UI Integration - TEMPORARILY DISABLED DUE TO IMPORT ERRORS
  * 
  * SAFETY: Character creator functionality is COMPLETELY UNTOUCHED
- * Only added defensive UI protection for game elements
+ * Defensive UI commented out until file structure is properly set up
  */
 
 import { GameEngine } from './src/core/game-engine.js';
@@ -13,8 +13,8 @@ import { Renderer } from './src/rendering/renderer.js';
 import { loadMapData } from './src/core/world/world.js';
 import { initializeCharacterCreator } from './character-creator.js';
 
-// PHASE 1: Import defensive UI system
-import { DefensiveUIManager } from './src/ui/defensive-ui-manager.js';
+// PHASE 1: Defensive UI imports - COMMENTED OUT UNTIL FILES EXIST
+// import { DefensiveUIManager } from './src/ui/defensive-ui-manager.js';
 
 // Global game state for Stage 3
 let gameEngine = null;
@@ -23,8 +23,8 @@ let uiUpdater = null;
 let renderer = null;
 let focusTargetId = null;
 
-// PHASE 1: Defensive UI instance
-let defensiveUI = null;
+// PHASE 1: Defensive UI instance - COMMENTED OUT
+// let defensiveUI = null;
 
 /**
  * DOM Ready Event - Main initialization
@@ -247,7 +247,7 @@ function setupStatusPanelTabs() {
 
 /**
  * MAIN GAME START FUNCTION - Called from character creator
- * PHASE 1: Added defensive UI initialization
+ * FIXED: Removed defensive UI temporarily, added missing setCharacterManager
  */
 window.startGameSimulation = async function(charactersFromCreator) {
     try {
@@ -281,17 +281,6 @@ window.startGameSimulation = async function(charactersFromCreator) {
         console.log('🖥️ Initializing UI updater...');
         uiUpdater = new UIUpdater(characterManager);
         
-        // PHASE 1: Initialize defensive UI system
-        console.log('🛡️ Initializing defensive UI protection...');
-        defensiveUI = new DefensiveUIManager();
-        const defensiveInitialized = await defensiveUI.initialize();
-        
-        if (defensiveInitialized) {
-            console.log('✅ Defensive UI protection active');
-        } else {
-            console.warn('⚠️ Defensive UI failed to initialize - continuing without protection');
-        }
-        
         // Subscribe UI updater to all characters for observer pattern
         characterManager.characters.forEach(character => {
             uiUpdater.subscribeToCharacter(character);
@@ -306,7 +295,16 @@ window.startGameSimulation = async function(charactersFromCreator) {
         // Initialize game engine
         console.log('🎮 Initializing game engine...');
         gameEngine = new GameEngine();
-        gameEngine.characterManager = characterManager;
+        
+        // FIXED: Add the missing setCharacterManager method call
+        if (gameEngine.setCharacterManager) {
+            gameEngine.setCharacterManager(characterManager);
+        } else {
+            // Fallback - directly assign if method doesn't exist
+            gameEngine.characterManager = characterManager;
+            console.log('⚠️ Using fallback character manager assignment');
+        }
+        
         gameEngine.setUIUpdater(uiUpdater);
         
         // Initialize renderer
@@ -348,21 +346,12 @@ window.startGameSimulation = async function(charactersFromCreator) {
         hideCharacterCreator();
         showGameWorld();
         
-        // PHASE 1: Start defensive UI updates alongside regular UI
-        if (defensiveUI && focusTargetId) {
-            const focusCharacter = characterManager.getCharacter(focusTargetId);
-            if (focusCharacter) {
-                // Update both regular UI and defensive UI
-                uiUpdater.updateUI(focusCharacter);
-                defensiveUI.updateUI(focusCharacter, characterManager.characters);
-                console.log(`🎯 UI (including defensive) focused on: ${focusCharacter.name}`);
-            }
-        } else if (focusTargetId) {
-            // Fallback to regular UI only
+        // Start UI updates with initial focus character
+        if (focusTargetId) {
             const focusCharacter = characterManager.getCharacter(focusTargetId);
             if (focusCharacter) {
                 uiUpdater.updateUI(focusCharacter);
-                console.log(`🎯 Regular UI focused on: ${focusCharacter.name}`);
+                console.log(`🎯 UI focused on: ${focusCharacter.name}`);
             }
         }
         
@@ -491,11 +480,6 @@ function logGameStatus() {
     if (uiUpdater) {
         console.log('🖥️ UI Updater: Active with clock running');
     }
-    
-    // PHASE 1: Log defensive UI status
-    if (defensiveUI) {
-        console.log('🛡️ Defensive UI:', defensiveUI.getStatus());
-    }
 }
 
 /**
@@ -519,12 +503,6 @@ function cleanupGame() {
         uiUpdater = null;
     }
     
-    // PHASE 1: Cleanup defensive UI
-    if (defensiveUI) {
-        defensiveUI.destroy();
-        defensiveUI = null;
-    }
-    
     characterManager = null;
     focusTargetId = null;
     
@@ -538,27 +516,19 @@ window.addEventListener('beforeunload', cleanupGame);
 
 /**
  * Debug functions for console testing
- * PHASE 1: Added defensive UI debug controls
  */
 window.debugGame = {
     getGameEngine: () => gameEngine,
     getCharacterManager: () => characterManager,
     getRenderer: () => renderer,
     getUIUpdater: () => uiUpdater,
-    getDefensiveUI: () => defensiveUI, // PHASE 1: Access to defensive UI
     logStatus: logGameStatus,
     forceUIUpdate: () => {
         if (gameEngine && focusTargetId) {
             const character = characterManager.getCharacter(focusTargetId);
             if (character && uiUpdater) {
                 uiUpdater.updateUI(character);
-                
-                // PHASE 1: Also update defensive UI
-                if (defensiveUI) {
-                    defensiveUI.updateUI(character, characterManager.characters);
-                }
-                
-                console.log('🔄 Debug: UI force updated (regular + defensive)');
+                console.log('🔄 Debug: UI force updated');
             }
         }
     },
@@ -601,47 +571,11 @@ window.debugGame = {
                 char.needs[needType] = Math.max(0, Math.min(10, value));
                 char.notifyObservers('needs');
                 console.log(`Set ${characterName}'s ${needType} to ${value}`);
-                
-                // PHASE 1: Force defensive UI update
-                if (defensiveUI && char.id === focusTargetId) {
-                    defensiveUI.updateUI(char, characterManager.characters);
-                }
             } else {
                 console.log('Character or need type not found');
             }
         }
-    },
-    // PHASE 1: Defensive UI specific debug controls
-    disableUIProtection: (reason) => {
-        if (defensiveUI) {
-            window.debugGame.disableUIProtection(reason);
-        } else {
-            console.log('Defensive UI not initialized');
-        }
-    },
-    enableUIProtection: () => {
-        if (defensiveUI) {
-            window.debugGame.enableUIProtection();
-        } else {
-            console.log('Defensive UI not initialized');
-        }
-    },
-    validateUI: () => {
-        if (defensiveUI) {
-            return window.debugGame.validateUI();
-        } else {
-            console.log('Defensive UI not initialized');
-            return null;
-        }
-    },
-    getUIStatus: () => {
-        if (defensiveUI) {
-            return window.debugGame.getUIStatus();
-        } else {
-            console.log('Defensive UI not initialized');
-            return null;
-        }
     }
 };
 
-console.log('🎮 Main.js loaded with Phase 1 Defensive UI - Debug functions available as window.debugGame');
+console.log('🎮 Main.js loaded - Debug functions available as window.debugGame');
