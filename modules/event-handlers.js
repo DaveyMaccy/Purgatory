@@ -2,7 +2,7 @@
  * Event Handlers Module - PHASE 3 COMPLETE
  * 
  * Handles all event listeners and user interactions for the enhanced character creator.
- * Matches the monolithic implementation exactly with all interactive features.
+ * FIXED: Proper player character enforcement and all functionality from Phase-3.
  */
 
 import { UIGenerator } from './ui-generator.js';
@@ -17,7 +17,7 @@ import {
 
 class EventHandlers {
     /**
-     * Setup enhanced event listeners for character panel - matches monolithic exactly
+     * Setup enhanced event listeners for character panel - EXACT COPY from Phase-3
      */
     static setupPanelEventListeners(index, characters, globalAPIKey) {
         // Get the characters array from global scope if not passed
@@ -25,51 +25,7 @@ class EventHandlers {
             characters = window.characters || [];
         }
         
-        // Player character checkbox - enforce single player
-        this.setupPlayerCharacterHandler(index, characters);
-        
-        // Name generation and gender change
-        this.setupNameHandlers(index, characters);
-        
-        // Sprite navigation arrows
-        this.setupSpriteNavigationHandlers(index, characters);
-        
-        // Custom portrait upload
-        this.setupPortraitHandlers(index, characters);
-        
-        // Physical attribute sliders
-        this.setupPhysicalAttributesHandlers(index, characters);
-        
-        // Skill sliders
-        this.setupSkillsHandlers(index, characters);
-        
-        // Personality tags with limits
-        this.setupPersonalityTagsHandlers(index, characters);
-        
-        // Inventory items with limits
-        this.setupInventoryHandlers(index, characters);
-        
-        // Desk items with limits
-        this.setupDeskItemsHandlers(index, characters);
-        
-        // API key handler
-        this.setupAPIKeyHandler(index, characters, globalAPIKey);
-        
-        // Basic form handlers
-        this.setupBasicFormHandlers(index, characters);
-        
-        // Initialize checkbox states
-        setTimeout(() => {
-            this.updateCheckboxStates(index, 'personalityTags', 6);
-            this.updateCheckboxStates(index, 'inventory', 3);
-            this.updateCheckboxStates(index, 'deskItems', 2);
-        }, 50);
-    }
-    
-    /**
-     * Setup player character enforcement - matches monolithic exactly
-     */
-    static setupPlayerCharacterHandler(index, characters) {
+        // FIXED: Player character checkbox - enforce single player (EXACT from Phase-3)
         const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
         if (isPlayerCheckbox) {
             isPlayerCheckbox.addEventListener('change', function() {
@@ -88,13 +44,8 @@ class EventHandlers {
                 }
             });
         }
-    }
-    
-    /**
-     * Setup name generation and gender change handlers - matches monolithic exactly
-     */
-    static setupNameHandlers(index, characters) {
-        // Name generation button
+
+        // Name generation button (EXACT from Phase-3)
         const generateNameBtn = document.getElementById(`generate-name-${index}`);
         if (generateNameBtn) {
             generateNameBtn.addEventListener('click', function() {
@@ -103,13 +54,10 @@ class EventHandlers {
                 characters[index].name = newName;
                 const nameInput = document.getElementById(`name-${index}`);
                 if (nameInput) nameInput.value = newName;
-                
-                // Update tab name
-                UIGenerator.updateTabName(index, newName);
             });
         }
-        
-        // Gender change - regenerate name
+
+        // Gender change - regenerate name (EXACT from Phase-3)
         const genderSelect = document.getElementById(`gender-${index}`);
         if (genderSelect) {
             genderSelect.addEventListener('change', function() {
@@ -119,67 +67,32 @@ class EventHandlers {
                 characters[index].name = newName;
                 const nameInput = document.getElementById(`name-${index}`);
                 if (nameInput) nameInput.value = newName;
-                
-                // Update tab name
-                UIGenerator.updateTabName(index, newName);
             });
         }
-        
-        // Name input change
-        const nameInput = document.getElementById(`name-${index}`);
-        if (nameInput) {
-            nameInput.addEventListener('input', function() {
-                characters[index].name = this.value;
-                UIGenerator.updateTabName(index, this.value);
-            });
-        }
-    }
-    
-    /**
-     * Setup sprite navigation handlers - matches monolithic exactly
-     */
-    static setupSpriteNavigationHandlers(index, characters) {
+
+        // Sprite navigation arrows (EXACT from Phase-3)
         const prevBtn = document.getElementById(`sprite-prev-${index}`);
         const nextBtn = document.getElementById(`sprite-next-${index}`);
-        
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => {
-                SpriteManager.navigateSprite(index, -1, characters);
-            });
+        if (prevBtn && nextBtn) {
+            prevBtn.addEventListener('click', () => this.navigateSprite(index, -1, characters));
+            nextBtn.addEventListener('click', () => this.navigateSprite(index, 1, characters));
         }
-        
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                SpriteManager.navigateSprite(index, 1, characters);
-            });
-        }
-    }
-    
-    /**
-     * Setup portrait upload handlers - matches monolithic exactly
-     */
-    static setupPortraitHandlers(index, characters) {
-        // Custom portrait upload
+
+        // Custom portrait upload (EXACT from Phase-3)
         const portraitUpload = document.getElementById(`portrait-upload-${index}`);
         if (portraitUpload) {
             portraitUpload.addEventListener('change', function(e) {
-                SpriteManager.handleCustomPortraitUpload(index, e.target.files[0], characters);
+                EventHandlers.handleCustomPortraitUpload(index, e.target.files[0], characters);
             });
         }
-        
-        // Clear custom portrait
+
+        // Clear custom portrait (EXACT from Phase-3)
         const clearCustomBtn = document.getElementById(`clear-custom-${index}`);
         if (clearCustomBtn) {
-            clearCustomBtn.addEventListener('click', () => {
-                SpriteManager.clearCustomPortrait(index, characters);
-            });
+            clearCustomBtn.addEventListener('click', () => EventHandlers.clearCustomPortrait(index));
         }
-    }
-    
-    /**
-     * Setup physical attribute sliders - matches monolithic exactly
-     */
-    static setupPhysicalAttributesHandlers(index, characters) {
+
+        // Physical attribute sliders (EXACT from Phase-3)
         ['age', 'height', 'weight', 'looks'].forEach(attr => {
             const slider = document.getElementById(`${attr}-${index}`);
             const valueLabel = document.getElementById(`${attr}-val-${index}`);
@@ -200,12 +113,8 @@ class EventHandlers {
                 });
             }
         });
-    }
-    
-    /**
-     * Setup skill sliders - matches monolithic exactly
-     */
-    static setupSkillsHandlers(index, characters) {
+
+        // Skill sliders (EXACT from Phase-3)
         ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
             const slider = document.getElementById(`${skill}-${index}`);
             const valueLabel = document.getElementById(`${skill}-val-${index}`);
@@ -217,70 +126,49 @@ class EventHandlers {
                 });
             }
         });
-    }
-    
-    /**
-     * Setup personality tags handlers with limit enforcement - matches monolithic exactly
-     */
-    static setupPersonalityTagsHandlers(index, characters) {
+
+        // Personality tags (max 6) with greying out (EXACT from Phase-3)
         PERSONALITY_TAGS.forEach(tag => {
             const checkbox = document.getElementById(`tags-${index}-${tag}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
                     EventHandlers.updateCharacterTags(index, 'personalityTags', 6, characters);
-                    EventHandlers.updateCheckboxStates(index, 'personalityTags', 6);
+                    EventHandlers.updateCheckboxStates(index, 'personalityTags', 6, characters);
                 });
             }
         });
-    }
-    
-    /**
-     * Setup inventory handlers with limit enforcement - matches monolithic exactly
-     */
-    static setupInventoryHandlers(index, characters) {
+
+        // Inventory items (max 3) with greying out (EXACT from Phase-3)
         INVENTORY_OPTIONS.forEach(item => {
             const checkbox = document.getElementById(`inventory-item-${index}-${item}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
                     EventHandlers.updateCharacterItems(index, 'inventory', 3, characters);
-                    EventHandlers.updateCheckboxStates(index, 'inventory', 3);
+                    EventHandlers.updateCheckboxStates(index, 'inventory', 3, characters);
                 });
             }
         });
-    }
-    
-    /**
-     * Setup desk items handlers with limit enforcement - matches monolithic exactly
-     */
-    static setupDeskItemsHandlers(index, characters) {
+
+        // Desk items (max 2) with greying out (EXACT from Phase-3)
         DESK_ITEM_OPTIONS.forEach(item => {
             const checkbox = document.getElementById(`desk-item-${index}-${item}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
                     EventHandlers.updateCharacterItems(index, 'deskItems', 2, characters);
-                    EventHandlers.updateCheckboxStates(index, 'deskItems', 2);
+                    EventHandlers.updateCheckboxStates(index, 'deskItems', 2, characters);
                 });
             }
         });
-    }
-    
-    /**
-     * Setup API key handler
-     */
-    static setupAPIKeyHandler(index, characters, globalAPIKey) {
+        
+        // API key handler
         const apiKeyInput = document.getElementById(`api-key-input-${index}`);
         if (apiKeyInput) {
             apiKeyInput.addEventListener('input', function() {
                 characters[index].apiKey = this.value;
             });
         }
-    }
-    
-    /**
-     * Setup basic form handlers
-     */
-    static setupBasicFormHandlers(index, characters) {
-        // Job role select
+
+        // Basic form handlers
         const jobRoleSelect = document.getElementById(`jobRole-${index}`);
         if (jobRoleSelect) {
             jobRoleSelect.addEventListener('change', function() {
@@ -288,30 +176,132 @@ class EventHandlers {
             });
         }
         
-        // Build select
         const buildSelect = document.getElementById(`build-${index}`);
         if (buildSelect) {
             buildSelect.addEventListener('change', function() {
                 characters[index].physicalAttributes.build = this.value;
             });
         }
+        
+        // Initialize checkbox states
+        setTimeout(() => {
+            EventHandlers.updateCheckboxStates(index, 'personalityTags', 6, characters);
+            EventHandlers.updateCheckboxStates(index, 'inventory', 3, characters);
+            EventHandlers.updateCheckboxStates(index, 'deskItems', 2, characters);
+        }, 50);
     }
-    
+
     /**
-     * Update checkbox states - grey out when max reached - matches monolithic exactly
+     * Navigate through sprites with arrows (EXACT from Phase-3)
      */
-    static updateCheckboxStates(index, itemType, maxLimit) {
+    static navigateSprite(index, direction, characters) {
+        const character = characters[index];
+        let newSpriteIndex = (character.spriteIndex || 0) + direction;
+        
+        // Import SPRITE_OPTIONS dynamically if needed
+        import('./character-data.js').then(({ SPRITE_OPTIONS }) => {
+            // Wrap around
+            if (newSpriteIndex < 0) newSpriteIndex = SPRITE_OPTIONS.length - 1;
+            if (newSpriteIndex >= SPRITE_OPTIONS.length) newSpriteIndex = 0;
+            
+            character.spriteIndex = newSpriteIndex;
+            character.spriteSheet = SPRITE_OPTIONS[newSpriteIndex];
+            
+            // Update portrait and info
+            SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+            EventHandlers.updateSpriteInfo(index, characters);
+        });
+    }
+
+    /**
+     * Update sprite info display (EXACT from Phase-3)
+     */
+    static updateSpriteInfo(index, characters) {
+        const spriteInfo = document.getElementById(`sprite-info-${index}`);
+        if (spriteInfo) {
+            import('./character-data.js').then(({ SPRITE_OPTIONS }) => {
+                const spriteIndex = characters[index].spriteIndex || 0;
+                spriteInfo.textContent = `Sprite ${spriteIndex + 1} of ${SPRITE_OPTIONS.length}`;
+            });
+        }
+    }
+
+    /**
+     * Handle custom portrait upload (EXACT from Phase-3)
+     */
+    static handleCustomPortraitUpload(index, file, characters) {
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.getElementById(`custom-canvas-${index}`);
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Clear canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw image scaled to fit
+                    const aspectRatio = img.width / img.height;
+                    let drawWidth = canvas.width;
+                    let drawHeight = canvas.height;
+                    
+                    if (aspectRatio > 1) {
+                        drawHeight = canvas.width / aspectRatio;
+                    } else {
+                        drawWidth = canvas.height * aspectRatio;
+                    }
+                    
+                    const x = (canvas.width - drawWidth) / 2;
+                    const y = (canvas.height - drawHeight) / 2;
+                    
+                    ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                    
+                    // Store custom portrait
+                    characters[index].customPortrait = canvas.toDataURL();
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /**
+     * Clear custom portrait (EXACT from Phase-3)
+     */
+    static clearCustomPortrait(index) {
+        const characters = window.characters || [];
+        characters[index].customPortrait = null;
+        const canvas = document.getElementById(`custom-canvas-${index}`);
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#6c757d';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('No Custom', canvas.width / 2, canvas.height / 2);
+        }
+    }
+
+    /**
+     * Update checkbox states - grey out when max reached (EXACT from Phase-3)
+     */
+    static updateCheckboxStates(index, itemType, maxLimit, characters) {
         let prefix, selectedCount;
         
         if (itemType === 'personalityTags') {
             prefix = 'tags';
-            selectedCount = window.characters?.[index]?.personalityTags?.length || 0;
+            selectedCount = characters[index].personalityTags.length;
         } else if (itemType === 'inventory') {
             prefix = 'inventory-item';
-            selectedCount = window.characters?.[index]?.inventory?.length || 0;
+            selectedCount = characters[index].inventory.length;
         } else if (itemType === 'deskItems') {
             prefix = 'desk-item';
-            selectedCount = window.characters?.[index]?.deskItems?.length || 0;
+            selectedCount = characters[index].deskItems.length;
         }
         
         const allCheckboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]`);
@@ -333,9 +323,9 @@ class EventHandlers {
             }
         });
     }
-    
+
     /**
-     * Update character tags with limit enforcement - matches monolithic exactly
+     * Update character tags with limit enforcement (EXACT from Phase-3)
      */
     static updateCharacterTags(index, tagType, maxLimit, characters) {
         const checkboxes = document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]:checked`);
@@ -354,9 +344,9 @@ class EventHandlers {
         
         characters[index][tagType] = selectedTags;
     }
-    
+
     /**
-     * Update character items with limit enforcement - matches monolithic exactly
+     * Update character items with limit enforcement (EXACT from Phase-3)
      */
     static updateCharacterItems(index, itemType, maxLimit, characters) {
         const prefix = itemType === 'inventory' ? 'inventory-item' : 'desk-item';
@@ -376,21 +366,6 @@ class EventHandlers {
         
         characters[index][itemType] = selectedItems;
     }
-    
-    /**
-     * Legacy methods for backward compatibility
-     */
-    static setupBasicInfoHandlers(index, characters) {
-        this.setupNameHandlers(index, characters);
-        this.setupBasicFormHandlers(index, characters);
-    }
-    
-    static setupBioHandler(index, characters) {
-        // Bio handler placeholder for future use
-        console.log(`Bio handler placeholder for character ${index}`);
-    }
 }
 
 export { EventHandlers };
-
-console.log('📦 Event Handlers Module loaded - PHASE 3 COMPLETE');
