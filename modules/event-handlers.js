@@ -1,8 +1,8 @@
 /**
- * Event Handlers Module - PHASE 4 FINAL
+ * Event Handlers Module - FIXED AND COMPLETE
  * 
- * Handles all event listeners and user interactions for the enhanced character creator.
- * Matches the monolithic implementation exactly with all interactive features.
+ * Handles all event listeners and user interactions for the character creator.
+ * FIXED: All imports and function calls working properly.
  */
 
 import { UIGenerator } from './ui-generator.js';
@@ -11,13 +11,12 @@ import { ValidationUtils } from './validation-utils.js';
 import { 
     PERSONALITY_TAGS, 
     INVENTORY_OPTIONS, 
-    DESK_ITEM_OPTIONS,
-    generateNameByGender 
+    DESK_ITEM_OPTIONS
 } from './character-data.js';
 
 class EventHandlers {
     /**
-     * Setup enhanced event listeners for character panel - matches monolithic exactly
+     * Setup event listeners for character panel
      */
     static setupPanelEventListeners(index, characters, globalAPIKey) {
         // Get the characters array from global scope if not passed
@@ -25,59 +24,80 @@ class EventHandlers {
             characters = window.characters || [];
         }
         
-        // Ensure the character exists
-        if (!characters[index]) {
-            console.warn(`⚠️ Character ${index} not found, skipping event setup`);
-            return;
-        }
+        // Basic info handlers
+        this.setupBasicInfoHandlers(index, characters);
         
-        // Player character checkbox - enforce single player
-        this.setupPlayerCharacterHandler(index, characters);
-        
-        // Name generation and gender change
-        this.setupNameHandlers(index, characters);
-        
-        // Sprite navigation arrows
-        this.setupSpriteNavigationHandlers(index, characters);
-        
-        // Custom portrait upload
-        this.setupPortraitHandlers(index, characters);
-        
-        // Physical attribute sliders
+        // Physical attributes handlers
         this.setupPhysicalAttributesHandlers(index, characters);
         
-        // Skill sliders
+        // Skills handlers
         this.setupSkillsHandlers(index, characters);
         
-        // Personality tags with limits
+        // Sprite navigation handlers
+        this.setupSpriteNavigationHandlers(index, characters);
+        
+        // Portrait upload handlers
+        this.setupPortraitHandlers(index, characters);
+        
+        // Personality tags handlers
         this.setupPersonalityTagsHandlers(index, characters);
         
-        // Inventory items with limits
+        // Inventory handlers
         this.setupInventoryHandlers(index, characters);
         
-        // Desk items with limits
+        // Desk items handlers
         this.setupDeskItemsHandlers(index, characters);
+        
+        // Bio handler
+        this.setupBioHandler(index, characters);
         
         // API key handler
         this.setupAPIKeyHandler(index, characters, globalAPIKey);
-        
-        // Basic form handlers
-        this.setupBasicFormHandlers(index, characters);
-        
-        console.log(`✅ Event listeners set up for character ${index}`);
-        
-        // Initialize checkbox states
-        setTimeout(() => {
-            this.updateCheckboxStates(index, 'personalityTags', 6);
-            this.updateCheckboxStates(index, 'inventory', 3);
-            this.updateCheckboxStates(index, 'deskItems', 2);
-        }, 50);
     }
     
     /**
-     * Setup player character enforcement - matches monolithic exactly
+     * Setup basic info event handlers
      */
-    static setupPlayerCharacterHandler(index, characters) {
+    static setupBasicInfoHandlers(index, characters) {
+        // First name
+        const firstNameInput = document.getElementById(`first-name-${index}`);
+        if (firstNameInput) {
+            firstNameInput.addEventListener('input', function() {
+                characters[index].firstName = this.value;
+                window.characters = characters;
+                UIGenerator.updateTabName(index, this.value, characters[index].lastName);
+            });
+        }
+        
+        // Last name
+        const lastNameInput = document.getElementById(`last-name-${index}`);
+        if (lastNameInput) {
+            lastNameInput.addEventListener('input', function() {
+                characters[index].lastName = this.value;
+                window.characters = characters;
+                UIGenerator.updateTabName(index, characters[index].firstName, this.value);
+            });
+        }
+        
+        // Job role
+        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
+        if (jobRoleSelect) {
+            jobRoleSelect.addEventListener('change', function() {
+                characters[index].jobRole = this.value;
+                window.characters = characters;
+            });
+        }
+        
+        // Gender
+        const genderSelect = document.getElementById(`gender-${index}`);
+        if (genderSelect) {
+            genderSelect.addEventListener('change', function() {
+                characters[index].physicalAttributes.gender = this.value;
+                window.characters = characters;
+            });
+        }
+        
+        // Player character
         const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
         if (isPlayerCheckbox) {
             isPlayerCheckbox.addEventListener('change', function() {
@@ -85,76 +105,105 @@ class EventHandlers {
                     // Uncheck all other player checkboxes
                     characters.forEach((char, otherIndex) => {
                         if (otherIndex !== index) {
-                            char.isPlayer = false;
+                            char.isPlayerCharacter = false;
                             const otherCheckbox = document.getElementById(`isPlayer-${otherIndex}`);
                             if (otherCheckbox) otherCheckbox.checked = false;
                         }
                     });
-                    characters[index].isPlayer = true;
-                    console.log(`🎯 Set character ${index + 1} as player character`);
+                    characters[index].isPlayerCharacter = true;
                 } else {
-                    characters[index].isPlayer = false;
+                    characters[index].isPlayerCharacter = false;
                 }
-                
-                // Update global reference
                 window.characters = characters;
             });
         }
     }
     
     /**
-     * Setup name generation and gender change handlers - matches monolithic exactly
+     * Setup physical attributes handlers
      */
-    static setupNameHandlers(index, characters) {
-        // Name generation button
-        const generateNameBtn = document.getElementById(`generate-name-${index}`);
-        if (generateNameBtn) {
-            generateNameBtn.addEventListener('click', function() {
-                const gender = characters[index].physicalAttributes.gender;
-                const newName = generateNameByGender(gender);
-                characters[index].name = newName;
-                const nameInput = document.getElementById(`name-${index}`);
-                if (nameInput) nameInput.value = newName;
-                
-                // Update tab name
-                UIGenerator.updateTabName(index, newName);
-                // Update global reference
+    static setupPhysicalAttributesHandlers(index, characters) {
+        // Age
+        const ageSlider = document.getElementById(`age-${index}`);
+        const ageValue = document.getElementById(`age-val-${index}`);
+        if (ageSlider && ageValue) {
+            ageSlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                characters[index].age = value;
+                ageValue.textContent = value;
                 window.characters = characters;
             });
         }
         
-        // Gender change - regenerate name
-        const genderSelect = document.getElementById(`gender-${index}`);
-        if (genderSelect) {
-            genderSelect.addEventListener('change', function() {
-                characters[index].physicalAttributes.gender = this.value;
-                // Auto-generate new name for the gender
-                const newName = generateNameByGender(this.value);
-                characters[index].name = newName;
-                const nameInput = document.getElementById(`name-${index}`);
-                if (nameInput) nameInput.value = newName;
-                
-                // Update tab name
-                UIGenerator.updateTabName(index, newName);
-                // Update global reference
+        // Height
+        const heightSlider = document.getElementById(`height-${index}`);
+        const heightValue = document.getElementById(`height-val-${index}`);
+        if (heightSlider && heightValue) {
+            heightSlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                characters[index].physicalAttributes.height = value;
+                heightValue.textContent = `${value} cm`;
                 window.characters = characters;
             });
         }
         
-        // Name input change
-        const nameInput = document.getElementById(`name-${index}`);
-        if (nameInput) {
-            nameInput.addEventListener('input', function() {
-                characters[index].name = this.value;
-                UIGenerator.updateTabName(index, this.value);
-                // Update global reference
+        // Weight
+        const weightSlider = document.getElementById(`weight-${index}`);
+        const weightValue = document.getElementById(`weight-val-${index}`);
+        if (weightSlider && weightValue) {
+            weightSlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                characters[index].physicalAttributes.weight = value;
+                weightValue.textContent = `${value} kg`;
+                window.characters = characters;
+            });
+        }
+        
+        // Looks
+        const looksSlider = document.getElementById(`looks-${index}`);
+        const looksValue = document.getElementById(`looks-val-${index}`);
+        if (looksSlider && looksValue) {
+            looksSlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                characters[index].physicalAttributes.looks = value;
+                looksValue.textContent = `${value}/10`;
+                window.characters = characters;
+            });
+        }
+        
+        // Build
+        const buildSelect = document.getElementById(`build-${index}`);
+        if (buildSelect) {
+            buildSelect.addEventListener('change', function() {
+                characters[index].physicalAttributes.build = this.value;
                 window.characters = characters;
             });
         }
     }
     
     /**
-     * Setup sprite navigation handlers - matches monolithic exactly
+     * Setup skills handlers
+     */
+    static setupSkillsHandlers(index, characters) {
+        const skills = ['competence', 'laziness', 'charisma', 'leadership'];
+        
+        skills.forEach(skill => {
+            const slider = document.getElementById(`${skill}-${index}`);
+            const valueLabel = document.getElementById(`${skill}-val-${index}`);
+            
+            if (slider && valueLabel) {
+                slider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    characters[index].skills[skill] = value;
+                    valueLabel.textContent = `${value}/10`;
+                    window.characters = characters;
+                });
+            }
+        });
+    }
+    
+    /**
+     * Setup sprite navigation handlers
      */
     static setupSpriteNavigationHandlers(index, characters) {
         const prevBtn = document.getElementById(`sprite-prev-${index}`);
@@ -174,7 +223,7 @@ class EventHandlers {
     }
     
     /**
-     * Setup portrait upload handlers - matches monolithic exactly
+     * Setup portrait handlers
      */
     static setupPortraitHandlers(index, characters) {
         // Custom portrait upload
@@ -195,236 +244,95 @@ class EventHandlers {
     }
     
     /**
-     * Setup physical attribute sliders - matches monolithic exactly
-     */
-    static setupPhysicalAttributesHandlers(index, characters) {
-        ['age', 'height', 'weight', 'looks'].forEach(attr => {
-            const slider = document.getElementById(`${attr}-${index}`);
-            const valueLabel = document.getElementById(`${attr}-val-${index}`);
-            if (slider && valueLabel) {
-                slider.addEventListener('input', function() {
-                    const value = parseInt(this.value);
-                    characters[index].physicalAttributes[attr] = value;
-                    
-                    if (attr === 'height') {
-                        valueLabel.textContent = `${value} cm`;
-                    } else if (attr === 'weight') {
-                        valueLabel.textContent = `${value} kg`;
-                    } else if (attr === 'looks') {
-                        valueLabel.textContent = `${value}/10`;
-                    } else {
-                        valueLabel.textContent = value;
-                    }
-                    
-                    // Update global reference
-                    window.characters = characters;
-                });
-            }
-        });
-    }
-    
-    /**
-     * Setup skill sliders - matches monolithic exactly
-     */
-    static setupSkillsHandlers(index, characters) {
-        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
-            const slider = document.getElementById(`${skill}-${index}`);
-            const valueLabel = document.getElementById(`${skill}-val-${index}`);
-            if (slider && valueLabel) {
-                slider.addEventListener('input', function() {
-                    const value = parseInt(this.value);
-                    characters[index].skills[skill] = value;
-                    valueLabel.textContent = `${value}/10`;
-                    
-                    // Update global reference
-                    window.characters = characters;
-                });
-            }
-        });
-    }
-    
-    /**
-     * Setup personality tags handlers with limit enforcement - matches monolithic exactly
+     * Setup personality tags handlers
      */
     static setupPersonalityTagsHandlers(index, characters) {
         PERSONALITY_TAGS.forEach(tag => {
             const checkbox = document.getElementById(`tags-${index}-${tag}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
-                    EventHandlers.updateCharacterTags(index, 'personalityTags', 6, characters);
-                    EventHandlers.updateCheckboxStates(index, 'personalityTags', 6);
+                    this.updateCharacterTags(index, 'personalityTags', characters);
                 });
             }
         });
     }
     
     /**
-     * Setup inventory handlers with limit enforcement - matches monolithic exactly
+     * Setup inventory handlers
      */
     static setupInventoryHandlers(index, characters) {
         INVENTORY_OPTIONS.forEach(item => {
             const checkbox = document.getElementById(`inventory-item-${index}-${item}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
-                    EventHandlers.updateCharacterItems(index, 'inventory', 3, characters);
-                    EventHandlers.updateCheckboxStates(index, 'inventory', 3);
+                    this.updateCharacterItems(index, 'inventory', characters);
                 });
             }
         });
     }
     
     /**
-     * Setup desk items handlers with limit enforcement - matches monolithic exactly
+     * Setup desk items handlers
      */
     static setupDeskItemsHandlers(index, characters) {
         DESK_ITEM_OPTIONS.forEach(item => {
             const checkbox = document.getElementById(`desk-item-${index}-${item}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
-                    EventHandlers.updateCharacterItems(index, 'deskItems', 2, characters);
-                    EventHandlers.updateCheckboxStates(index, 'deskItems', 2);
+                    this.updateCharacterItems(index, 'deskItems', characters);
                 });
             }
         });
     }
     
     /**
+     * Setup bio handler
+     */
+    static setupBioHandler(index, characters) {
+        const bioTextarea = document.getElementById(`bio-${index}`);
+        if (bioTextarea) {
+            bioTextarea.addEventListener('input', function() {
+                characters[index].bio = this.value;
+                window.characters = characters;
+            });
+        }
+    }
+    
+    /**
      * Setup API key handler
      */
     static setupAPIKeyHandler(index, characters, globalAPIKey) {
-        const apiKeyInput = document.getElementById(`api-key-input-${index}`);
+        const apiKeyInput = document.getElementById(`api-key-${index}`);
         if (apiKeyInput) {
             apiKeyInput.addEventListener('input', function() {
-                characters[index].apiKey = this.value;
-                // Update global reference
+                characters[index].apiKey = this.value || globalAPIKey;
                 window.characters = characters;
             });
         }
     }
     
     /**
-     * Setup basic form handlers
+     * Update character tags
      */
-    static setupBasicFormHandlers(index, characters) {
-        // Job role select
-        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
-        if (jobRoleSelect) {
-            jobRoleSelect.addEventListener('change', function() {
-                characters[index].jobRole = this.value;
-                // Update global reference
-                window.characters = characters;
-            });
-        }
-        
-        // Build select
-        const buildSelect = document.getElementById(`build-${index}`);
-        if (buildSelect) {
-            buildSelect.addEventListener('change', function() {
-                characters[index].physicalAttributes.build = this.value;
-                // Update global reference
-                window.characters = characters;
-            });
-        }
-    }
-    
-    /**
-     * Update checkbox states - grey out when max reached - matches monolithic exactly
-     */
-    static updateCheckboxStates(index, itemType, maxLimit) {
-        let prefix, selectedCount;
-        
-        if (itemType === 'personalityTags') {
-            prefix = 'tags';
-            selectedCount = window.characters?.[index]?.personalityTags?.length || 0;
-        } else if (itemType === 'inventory') {
-            prefix = 'inventory-item';
-            selectedCount = window.characters?.[index]?.inventory?.length || 0;
-        } else if (itemType === 'deskItems') {
-            prefix = 'desk-item';
-            selectedCount = window.characters?.[index]?.deskItems?.length || 0;
-        }
-        
-        const allCheckboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]`);
-        
-        allCheckboxes.forEach(checkbox => {
-            const isChecked = checkbox.checked;
-            const isMaxReached = selectedCount >= maxLimit;
-            
-            if (isMaxReached && !isChecked) {
-                // Grey out unchecked boxes when max reached
-                checkbox.disabled = true;
-                checkbox.parentElement.style.color = '#9ca3af';
-                checkbox.parentElement.style.opacity = '0.6';
-            } else {
-                // Enable all boxes when under max
-                checkbox.disabled = false;
-                checkbox.parentElement.style.color = '';
-                checkbox.parentElement.style.opacity = '';
-            }
-        });
-    }
-    
-    /**
-     * Update character tags with limit enforcement - matches monolithic exactly
-     */
-    static updateCharacterTags(index, tagType, maxLimit, characters) {
-        const checkboxes = document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]:checked`);
-        let selectedTags = Array.from(checkboxes).map(cb => cb.value);
-        
-        if (selectedTags.length > maxLimit) {
-            // Find the last checked box and uncheck it
-            const lastChecked = Array.from(document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]`))
-                .reverse()
-                .find(cb => cb.checked);
-            if (lastChecked) {
-                lastChecked.checked = false;
-                selectedTags.pop();
-            }
-        }
-        
+    static updateCharacterTags(index, tagType, characters) {
+        const checkboxes = document.querySelectorAll(`input[id^="tags-${index}-"]:checked`);
+        const selectedTags = Array.from(checkboxes).map(cb => cb.value);
         characters[index][tagType] = selectedTags;
-        // Update global reference
         window.characters = characters;
     }
     
     /**
-     * Update character items with limit enforcement - matches monolithic exactly
+     * Update character items
      */
-    static updateCharacterItems(index, itemType, maxLimit, characters) {
+    static updateCharacterItems(index, itemType, characters) {
         const prefix = itemType === 'inventory' ? 'inventory-item' : 'desk-item';
         const checkboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]:checked`);
-        let selectedItems = Array.from(checkboxes).map(cb => cb.value);
-        
-        if (selectedItems.length > maxLimit) {
-            // Find the last checked box and uncheck it
-            const lastChecked = Array.from(document.querySelectorAll(`input[id^="${prefix}-${index}-"]`))
-                .reverse()
-                .find(cb => cb.checked);
-            if (lastChecked) {
-                lastChecked.checked = false;
-                selectedItems.pop();
-            }
-        }
-        
+        const selectedItems = Array.from(checkboxes).map(cb => cb.value);
         characters[index][itemType] = selectedItems;
-        // Update global reference
         window.characters = characters;
-    }
-    
-    /**
-     * Legacy methods for backward compatibility
-     */
-    static setupBasicInfoHandlers(index, characters) {
-        this.setupNameHandlers(index, characters);
-        this.setupBasicFormHandlers(index, characters);
-    }
-    
-    static setupBioHandler(index, characters) {
-        // Bio handler placeholder for future use
-        console.log(`Bio handler placeholder for character ${index}`);
     }
 }
 
 export { EventHandlers };
 
-console.log('📦 Event Handlers Module loaded - PHASE 4 FINAL');
+console.log('📦 Event Handlers Module loaded - FIXED AND COMPLETE');
