@@ -271,7 +271,7 @@ window.startGameSimulation = async function(charactersFromCreator) {
         characterManager.initializeCharacterPositions(gameEngine.world);
         
         // Render all characters in the world
-        const characters = characterManager.getAllCharacters();
+        const characters = characterManager.characters;
         characters.forEach(character => {
             // Use renderCharacter (the actual method that exists)
             renderer.renderCharacter(character);
