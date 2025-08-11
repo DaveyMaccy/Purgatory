@@ -1,7 +1,9 @@
 /**
- * UI Generator Module - WORKING VERSION
+ * UI Generator Module - PHASE 3 COMPLETE UI OVERHAUL
  * 
- * FIXED: Correct import paths and uses original data structure
+ * Generates the exact same UI layout as the monolithic version.
+ * This includes the enhanced two-column layout, all interactive elements,
+ * and pixel-perfect styling to match the original implementation.
  */
 
 import { 
@@ -18,13 +20,12 @@ import { SpriteManager } from './sprite-manager.js';
 
 class UIGenerator {
     /**
-     * Create a character tab
+     * Create a character tab - matches monolithic exactly
      */
     static createCharacterTab(index, character, container) {
-        const tab = document.createElement('div');
-        tab.id = `character-tab-${index}`;
-        tab.className = `character-tab ${index === 0 ? 'active' : ''}`;
-        tab.textContent = `${character.firstName} ${character.lastName}`;
+        const tab = document.createElement('button');
+        tab.textContent = `Character ${index + 1}`;
+        tab.className = index === 0 ? 'active' : '';
         tab.onclick = () => window.switchTab(index);
         
         if (container) {
@@ -35,14 +36,26 @@ class UIGenerator {
     }
     
     /**
-     * Create a character panel
+     * Update tab name when character name changes
+     */
+    static updateTabName(index, name) {
+        const tab = document.querySelector(`#character-tabs button:nth-child(${index + 1})`);
+        if (tab && name) {
+            // Show first name only for tab
+            const firstName = name.split(' ')[0];
+            tab.textContent = firstName || `Character ${index + 1}`;
+        }
+    }
+    
+    /**
+     * Create a character panel - matches monolithic exactly
      */
     static createCharacterPanel(index, character, container, officeType) {
         const panel = document.createElement('div');
         panel.id = `character-panel-${index}`;
         panel.className = `creator-panel ${index === 0 ? '' : 'hidden'}`;
         
-        panel.innerHTML = this.generatePanelHTML(index, character, officeType);
+        panel.innerHTML = this.generateEnhancedPanelHTML(index, character, officeType);
         
         if (container) {
             container.appendChild(panel);
@@ -51,16 +64,19 @@ class UIGenerator {
         // Setup event listeners for this panel
         EventHandlers.setupPanelEventListeners(index);
         
-        // Initialize sprite and portrait
+        // Initialize sprite and portrait - pass characters array
         SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+        if (window.characters) {
+            SpriteManager.updateSpriteInfo(index, window.characters);
+        }
         
         return panel;
     }
     
     /**
-     * Generate complete panel HTML
+     * Generate complete enhanced panel HTML - EXACT MATCH to monolithic version
      */
-    static generatePanelHTML(index, charData, officeType) {
+    static generateEnhancedPanelHTML(index, charData, officeType) {
         const jobRoleOptions = JOB_ROLES_BY_OFFICE[officeType]
             .map(role => `<option value="${role}" ${role === charData.jobRole ? 'selected' : ''}>${role}</option>`)
             .join('');
@@ -100,13 +116,11 @@ class UIGenerator {
                 <div class="flex-1 space-y-4 overflow-y-auto" style="max-height: 500px; padding-right: 10px;">
                     <!-- Basic Info -->
                     <div class="form-group">
-                        <label for="first-name-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">First Name</label>
-                        <input type="text" id="first-name-${index}" value="${charData.firstName}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="last-name-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Last Name</label>
-                        <input type="text" id="last-name-${index}" value="${charData.lastName}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        <label for="name-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Character Name</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="name-${index}" value="${charData.name}" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            <button type="button" id="generate-name-${index}" style="padding: 8px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Generate</button>
+                        </div>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -123,7 +137,7 @@ class UIGenerator {
 
                     <div class="form-group">
                         <label style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="isPlayer-${index}" ${charData.isPlayerCharacter ? 'checked' : ''}>
+                            <input type="checkbox" id="isPlayer-${index}" ${charData.isPlayer ? 'checked' : ''}>
                             <span style="font-weight: bold;">Player Character</span>
                         </label>
                     </div>
@@ -133,8 +147,8 @@ class UIGenerator {
                         <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Physical Attributes</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div>
-                                <label>Age: <span id="age-val-${index}">${charData.age}</span></label>
-                                <input type="range" id="age-${index}" min="22" max="65" value="${charData.age}" style="width: 100%;">
+                                <label>Age: <span id="age-val-${index}">${charData.physicalAttributes.age}</span></label>
+                                <input type="range" id="age-${index}" min="22" max="65" value="${charData.physicalAttributes.age}" style="width: 100%;">
                             </div>
                             <div>
                                 <label>Height: <span id="height-val-${index}">${charData.physicalAttributes.height} cm</span></label>
@@ -180,7 +194,7 @@ class UIGenerator {
                     
                     <!-- Personality Tags -->
                     <div class="form-group">
-                        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Personality</h3>
+                        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Personality (Max 6)</h3>
                         <div style="max-height: 120px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
                             ${tagOptions}
                         </div>
@@ -189,7 +203,7 @@ class UIGenerator {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <!-- Inventory -->
                         <div class="form-group">
-                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Inventory</h3>
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Inventory (Max 3)</h3>
                             <div style="max-height: 100px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
                                 ${inventoryOptions}
                             </div>
@@ -197,29 +211,53 @@ class UIGenerator {
                         
                         <!-- Desk Items -->
                         <div class="form-group">
-                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Desk Items</h3>
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Desk Items (Max 2)</h3>
                             <div style="max-height: 100px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
                                 ${deskItemOptions}
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- API Key -->
-                    <div class="form-group">
-                        <label for="api-key-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">API Key</label>
-                        <input type="text" id="api-key-${index}" value="${charData.apiKey}" placeholder="Individual API key..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-family: monospace;">
-                    </div>
                 </div>
 
-                <!-- Right Column: Portrait -->
+                <!-- Right Column: Portraits and Settings -->
                 <div class="w-80" style="width: 320px;">
                     <div class="space-y-4">
-                        <!-- Character Portrait -->
+                        <!-- Character Portrait with Sprite Navigation -->
                         <div class="form-group">
                             <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Character Portrait</h3>
                             <div style="text-align: center;">
-                                <canvas id="preview-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f0f0f0;"></canvas>
+                                <!-- Sprite Navigation Arrows -->
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <button type="button" id="sprite-prev-${index}" style="padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">◀ Prev</button>
+                                    <span id="sprite-info-${index}" style="font-size: 12px; color: #6c757d;">Sprite 1 of ${SPRITE_OPTIONS.length}</span>
+                                    <button type="button" id="sprite-next-${index}" style="padding: 8px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Next ▶</button>
+                                </div>
+                                
+                                <!-- Centered portrait canvas -->
+                                <div style="display: flex; justify-content: center;">
+                                    <canvas id="preview-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f0f0f0;"></canvas>
+                                </div>
                             </div>
+                        </div>
+
+                        <!-- Custom Portrait Upload -->
+                        <div class="form-group">
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Custom Portrait</h3>
+                            <div style="text-align: center;">
+                                <!-- Centered custom canvas -->
+                                <div style="display: flex; justify-content: center; margin-bottom: 10px;">
+                                    <canvas id="custom-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f8f9fa;"></canvas>
+                                </div>
+                                <input type="file" id="portrait-upload-${index}" accept="image/*" style="width: 100%; padding: 4px; font-size: 12px; margin-bottom: 5px;">
+                                <button type="button" id="clear-custom-${index}" style="padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear Custom</button>
+                            </div>
+                        </div>
+
+                        <!-- API Key Override -->
+                        <div class="form-group">
+                            <label for="api-key-input-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Individual API Key</label>
+                            <input type="text" id="api-key-input-${index}" value="${charData.apiKey}" placeholder="Override global key..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-family: monospace;">
+                            <div style="font-size: 11px; color: #6c757d; margin-top: 2px;">Leave empty to use global key</div>
                         </div>
                     </div>
                 </div>
@@ -228,16 +266,13 @@ class UIGenerator {
     }
     
     /**
-     * Update tab name when character name changes
+     * Generate complete panel HTML - legacy support for existing code
      */
-    static updateTabName(index, firstName, lastName) {
-        const tab = document.getElementById(`character-tab-${index}`);
-        if (tab) {
-            tab.textContent = `${firstName} ${lastName}`;
-        }
+    static generatePanelHTML(index, charData, officeType) {
+        return this.generateEnhancedPanelHTML(index, charData, officeType);
     }
 }
 
 export { UIGenerator };
 
-console.log('📦 UI Generator Module loaded - WORKING VERSION');
+console.log('📦 UI Generator Module loaded - PHASE 3 COMPLETE UI OVERHAUL');
