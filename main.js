@@ -3,8 +3,7 @@
  * CORRECT FIX: Use the actual method names that exist in the codebase
  * - characterManager.initializeCharacterPositions() EXISTS and is kept
  * - renderer.addCharacter() does NOT exist, replaced with renderer.renderCharacter()
- * 
- * PHASE 4 ADDITIONS:
+ * * PHASE 4 ADDITIONS:
  * - Enhanced handleWorldClick for click-to-move functionality
  */
 
@@ -475,6 +474,8 @@ function showStartScreen() {
     const startScreen = document.getElementById('start-screen');
     if (startScreen) {
         startScreen.style.display = 'flex';
+    } else {
+        console.warn('UI Warning: Element with ID "start-screen" not found.');
     }
 }
 
@@ -482,6 +483,8 @@ function hideStartScreen() {
     const startScreen = document.getElementById('start-screen');
     if (startScreen) {
         startScreen.style.display = 'none';
+    } else {
+        console.warn('UI Warning: Element with ID "start-screen" not found.');
     }
 }
 
@@ -489,6 +492,8 @@ function showCharacterCreator() {
     const creator = document.getElementById('character-creator');
     if (creator) {
         creator.style.display = 'block';
+    } else {
+        throw new Error('UI Error: Element with ID "character-creator" not found. Cannot open character creator.');
     }
 }
 
@@ -496,6 +501,8 @@ function hideCharacterCreator() {
     const creator = document.getElementById('character-creator');
     if (creator) {
         creator.style.display = 'none';
+    } else {
+        console.warn('UI Warning: Element with ID "character-creator" not found.');
     }
 }
 
@@ -503,6 +510,8 @@ function showGameView() {
     const gameView = document.getElementById('game-view');
     if (gameView) {
         gameView.style.display = 'flex';
+    } else {
+        throw new Error('UI Error: Element with ID "game-view" not found. Cannot show game view.');
     }
 }
 
@@ -510,6 +519,8 @@ function hideGameView() {
     const gameView = document.getElementById('game-view');
     if (gameView) {
         gameView.style.display = 'none';
+    } else {
+        console.warn('UI Warning: Element with ID "game-view" not found.');
     }
 }
 
