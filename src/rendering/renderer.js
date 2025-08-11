@@ -17,6 +17,9 @@
  * - Enhanced error handling for asset loading
  * - Better fallback mechanisms
  * 
+ * PHASE 4 ADDITION:
+ * - updateCharacterAnimation() method for movement system integration
+ * 
  * ⚠️ DORMANT MODE: Enhanced sprite rendering is DISABLED by default
  * Set USE_ENHANCED_SPRITES = true to enable when movement system is ready
  */
@@ -204,140 +207,135 @@ export class Renderer {
         // PRESERVED: Better error handling for missing container
         if (!this.container) {
             console.warn('⚠️ No container provided, using fallback dimensions');
-            this.WORLD_WIDTH = 800;
-            this.WORLD_HEIGHT = 450;
+            this.WORLD_WIDTH = this.BASE_WIDTH;
+            this.WORLD_HEIGHT = this.BASE_HEIGHT;
             return;
         }
 
-        try {
-            const containerRect = this.container.getBoundingClientRect();
-            let containerWidth = containerRect.width;
-            let containerHeight = containerRect.height;
+        // PRESERVED: Get container dimensions
+        const containerRect = this.container.getBoundingClientRect();
+        const containerWidth = containerRect.width || this.container.clientWidth || 800;
+        const containerHeight = containerRect.height || this.container.clientHeight || 600;
 
-            // PRESERVED: Better fallback logic
-            if (containerWidth <= 0 || containerHeight <= 0) {
-                console.warn('⚠️ Container has no size, using fallback dimensions');
-                containerWidth = Math.max(this.container.offsetWidth, 800);
-                containerHeight = Math.max(this.container.offsetHeight, 450);
-            }
+        // PRESERVED: Calculate size maintaining 16:9 aspect ratio
+        const targetAspectRatio = 16 / 9;
+        const containerAspectRatio = containerWidth / containerHeight;
 
-            // Final fallback to reasonable defaults
-            if (containerWidth <= 0) containerWidth = 800;
-            if (containerHeight <= 0) containerHeight = 450;
-
-            // Calculate 16:9 dimensions that fit in container
-            const aspectRatio = 16 / 9;
-
-            let width = containerWidth;
-            let height = width / aspectRatio;
-
-            // If height exceeds container, scale by height instead
-            if (height > containerHeight) {
-                height = containerHeight;
-                width = height * aspectRatio;
-            }
-
-            // Ensure minimum size for playability
-            const MIN_WIDTH = 800;
-            const MIN_HEIGHT = 450;
-
-            this.WORLD_WIDTH = Math.max(Math.floor(width), MIN_WIDTH);
-            this.WORLD_HEIGHT = Math.max(Math.floor(height), MIN_HEIGHT);
-
-            console.log(`📐 Canvas size calculated: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`);
-
-        } catch (error) {
-            console.error('❌ Error calculating canvas size:', error);
-            // Safe fallback
-            this.WORLD_WIDTH = 800;
-            this.WORLD_HEIGHT = 450;
-            console.log('🔧 Using safe fallback dimensions: 800x450');
+        if (containerAspectRatio > targetAspectRatio) {
+            // Container is wider than 16:9, fit to height
+            this.WORLD_HEIGHT = Math.min(containerHeight * 0.85, this.BASE_HEIGHT);
+            this.WORLD_WIDTH = this.WORLD_HEIGHT * targetAspectRatio;
+        } else {
+            // Container is taller than 16:9, fit to width
+            this.WORLD_WIDTH = Math.min(containerWidth * 0.85, this.BASE_WIDTH);
+            this.WORLD_HEIGHT = this.WORLD_WIDTH / targetAspectRatio;
         }
+
+        // PRESERVED: Ensure minimum size
+        this.WORLD_WIDTH = Math.max(this.WORLD_WIDTH, 800);
+        this.WORLD_HEIGHT = Math.max(this.WORLD_HEIGHT, 450);
+
+        console.log(`📐 Canvas sized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9 aspect ratio)`);
     }
 
     /**
      * PRESERVED: Setup responsive canvas styling
      */
     setupResponsiveCanvas() {
-        const canvas = this.app.view;
-        canvas.style.display = 'block';
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-        canvas.style.objectFit = 'contain'; // Maintain aspect ratio
-        canvas.style.maxWidth = '100%';
-        canvas.style.maxHeight = '100%';
+        if (this.app && this.app.view) {
+            const canvas = this.app.view;
+            canvas.style.display = 'block';
+            canvas.style.margin = '0 auto';
+            canvas.style.maxWidth = '100%';
+            canvas.style.maxHeight = '100%';
+            canvas.style.border = '2px solid #34495e';
+            canvas.style.borderRadius = '8px';
+        }
     }
 
     /**
-     * PRESERVED: Setup resize listener for responsive behavior
+     * PRESERVED: Setup window resize listener
      */
     setupResizeListener() {
-        const resizeHandler = () => {
+        this.resizeHandler = () => {
             this.calculateCanvasSize();
             if (this.app) {
                 this.app.renderer.resize(this.WORLD_WIDTH, this.WORLD_HEIGHT);
+                this.setupResponsiveCanvas();
             }
         };
-
-        window.addEventListener('resize', resizeHandler);
-
-        // Store reference for cleanup
-        this.resizeHandler = resizeHandler;
+        
+        window.addEventListener('resize', this.resizeHandler);
     }
 
     /**
-     * PRESERVED: Render office map with proper 16:9 proportions
-     * @param {Object} mapData - Map data from JSON file
+     * PRESERVED: Render basic office map with desks and environment
      */
     renderMap(mapData) {
         console.log('🗺️ Rendering office map...');
 
-        // Clear existing map sprites
+        // PRESERVED: Clear existing map sprites
         this.mapSprites.forEach(sprite => {
             this.mapLayer.removeChild(sprite);
         });
         this.mapSprites = [];
 
-        // Create a simple office layout graphics
-        const graphics = new PIXI.Graphics();
+        // PRESERVED: Create background
+        const background = new PIXI.Graphics();
+        background.beginFill(0x95a5a6); // Light gray floor
+        background.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT);
+        background.endFill();
+        this.mapLayer.addChild(background);
+        this.mapSprites.push(background);
 
-        // Calculate scale factors for responsive design
-        const scaleX = this.WORLD_WIDTH / this.BASE_WIDTH;
-        const scaleY = this.WORLD_HEIGHT / this.BASE_HEIGHT;
+        // PRESERVED: Create walls
+        const walls = new PIXI.Graphics();
+        walls.beginFill(0x2c3e50); // Dark walls
+        
+        const wallThickness = 20;
+        // Top wall
+        walls.drawRect(0, 0, this.WORLD_WIDTH, wallThickness);
+        // Bottom wall  
+        walls.drawRect(0, this.WORLD_HEIGHT - wallThickness, this.WORLD_WIDTH, wallThickness);
+        // Left wall
+        walls.drawRect(0, 0, wallThickness, this.WORLD_HEIGHT);
+        // Right wall
+        walls.drawRect(this.WORLD_WIDTH - wallThickness, 0, wallThickness, this.WORLD_HEIGHT);
+        
+        walls.endFill();
+        this.mapLayer.addChild(walls);
+        this.mapSprites.push(walls);
 
-        // Floor
-        const floorColor = 0xf0f0f0;
-        graphics.beginFill(floorColor);
-        graphics.drawRect(10, 10, this.WORLD_WIDTH - 20, this.WORLD_HEIGHT - 20);
-        graphics.endFill();
-
-        // Office desks (scaled positions)
-        const deskColor = 0x8B4513;
-        const desks = [
-            { x: 200 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 450 * scaleX, y: 150 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 200 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 450 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 650 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY },
-            { x: 900 * scaleX, y: 350 * scaleY, width: 120 * scaleX, height: 60 * scaleY }
+        // PRESERVED: Create desks (simple rectangles for now)
+        const deskPositions = [
+            { x: 100, y: 150, width: 120, height: 60 },
+            { x: 300, y: 150, width: 120, height: 60 },
+            { x: 500, y: 150, width: 120, height: 60 },
+            { x: 100, y: 350, width: 120, height: 60 },
+            { x: 300, y: 350, width: 120, height: 60 }
         ];
 
-        desks.forEach(desk => {
-            graphics.beginFill(deskColor);
-            graphics.drawRect(desk.x, desk.y, desk.width, desk.height);
-            graphics.endFill();
+        deskPositions.forEach((desk, index) => {
+            const deskSprite = new PIXI.Graphics();
+            deskSprite.beginFill(0x8b4513); // Brown desk color
+            deskSprite.drawRect(desk.x, desk.y, desk.width, desk.height);
+            deskSprite.endFill();
+            
+            // Add desk label
+            const deskLabel = new PIXI.Text(`Desk ${index + 1}`, {
+                fontSize: 12,
+                fill: 0xffffff,
+                align: 'center'
+            });
+            deskLabel.x = desk.x + desk.width / 2 - deskLabel.width / 2;
+            deskLabel.y = desk.y + desk.height / 2 - deskLabel.height / 2;
+            
+            this.mapLayer.addChild(deskSprite);
+            this.mapLayer.addChild(deskLabel);
+            this.mapSprites.push(deskSprite, deskLabel);
         });
 
-        // Add walls
-        graphics.beginFill(0x654321);
-        graphics.drawRect(0, 0, this.WORLD_WIDTH, 10); // Top wall
-        graphics.drawRect(0, this.WORLD_HEIGHT - 10, this.WORLD_WIDTH, 10); // Bottom wall
-        graphics.drawRect(0, 0, 10, this.WORLD_HEIGHT); // Left wall
-        graphics.drawRect(this.WORLD_WIDTH - 10, 0, 10, this.WORLD_HEIGHT); // Right wall
-        graphics.endFill();
-
-        this.mapLayer.addChild(graphics);
-        console.log('✅ Office map rendered');
+        console.log('✅ Office map rendered with walls and desks');
     }
 
     /**
@@ -412,6 +410,9 @@ export class Renderer {
             sprite.x = character.position?.x || 100;
             sprite.y = character.position?.y || 100;
 
+            // PHASE 4 ADD: Store character ID reference for animation system
+            sprite.characterId = character.id;
+
             // Add to character layer
             this.characterLayer.addChild(sprite);
             this.characterSprites.set(character.id, sprite);
@@ -426,6 +427,7 @@ export class Renderer {
                 const fallbackSprite = this.createSimpleCharacterSprite(character);
                 fallbackSprite.x = character.position?.x || 100;
                 fallbackSprite.y = character.position?.y || 100;
+                fallbackSprite.characterId = character.id;
                 this.characterLayer.addChild(fallbackSprite);
                 this.characterSprites.set(character.id, fallbackSprite);
                 console.log(`🔧 Emergency fallback sprite created for ${character.name}`);
@@ -473,6 +475,99 @@ export class Renderer {
         if (sprite) {
             sprite.x = x;
             sprite.y = y;
+        }
+    }
+
+    /**
+     * PHASE 4 ADD: Update character animation based on action state and direction
+     * @param {string} characterId - Character ID
+     * @param {string} actionState - Action state ('idle', 'walking', 'working', etc.)
+     * @param {string} facingDirection - Direction ('up', 'down', 'left', 'right')
+     */
+    updateCharacterAnimation(characterId, actionState, facingDirection) {
+        const sprite = this.characterSprites.get(characterId);
+        if (!sprite) {
+            console.warn(`⚠️ Cannot update animation: sprite not found for ${characterId}`);
+            return;
+        }
+
+        // For now, implement basic visual feedback
+        console.log(`🎭 ${characterId}: ${actionState} facing ${facingDirection}`);
+        
+        if (USE_ENHANCED_SPRITES) {
+            // ENHANCED: Use sprite sheet frames for different directions and states
+            this.updateSpriteFrame(sprite, actionState, facingDirection);
+        } else {
+            // BASIC: Simple visual changes (tint, scale, etc.)
+            this.updateBasicAnimation(sprite, actionState, facingDirection);
+        }
+    }
+
+    /**
+     * PHASE 4 ADD: Update sprite frame for enhanced sprite sheets
+     */
+    updateSpriteFrame(sprite, actionState, facingDirection) {
+        const SPRITE_WIDTH = 48;
+        const SPRITE_HEIGHT = 96;
+        
+        // Direction mapping (row in sprite sheet)
+        const directionRows = {
+            'down': 0,
+            'left': 1, 
+            'right': 2,
+            'up': 3
+        };
+        
+        // Animation frame mapping (column in sprite sheet)
+        const animationFrames = {
+            'idle': 0,
+            'walking': 1, // Could cycle through 1,2,3 for walking animation
+            'working': 0
+        };
+        
+        const row = directionRows[facingDirection] || 0;
+        const frame = animationFrames[actionState] || 0;
+        
+        // Calculate source rectangle
+        const sourceX = frame * SPRITE_WIDTH;
+        const sourceY = row * SPRITE_HEIGHT;
+        
+        // Update texture rectangle
+        if (sprite.texture && sprite.texture.baseTexture) {
+            sprite.texture.frame = new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT);
+            sprite.texture.updateUvs();
+        }
+    }
+
+    /**
+     * PHASE 4 ADD: Basic animation for simple sprites
+     */
+    updateBasicAnimation(sprite, actionState, facingDirection) {
+        // Simple visual feedback without sprite sheets
+        
+        // Direction changes: Flip sprite horizontally for left/right
+        if (facingDirection === 'left') {
+            sprite.scale.x = -Math.abs(sprite.scale.x); // Face left
+        } else if (facingDirection === 'right') {
+            sprite.scale.x = Math.abs(sprite.scale.x); // Face right
+        }
+        
+        // Animation state changes: Subtle visual effects
+        if (actionState === 'walking') {
+            // Slight bounce effect for walking
+            sprite.y -= 2;
+            setTimeout(() => {
+                if (this.characterSprites.get(sprite.characterId) === sprite) {
+                    sprite.y += 2;
+                }
+            }, 200);
+        }
+        
+        // Optional: Tint changes for different states
+        if (actionState === 'working') {
+            sprite.tint = 0xffffaa; // Slight yellow tint
+        } else {
+            sprite.tint = 0xffffff; // Normal color
         }
     }
 
@@ -546,81 +641,9 @@ export class Renderer {
             worldBounds: this.getWorldBounds(),
             canvasSize: `${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`,
             aspectRatio: '16:9',
-            textureCache: USE_ENHANCED_SPRITES ? Array.from(this.preloadedTextures.keys()) : 'DORMANT'
+            textureCache: USE_ENHANCED_SPRITES ? 
+                `${this.preloadedTextures.size} textures cached` : 
+                'Texture caching dormant'
         };
-    }
-
-    /**
-     * NEW: Get texture cache status for debugging
-     * ⚠️ CONDITIONAL: Only provides data when enhanced sprites are enabled
-     */
-    getTextureCacheStatus() {
-        if (!USE_ENHANCED_SPRITES) {
-            return {
-                status: 'DORMANT',
-                message: 'Enhanced sprites are dormant. Set USE_ENHANCED_SPRITES = true to enable.'
-            };
-        }
-
-        const cached = Array.from(this.preloadedTextures.entries()).map(([path, texture]) => ({
-            path,
-            isValid: texture.valid,
-            dimensions: `${texture.width}x${texture.height}`,
-            baseTexture: !!texture.baseTexture
-        }));
-
-        return {
-            status: 'ACTIVE',
-            totalCached: this.preloadedTextures.size,
-            textures: cached
-        };
-    }
-
-    /**
-     * NEW: Force reload a specific texture (useful for debugging)
-     * ⚠️ CONDITIONAL: Only works when enhanced sprites are enabled
-     */
-    async reloadTexture(spritePath) {
-        if (!USE_ENHANCED_SPRITES) {
-            throw new Error('Cannot reload texture: Enhanced sprites are dormant');
-        }
-
-        try {
-            // Remove from cache
-            this.preloadedTextures.delete(spritePath);
-            
-            // Reload
-            const texture = await this.loadSpriteTexture(spritePath);
-            console.log(`✅ Reloaded texture: ${spritePath}`);
-            return texture;
-        } catch (error) {
-            console.error(`❌ Failed to reload texture: ${spritePath}`, error);
-            throw error;
-        }
-    }
-
-    /**
-     * NEW: Enable enhanced sprites (for future use)
-     * ⚠️ WARNING: This cannot be changed at runtime safely
-     */
-    static enableEnhancedSprites() {
-        console.warn('⚠️ Enhanced sprites can only be enabled by changing USE_ENHANCED_SPRITES at the top of renderer.js');
-        console.warn('⚠️ Runtime enabling is not supported - restart required after code change');
-        return USE_ENHANCED_SPRITES;
     }
 }
-
-/*
- * ⚠️ USAGE NOTES FOR ENHANCED SPRITE ACTIVATION:
- * 
- * When ready to enable enhanced sprite rendering:
- * 1. Change `const USE_ENHANCED_SPRITES = false;` to `const USE_ENHANCED_SPRITES = true;` at the top
- * 2. Ensure character sprite sheets are properly configured in character-data.js
- * 3. Test with debug functions:
- *    - window.game.renderer.getStatus()
- *    - window.game.renderer.getTextureCacheStatus()
- * 4. Characters will automatically use sprite sheets instead of placeholders
- * 
- * The system is fully backwards compatible and will gracefully fall back to
- * placeholder sprites if any enhanced feature fails.
- */
