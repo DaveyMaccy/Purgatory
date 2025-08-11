@@ -4,8 +4,6 @@
  * 
  * CRITICAL FIX: Updated all UI functions to use correct HTML element IDs
  * COMPLETE: Includes ALL functions from the original main.js
- * 
- * ANIMATION FIX: Added window.renderer assignment (line 171)
  */
 
 // Import statements - Module-based loading
@@ -122,51 +120,75 @@ function handleNewGameClick() {
 function injectTabCSS() {
     const style = document.createElement('style');
     style.textContent = `
-        .tabs {
+        /* Tab alignment fixes */
+        .tab-bar {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
+            border-bottom: 1px solid #333;
+            background: #1a1a1a;
         }
         
         .tab-link {
-            padding: 6px 12px;
-            border: 1px solid #d1d5db;
-            background: #f9fafb;
-            color: #374151;
+            padding: 10px 20px;
+            background: transparent;
+            color: #888;
+            border: none;
             cursor: pointer;
-            border-radius: 4px;
-            font-size: 12px;
-            transition: all 0.2s;
+            transition: all 0.3s;
         }
         
         .tab-link:hover {
-            background: #e5e7eb;
+            background: #2a2a2a;
+            color: #fff;
         }
         
         .tab-link.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
+            background: #333;
+            color: #0ff;
+            border-bottom: 2px solid #0ff;
+            margin-bottom: -1px;
         }
         
         .tab-content {
             display: none;
+            padding: 15px;
+            min-height: 200px;
         }
         
         .tab-content.active {
             display: block;
         }
+        
+        /* Ensure proper z-index for tab bar */
+        .tab-bar {
+            z-index: 10;
+            margin-top: -1px;
+        }
+        
+        /* Ensure the widget container has proper flex layout */
+        .widget.flex-grow {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .widget .flex-grow {
+            flex: 1;
+            overflow-y: auto;
+        }
     `;
     document.head.appendChild(style);
+    console.log('✅ Tab CSS injected with proper alignment');
 }
 
 /**
- * Setup status panel tabs functionality
+ * Set up status panel tab switching
  */
 function setupStatusPanelTabs() {
-    // Make openTab function globally available
+    console.log('🔧 Setting up status panel tabs...');
+    
+    // Make openTab function available globally (as required by HTML onclick)
     window.openTab = function(evt, tabName) {
+        console.log(`📋 Switching to tab: ${tabName}`);
+        
         // Hide all tab content
         const tabContents = document.getElementsByClassName("tab-content");
         for (let i = 0; i < tabContents.length; i++) {
@@ -278,6 +300,17 @@ window.startGameSimulation = async function(charactersFromCreator) {
         
         // Start the game loop
         gameEngine.start();
+
+// Make game accessible globally for debugging
+window.game = {
+    engine: gameEngine,
+    characterManager: characterManager,
+    renderer: renderer,
+    uiUpdater: uiUpdater
+};
+
+// ADD THIS LINE immediately after the window.game assignment:
+window.renderer = renderer;  // <-- ADD THIS LINE FOR SPRITE ANIMATIONS
         
         // Make game accessible globally for debugging
         window.game = {
@@ -286,9 +319,6 @@ window.startGameSimulation = async function(charactersFromCreator) {
             renderer: renderer,
             uiUpdater: uiUpdater
         };
-        
-        // ANIMATION FIX: Make renderer globally accessible for character animations
-        window.renderer = renderer;
         
         console.log('🎮 GAME STARTED SUCCESSFULLY!');
         showSuccessMessage('Game started! Click to move your character.');
@@ -349,15 +379,79 @@ function startGameWithFallbackCharacters() {
     
     const fallbackCharacters = [
         {
-            id: 'player_fallback',
-            name: 'Test Player',
-            age: 30,
-            jobRole: 'Developer',
-            skills: { competence: 7, charisma: 5, laziness: 3 },
-            personalityTags: ['Focused', 'Analytical'],
-            needs: { energy: 10, hunger: 8, social: 6 },
+            id: 'player',
+            name: 'Manager',
+            age: 35,
+            jobRole: 'Manager',
+            competence: 7,
+            laziness: 3,
+            charisma: 8,
+            personalityTags: ['organized', 'decisive'],
+            experienceTags: ['Leadership'],
+            personalItems: ['clipboard'],
+            deskItems: ['computer'],
             spriteSheet: 'assets/characters/character-01.png',
             isPlayer: true
+        },
+        {
+            id: 'npc1',
+            name: 'Developer',
+            age: 28,
+            jobRole: 'Software Developer',
+            competence: 9,
+            laziness: 4,
+            charisma: 5,
+            personalityTags: ['logical', 'introverted'],
+            experienceTags: ['Programming'],
+            personalItems: ['laptop'],
+            deskItems: ['code'],
+            spriteSheet: 'assets/characters/character-02.png',
+            isPlayer: false
+        },
+        {
+            id: 'npc2',
+            name: 'Designer',
+            age: 26,
+            jobRole: 'UI/UX Designer',
+            competence: 8,
+            laziness: 2,
+            charisma: 7,
+            personalityTags: ['creative', 'detail-oriented'],
+            experienceTags: ['Design'],
+            personalItems: ['tablet'],
+            deskItems: ['sketches'],
+            spriteSheet: 'assets/characters/character-03.png',
+            isPlayer: false
+        },
+        {
+            id: 'npc3',
+            name: 'Sales Rep',
+            age: 32,
+            jobRole: 'Sales Representative',
+            competence: 6,
+            laziness: 5,
+            charisma: 9,
+            personalityTags: ['outgoing', 'persuasive'],
+            experienceTags: ['Sales'],
+            personalItems: ['phone'],
+            deskItems: ['contracts'],
+            spriteSheet: 'assets/characters/character-04.png',
+            isPlayer: false
+        },
+        {
+            id: 'npc4',
+            name: 'Intern',
+            age: 22,
+            jobRole: 'Intern',
+            competence: 4,
+            laziness: 2,
+            charisma: 6,
+            personalityTags: ['eager', 'nervous'],
+            experienceTags: ['Entry Level'],
+            personalItems: ['notebook'],
+            deskItems: ['coffee'],
+            spriteSheet: 'assets/characters/character-05.png',
+            isPlayer: false
         }
     ];
     
@@ -365,39 +459,43 @@ function startGameWithFallbackCharacters() {
 }
 
 /**
- * Set focus target for camera/UI
+ * Set focus on a specific character
+ * @param {string} characterId - ID of character to focus on
  */
 function setFocusTarget(characterId) {
     focusTargetId = characterId;
-    console.log(`🎯 Focus set to character: ${characterId}`);
     
-    // Update UI to show this character's info
     if (uiUpdater && characterManager) {
-        const character = characterManager.getCharacter(characterId);
+        // Get the character by ID and update UI
+        const character = characterManager.characters.find(char => char.id === characterId);
         if (character) {
-            uiUpdater.updateCharacterUI(character);
+            uiUpdater.updateUI(character);
+            console.log(`👁️ Focus set on character: ${character.name}`);
+        } else {
+            console.warn(`⚠️ Character with ID ${characterId} not found`);
         }
     }
 }
 
-// Screen management functions
+// UI Visibility Helper Functions - FIXED to use correct HTML element IDs
+
 function showStartScreen() {
-    const startScreen = document.getElementById('start-screen');
+    const startScreen = document.getElementById('start-screen-backdrop');
     if (startScreen) {
         startScreen.classList.remove('hidden');
         startScreen.style.display = 'flex';
     } else {
-        throw new Error('UI Error: Element with ID "start-screen" not found. Cannot show start screen.');
+        console.warn('UI Warning: Element with ID "start-screen-backdrop" not found.');
     }
 }
 
 function hideStartScreen() {
-    const startScreen = document.getElementById('start-screen');
+    const startScreen = document.getElementById('start-screen-backdrop');
     if (startScreen) {
         startScreen.classList.add('hidden');
         startScreen.style.display = 'none';
     } else {
-        console.warn('UI Warning: Element with ID "start-screen" not found.');
+        console.warn('UI Warning: Element with ID "start-screen-backdrop" not found.');
     }
 }
 
@@ -405,7 +503,7 @@ function showCharacterCreator() {
     const creator = document.getElementById('creator-modal-backdrop');
     if (creator) {
         creator.classList.remove('hidden');
-        creator.style.display = 'flex';
+        creator.style.display = 'block';
     } else {
         throw new Error('UI Error: Element with ID "creator-modal-backdrop" not found. Cannot open character creator.');
     }
@@ -486,4 +584,3 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
-
