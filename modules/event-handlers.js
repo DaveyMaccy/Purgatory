@@ -1,17 +1,23 @@
 /**
- * Event Handlers Module
+ * Event Handlers Module - PHASE 3 COMPLETE OVERHAUL
  * 
- * Manages all event listeners and user interactions for the character creator.
- * Handles form updates, validation, and user input processing.
+ * Handles all event listeners and user interactions for the enhanced character creator.
+ * Matches the monolithic implementation exactly with all interactive features.
  */
 
 import { UIGenerator } from './ui-generator.js';
 import { SpriteManager } from './sprite-manager.js';
 import { ValidationUtils } from './validation-utils.js';
+import { 
+    PERSONALITY_TAGS, 
+    INVENTORY_OPTIONS, 
+    DESK_ITEM_OPTIONS,
+    generateNameByGender 
+} from './character-data.js';
 
 class EventHandlers {
     /**
-     * Setup event listeners for a character panel
+     * Setup enhanced event listeners for character panel - matches monolithic exactly
      */
     static setupPanelEventListeners(index, characters, globalAPIKey) {
         // Get the characters array from global scope if not passed
@@ -19,155 +25,118 @@ class EventHandlers {
             characters = window.characters || [];
         }
         
-        // Basic info handlers
-        this.setupBasicInfoHandlers(index, characters);
+        // Player character checkbox - enforce single player
+        this.setupPlayerCharacterHandler(index, characters);
         
-        // Physical attributes handlers
-        this.setupPhysicalAttributesHandlers(index, characters);
+        // Name generation and gender change
+        this.setupNameHandlers(index, characters);
         
-        // Skills handlers
-        this.setupSkillsHandlers(index, characters);
-        
-        // Sprite navigation handlers
+        // Sprite navigation arrows
         this.setupSpriteNavigationHandlers(index, characters);
         
-        // Portrait upload handlers
+        // Custom portrait upload
         this.setupPortraitHandlers(index, characters);
         
-        // Personality tags handlers
+        // Physical attribute sliders
+        this.setupPhysicalAttributesHandlers(index, characters);
+        
+        // Skill sliders
+        this.setupSkillsHandlers(index, characters);
+        
+        // Personality tags with limits
         this.setupPersonalityTagsHandlers(index, characters);
         
-        // Inventory handlers
+        // Inventory items with limits
         this.setupInventoryHandlers(index, characters);
         
-        // Desk items handlers
+        // Desk items with limits
         this.setupDeskItemsHandlers(index, characters);
-        
-        // Bio handler
-        this.setupBioHandler(index, characters);
         
         // API key handler
         this.setupAPIKeyHandler(index, characters, globalAPIKey);
+        
+        // Basic form handlers
+        this.setupBasicFormHandlers(index, characters);
+        
+        // Initialize checkbox states
+        setTimeout(() => {
+            this.updateCheckboxStates(index, 'personalityTags', 6);
+            this.updateCheckboxStates(index, 'inventory', 3);
+            this.updateCheckboxStates(index, 'deskItems', 2);
+        }, 50);
     }
     
     /**
-     * Setup basic info event handlers
+     * Setup player character enforcement - matches monolithic exactly
      */
-    static setupBasicInfoHandlers(index, characters) {
-        // First name
-        const firstNameInput = document.getElementById(`first-name-${index}`);
-        if (firstNameInput) {
-            firstNameInput.addEventListener('input', function() {
-                characters[index].firstName = this.value;
-                UIGenerator.updateTabName(index, this.value, characters[index].lastName);
-            });
-        }
-        
-        // Last name
-        const lastNameInput = document.getElementById(`last-name-${index}`);
-        if (lastNameInput) {
-            lastNameInput.addEventListener('input', function() {
-                characters[index].lastName = this.value;
-                UIGenerator.updateTabName(index, characters[index].firstName, this.value);
-            });
-        }
-        
-        // Age
-        const ageSlider = document.getElementById(`age-${index}`);
-        const ageValue = document.getElementById(`age-val-${index}`);
-        if (ageSlider && ageValue) {
-            ageSlider.addEventListener('input', function() {
-                const value = parseInt(this.value);
-                characters[index].age = value;
-                ageValue.textContent = value;
-            });
-        }
-        
-        // Job role
-        const jobRoleSelect = document.getElementById(`job-role-${index}`);
-        if (jobRoleSelect) {
-            jobRoleSelect.addEventListener('change', function() {
-                characters[index].jobRole = this.value;
+    static setupPlayerCharacterHandler(index, characters) {
+        const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
+        if (isPlayerCheckbox) {
+            isPlayerCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    // Uncheck all other player checkboxes
+                    characters.forEach((char, otherIndex) => {
+                        if (otherIndex !== index) {
+                            char.isPlayer = false;
+                            const otherCheckbox = document.getElementById(`isPlayer-${otherIndex}`);
+                            if (otherCheckbox) otherCheckbox.checked = false;
+                        }
+                    });
+                    characters[index].isPlayer = true;
+                } else {
+                    characters[index].isPlayer = false;
+                }
             });
         }
     }
     
     /**
-     * Setup physical attributes event handlers
+     * Setup name generation and gender change handlers - matches monolithic exactly
      */
-    static setupPhysicalAttributesHandlers(index, characters) {
-        // Gender
+    static setupNameHandlers(index, characters) {
+        // Name generation button
+        const generateNameBtn = document.getElementById(`generate-name-${index}`);
+        if (generateNameBtn) {
+            generateNameBtn.addEventListener('click', function() {
+                const gender = characters[index].physicalAttributes.gender;
+                const newName = generateNameByGender(gender);
+                characters[index].name = newName;
+                const nameInput = document.getElementById(`name-${index}`);
+                if (nameInput) nameInput.value = newName;
+                
+                // Update tab name
+                UIGenerator.updateTabName(index, newName);
+            });
+        }
+        
+        // Gender change - regenerate name
         const genderSelect = document.getElementById(`gender-${index}`);
         if (genderSelect) {
             genderSelect.addEventListener('change', function() {
                 characters[index].physicalAttributes.gender = this.value;
+                // Auto-generate new name for the gender
+                const newName = generateNameByGender(this.value);
+                characters[index].name = newName;
+                const nameInput = document.getElementById(`name-${index}`);
+                if (nameInput) nameInput.value = newName;
+                
+                // Update tab name
+                UIGenerator.updateTabName(index, newName);
             });
         }
         
-        // Build
-        const buildSelect = document.getElementById(`build-${index}`);
-        if (buildSelect) {
-            buildSelect.addEventListener('change', function() {
-                characters[index].physicalAttributes.build = this.value;
-            });
-        }
-        
-        // Height
-        const heightSlider = document.getElementById(`height-${index}`);
-        const heightValue = document.getElementById(`height-val-${index}`);
-        if (heightSlider && heightValue) {
-            heightSlider.addEventListener('input', function() {
-                const value = parseInt(this.value);
-                characters[index].physicalAttributes.height = value;
-                heightValue.textContent = `${value} cm`;
-            });
-        }
-        
-        // Weight
-        const weightSlider = document.getElementById(`weight-${index}`);
-        const weightValue = document.getElementById(`weight-val-${index}`);
-        if (weightSlider && weightValue) {
-            weightSlider.addEventListener('input', function() {
-                const value = parseInt(this.value);
-                characters[index].physicalAttributes.weight = value;
-                weightValue.textContent = `${value} kg`;
-            });
-        }
-        
-        // Looks
-        const looksSlider = document.getElementById(`looks-${index}`);
-        const looksValue = document.getElementById(`looks-val-${index}`);
-        if (looksSlider && looksValue) {
-            looksSlider.addEventListener('input', function() {
-                const value = parseInt(this.value);
-                characters[index].physicalAttributes.looks = value;
-                looksValue.textContent = `${value}/10`;
+        // Name input change
+        const nameInput = document.getElementById(`name-${index}`);
+        if (nameInput) {
+            nameInput.addEventListener('input', function() {
+                characters[index].name = this.value;
+                UIGenerator.updateTabName(index, this.value);
             });
         }
     }
     
     /**
-     * Setup skills event handlers
-     */
-    static setupSkillsHandlers(index, characters) {
-        const skills = ['competence', 'laziness', 'charisma', 'leadership'];
-        
-        skills.forEach(skill => {
-            const slider = document.getElementById(`${skill}-${index}`);
-            const valueLabel = document.getElementById(`${skill}-val-${index}`);
-            
-            if (slider && valueLabel) {
-                slider.addEventListener('input', function() {
-                    const value = parseInt(this.value);
-                    characters[index].skills[skill] = value;
-                    valueLabel.textContent = `${value}/10`;
-                });
-            }
-        });
-    }
-    
-    /**
-     * Setup sprite navigation event handlers
+     * Setup sprite navigation handlers - matches monolithic exactly
      */
     static setupSpriteNavigationHandlers(index, characters) {
         const prevBtn = document.getElementById(`sprite-prev-${index}`);
@@ -187,7 +156,7 @@ class EventHandlers {
     }
     
     /**
-     * Setup portrait upload event handlers
+     * Setup portrait upload handlers - matches monolithic exactly
      */
     static setupPortraitHandlers(index, characters) {
         // Custom portrait upload
@@ -208,85 +177,178 @@ class EventHandlers {
     }
     
     /**
-     * Setup personality tags event handlers
+     * Setup physical attribute sliders - matches monolithic exactly
+     */
+    static setupPhysicalAttributesHandlers(index, characters) {
+        ['age', 'height', 'weight', 'looks'].forEach(attr => {
+            const slider = document.getElementById(`${attr}-${index}`);
+            const valueLabel = document.getElementById(`${attr}-val-${index}`);
+            if (slider && valueLabel) {
+                slider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    characters[index].physicalAttributes[attr] = value;
+                    
+                    if (attr === 'height') {
+                        valueLabel.textContent = `${value} cm`;
+                    } else if (attr === 'weight') {
+                        valueLabel.textContent = `${value} kg`;
+                    } else if (attr === 'looks') {
+                        valueLabel.textContent = `${value}/10`;
+                    } else {
+                        valueLabel.textContent = value;
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * Setup skill sliders - matches monolithic exactly
+     */
+    static setupSkillsHandlers(index, characters) {
+        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
+            const slider = document.getElementById(`${skill}-${index}`);
+            const valueLabel = document.getElementById(`${skill}-val-${index}`);
+            if (slider && valueLabel) {
+                slider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    characters[index].skills[skill] = value;
+                    valueLabel.textContent = `${value}/10`;
+                });
+            }
+        });
+    }
+    
+    /**
+     * Setup personality tags handlers with limit enforcement - matches monolithic exactly
      */
     static setupPersonalityTagsHandlers(index, characters) {
-        const tagCheckboxes = document.querySelectorAll(`input[id^="tags-${index}-"]`);
-        
-        tagCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                this.updateCharacterTags(index, 'personalityTags', 5, characters);
-            }.bind(this));
+        PERSONALITY_TAGS.forEach(tag => {
+            const checkbox = document.getElementById(`tags-${index}-${tag}`);
+            if (checkbox) {
+                checkbox.addEventListener('change', function() {
+                    EventHandlers.updateCharacterTags(index, 'personalityTags', 6, characters);
+                    EventHandlers.updateCheckboxStates(index, 'personalityTags', 6);
+                });
+            }
         });
     }
     
     /**
-     * Setup inventory event handlers
+     * Setup inventory handlers with limit enforcement - matches monolithic exactly
      */
     static setupInventoryHandlers(index, characters) {
-        const inventoryCheckboxes = document.querySelectorAll(`input[id^="inventory-item-${index}-"]`);
-        
-        inventoryCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                this.updateCharacterItems(index, 'inventory', 6, characters);
-            }.bind(this));
+        INVENTORY_OPTIONS.forEach(item => {
+            const checkbox = document.getElementById(`inventory-item-${index}-${item}`);
+            if (checkbox) {
+                checkbox.addEventListener('change', function() {
+                    EventHandlers.updateCharacterItems(index, 'inventory', 3, characters);
+                    EventHandlers.updateCheckboxStates(index, 'inventory', 3);
+                });
+            }
         });
     }
     
     /**
-     * Setup desk items event handlers
+     * Setup desk items handlers with limit enforcement - matches monolithic exactly
      */
     static setupDeskItemsHandlers(index, characters) {
-        const deskItemCheckboxes = document.querySelectorAll(`input[id^="desk-item-${index}-"]`);
-        
-        deskItemCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                this.updateCharacterItems(index, 'deskItems', 6, characters);
-            }.bind(this));
+        DESK_ITEM_OPTIONS.forEach(item => {
+            const checkbox = document.getElementById(`desk-item-${index}-${item}`);
+            if (checkbox) {
+                checkbox.addEventListener('change', function() {
+                    EventHandlers.updateCharacterItems(index, 'deskItems', 2, characters);
+                    EventHandlers.updateCheckboxStates(index, 'deskItems', 2);
+                });
+            }
         });
     }
     
     /**
-     * Setup bio event handler
-     */
-    static setupBioHandler(index, characters) {
-        const bioTextarea = document.getElementById(`bio-${index}`);
-        if (bioTextarea) {
-            bioTextarea.addEventListener('input', function() {
-                characters[index].bio = this.value;
-            });
-        }
-    }
-    
-    /**
-     * Setup API key event handler
+     * Setup API key handler
      */
     static setupAPIKeyHandler(index, characters, globalAPIKey) {
-        const apiKeyInput = document.getElementById(`api-key-${index}`);
+        const apiKeyInput = document.getElementById(`api-key-input-${index}`);
         if (apiKeyInput) {
             apiKeyInput.addEventListener('input', function() {
-                characters[index].apiKey = this.value || globalAPIKey || '';
+                characters[index].apiKey = this.value;
             });
         }
     }
     
     /**
-     * Update character tags with limit enforcement
+     * Setup basic form handlers
      */
-    updateCharacterTags(index, tagType, maxLimit, characters) {
-        const prefix = tagType === 'personalityTags' ? 'tags' : tagType;
-        const checkboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]:checked`);
+    static setupBasicFormHandlers(index, characters) {
+        // Job role select
+        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
+        if (jobRoleSelect) {
+            jobRoleSelect.addEventListener('change', function() {
+                characters[index].jobRole = this.value;
+            });
+        }
+        
+        // Build select
+        const buildSelect = document.getElementById(`build-${index}`);
+        if (buildSelect) {
+            buildSelect.addEventListener('change', function() {
+                characters[index].physicalAttributes.build = this.value;
+            });
+        }
+    }
+    
+    /**
+     * Update checkbox states - grey out when max reached - matches monolithic exactly
+     */
+    static updateCheckboxStates(index, itemType, maxLimit) {
+        let prefix, selectedCount;
+        
+        if (itemType === 'personalityTags') {
+            prefix = 'tags';
+            selectedCount = window.characters?.[index]?.personalityTags?.length || 0;
+        } else if (itemType === 'inventory') {
+            prefix = 'inventory-item';
+            selectedCount = window.characters?.[index]?.inventory?.length || 0;
+        } else if (itemType === 'deskItems') {
+            prefix = 'desk-item';
+            selectedCount = window.characters?.[index]?.deskItems?.length || 0;
+        }
+        
+        const allCheckboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]`);
+        
+        allCheckboxes.forEach(checkbox => {
+            const isChecked = checkbox.checked;
+            const isMaxReached = selectedCount >= maxLimit;
+            
+            if (isMaxReached && !isChecked) {
+                // Grey out unchecked boxes when max reached
+                checkbox.disabled = true;
+                checkbox.parentElement.style.color = '#9ca3af';
+                checkbox.parentElement.style.opacity = '0.6';
+            } else {
+                // Enable all boxes when under max
+                checkbox.disabled = false;
+                checkbox.parentElement.style.color = '';
+                checkbox.parentElement.style.opacity = '';
+            }
+        });
+    }
+    
+    /**
+     * Update character tags with limit enforcement - matches monolithic exactly
+     */
+    static updateCharacterTags(index, tagType, maxLimit, characters) {
+        const checkboxes = document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]:checked`);
         let selectedTags = Array.from(checkboxes).map(cb => cb.value);
         
         if (selectedTags.length > maxLimit) {
             // Find the last checked box and uncheck it
-            const lastChecked = Array.from(document.querySelectorAll(`input[id^="${prefix}-${index}-"]`))
+            const lastChecked = Array.from(document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]`))
                 .reverse()
                 .find(cb => cb.checked);
             if (lastChecked) {
                 lastChecked.checked = false;
                 selectedTags.pop();
-                UIGenerator.showError(`Maximum ${maxLimit} ${tagType} allowed`);
             }
         }
         
@@ -294,9 +356,9 @@ class EventHandlers {
     }
     
     /**
-     * Update character items with limit enforcement
+     * Update character items with limit enforcement - matches monolithic exactly
      */
-    updateCharacterItems(index, itemType, maxLimit, characters) {
+    static updateCharacterItems(index, itemType, maxLimit, characters) {
         const prefix = itemType === 'inventory' ? 'inventory-item' : 'desk-item';
         const checkboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]:checked`);
         let selectedItems = Array.from(checkboxes).map(cb => cb.value);
@@ -309,7 +371,6 @@ class EventHandlers {
             if (lastChecked) {
                 lastChecked.checked = false;
                 selectedItems.pop();
-                UIGenerator.showError(`Maximum ${maxLimit} ${itemType} allowed`);
             }
         }
         
@@ -317,68 +378,15 @@ class EventHandlers {
     }
     
     /**
-     * Setup keyboard shortcuts
+     * Legacy methods for backward compatibility
      */
-    static setupKeyboardShortcuts() {
-        document.addEventListener('keydown', function(e) {
-            // Ctrl/Cmd + Number keys to switch tabs
-            if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '5') {
-                e.preventDefault();
-                const tabIndex = parseInt(e.key) - 1;
-                if (window.switchTab && typeof window.switchTab === 'function') {
-                    window.switchTab(tabIndex);
-                }
-            }
-            
-            // Ctrl/Cmd + R to randomize current character
-            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-                e.preventDefault();
-                if (window.randomizeCurrentCharacter && typeof window.randomizeCurrentCharacter === 'function') {
-                    window.randomizeCurrentCharacter();
-                }
-            }
-            
-            // Enter to start simulation (when focused on start button)
-            if (e.key === 'Enter' && document.activeElement.id === 'start-simulation-btn') {
-                e.preventDefault();
-                if (window.startSimulation && typeof window.startSimulation === 'function') {
-                    window.startSimulation();
-                }
-            }
-        });
+    static setupBasicInfoHandlers(index, characters) {
+        this.setupNameHandlers(index, characters);
+        this.setupBasicFormHandlers(index, characters);
     }
     
-    /**
-     * Setup form validation on blur events
-     */
-    static setupFormValidation(characters) {
-        // Add real-time validation to required fields
-        document.addEventListener('blur', function(e) {
-            if (e.target.matches('input[id^="first-name-"], input[id^="last-name-"]')) {
-                const index = parseInt(e.target.id.split('-')[2]);
-                const validation = ValidationUtils.validateCharacter(characters[index]);
-                
-                if (!validation.isValid) {
-                    e.target.style.borderColor = '#ff4444';
-                    e.target.title = validation.errors.join(', ');
-                } else {
-                    e.target.style.borderColor = '';
-                    e.target.title = '';
-                }
-            }
-        }, true);
+    static setupPhysicalAttributesHandlers(index, characters) {
+        this.setupPhysicalAttributesHandlers(index, characters);
     }
     
-    /**
-     * Cleanup event listeners (useful for module reloading)
-     */
-    static cleanup() {
-        // Remove any global event listeners that might persist
-        document.removeEventListener('keydown', this.keyboardHandler);
-        document.removeEventListener('blur', this.validationHandler);
-    }
-}
-
-export { EventHandlers };
-
-console.log('🎯 Event Handlers Module loaded');
+    static setupSkillsHandlers(index,
