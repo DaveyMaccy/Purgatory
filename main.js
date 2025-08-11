@@ -300,6 +300,17 @@ window.startGameSimulation = async function(charactersFromCreator) {
         
         // Start the game loop
         gameEngine.start();
+
+// Make game accessible globally for debugging
+window.game = {
+    engine: gameEngine,
+    characterManager: characterManager,
+    renderer: renderer,
+    uiUpdater: uiUpdater
+};
+
+// ADD THIS LINE immediately after the window.game assignment:
+window.renderer = renderer;  // <-- ADD THIS LINE FOR SPRITE ANIMATIONS
         
         // Make game accessible globally for debugging
         window.game = {
@@ -573,3 +584,4 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
