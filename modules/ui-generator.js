@@ -1,211 +1,243 @@
 /**
- * Character Creator - WORKING VERSION
+ * UI Generator Module - WORKING VERSION
  * 
- * FIXED: All imports, office types, and functionality working
+ * FIXED: Correct import paths and uses original data structure
  */
 
-// FIXED: Import the CharacterData class that actually exists
-import { CharacterData } from './modules/character-data.js';
-import { UIGenerator } from './modules/ui-generator.js';
-import { EventHandlers } from './modules/event-handlers.js';
-import { SpriteManager } from './modules/sprite-manager.js';
-import { ValidationUtils } from './modules/validation-utils.js';
+import { 
+    JOB_ROLES_BY_OFFICE, 
+    PHYSICAL_BUILDS, 
+    GENDERS, 
+    PERSONALITY_TAGS, 
+    INVENTORY_OPTIONS, 
+    DESK_ITEM_OPTIONS,
+    SPRITE_OPTIONS
+} from './character-data.js';
+import { EventHandlers } from './event-handlers.js';
+import { SpriteManager } from './sprite-manager.js';
 
-// Global state - FIXED: Use original office type
-let characters = [];
-let currentCharacterIndex = 0;
-let officeType = 'Tech Startup'; // FIXED: This matches the data file
-let globalAPIKey = '';
-
-/**
- * Initialize the character creator system
- */
-function initializeCharacterCreator() {
-    console.log('🎭 Initializing Character Creator...');
-    
-    try {
-        // Initialize with default characters
-        characters = CharacterData.generateDefaultCharacters(3, officeType);
+class UIGenerator {
+    /**
+     * Create a character tab
+     */
+    static createCharacterTab(index, character, container) {
+        const tab = document.createElement('div');
+        tab.id = `character-tab-${index}`;
+        tab.className = `character-tab ${index === 0 ? 'active' : ''}`;
+        tab.textContent = `${character.firstName} ${character.lastName}`;
+        tab.onclick = () => window.switchTab(index);
         
-        // Make characters globally accessible
-        window.characters = characters;
+        if (container) {
+            container.appendChild(tab);
+        }
         
-        // Set up UI
-        setupCharacterCreatorUI();
+        return tab;
+    }
+    
+    /**
+     * Create a character panel
+     */
+    static createCharacterPanel(index, character, container, officeType) {
+        const panel = document.createElement('div');
+        panel.id = `character-panel-${index}`;
+        panel.className = `creator-panel ${index === 0 ? '' : 'hidden'}`;
         
-        // Setup global event listeners
-        setupGlobalEventHandlers();
+        panel.innerHTML = this.generatePanelHTML(index, character, officeType);
         
-        console.log('🎭 Character Creator initialized successfully');
-        console.log('📊 Characters:', characters.length);
+        if (container) {
+            container.appendChild(panel);
+        }
         
-    } catch (error) {
-        console.error('❌ Failed to initialize Character Creator:', error);
-        throw error;
+        // Setup event listeners for this panel
+        EventHandlers.setupPanelEventListeners(index);
+        
+        // Initialize sprite and portrait
+        SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+        
+        return panel;
+    }
+    
+    /**
+     * Generate complete panel HTML
+     */
+    static generatePanelHTML(index, charData, officeType) {
+        const jobRoleOptions = JOB_ROLES_BY_OFFICE[officeType]
+            .map(role => `<option value="${role}" ${role === charData.jobRole ? 'selected' : ''}>${role}</option>`)
+            .join('');
+            
+        const buildOptions = PHYSICAL_BUILDS
+            .map(build => `<option value="${build}" ${build === charData.physicalAttributes.build ? 'selected' : ''}>${build}</option>`)
+            .join('');
+            
+        const genderOptions = GENDERS
+            .map(gender => `<option value="${gender}" ${gender === charData.physicalAttributes.gender ? 'selected' : ''}>${gender}</option>`)
+            .join('');
+            
+        const tagOptions = PERSONALITY_TAGS
+            .map(tag => `<label class="checkbox-label" style="display: block; margin: 2px 0;">
+                <input type="checkbox" id="tags-${index}-${tag}" value="${tag}" ${charData.personalityTags.includes(tag) ? 'checked' : ''}> 
+                ${tag}
+            </label>`)
+            .join('');
+            
+        const inventoryOptions = INVENTORY_OPTIONS
+            .map(item => `<label class="checkbox-label" style="display: block; margin: 2px 0;">
+                <input type="checkbox" id="inventory-item-${index}-${item}" value="${item}" ${charData.inventory.includes(item) ? 'checked' : ''}> 
+                ${item}
+            </label>`)
+            .join('');
+            
+        const deskItemOptions = DESK_ITEM_OPTIONS
+            .map(item => `<label class="checkbox-label" style="display: block; margin: 2px 0;">
+                <input type="checkbox" id="desk-item-${index}-${item}" value="${item}" ${charData.deskItems.includes(item) ? 'checked' : ''}> 
+                ${item}
+            </label>`)
+            .join('');
+
+        return `
+            <div class="flex gap-6 h-full">
+                <!-- Left Column: Form Fields -->
+                <div class="flex-1 space-y-4 overflow-y-auto" style="max-height: 500px; padding-right: 10px;">
+                    <!-- Basic Info -->
+                    <div class="form-group">
+                        <label for="first-name-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">First Name</label>
+                        <input type="text" id="first-name-${index}" value="${charData.firstName}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="last-name-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Last Name</label>
+                        <input type="text" id="last-name-${index}" value="${charData.lastName}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                            <label for="jobRole-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Job Role</label>
+                            <select id="jobRole-${index}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">${jobRoleOptions}</select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="gender-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">Gender</label>
+                            <select id="gender-${index}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">${genderOptions}</select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="isPlayer-${index}" ${charData.isPlayerCharacter ? 'checked' : ''}>
+                            <span style="font-weight: bold;">Player Character</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Physical Attributes -->
+                    <div class="form-group">
+                        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Physical Attributes</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Age: <span id="age-val-${index}">${charData.age}</span></label>
+                                <input type="range" id="age-${index}" min="22" max="65" value="${charData.age}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Height: <span id="height-val-${index}">${charData.physicalAttributes.height} cm</span></label>
+                                <input type="range" id="height-${index}" min="150" max="200" value="${charData.physicalAttributes.height}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Weight: <span id="weight-val-${index}">${charData.physicalAttributes.weight} kg</span></label>
+                                <input type="range" id="weight-${index}" min="45" max="120" value="${charData.physicalAttributes.weight}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Looks: <span id="looks-val-${index}">${charData.physicalAttributes.looks}/10</span></label>
+                                <input type="range" id="looks-${index}" min="1" max="10" value="${charData.physicalAttributes.looks}" style="width: 100%;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label for="build-${index}" style="display: block; margin-bottom: 5px;">Build</label>
+                            <select id="build-${index}" style="width: 100%; padding: 4px;">${buildOptions}</select>
+                        </div>
+                    </div>
+
+                    <!-- Skills -->
+                    <div class="form-group">
+                        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Skills</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Competence: <span id="competence-val-${index}">${charData.skills.competence}/10</span></label>
+                                <input type="range" id="competence-${index}" min="1" max="10" value="${charData.skills.competence}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Laziness: <span id="laziness-val-${index}">${charData.skills.laziness}/10</span></label>
+                                <input type="range" id="laziness-${index}" min="1" max="10" value="${charData.skills.laziness}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Charisma: <span id="charisma-val-${index}">${charData.skills.charisma}/10</span></label>
+                                <input type="range" id="charisma-${index}" min="1" max="10" value="${charData.skills.charisma}" style="width: 100%;">
+                            </div>
+                            <div>
+                                <label>Leadership: <span id="leadership-val-${index}">${charData.skills.leadership}/10</span></label>
+                                <input type="range" id="leadership-${index}" min="1" max="10" value="${charData.skills.leadership}" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Personality Tags -->
+                    <div class="form-group">
+                        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Personality</h3>
+                        <div style="max-height: 120px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
+                            ${tagOptions}
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <!-- Inventory -->
+                        <div class="form-group">
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Inventory</h3>
+                            <div style="max-height: 100px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
+                                ${inventoryOptions}
+                            </div>
+                        </div>
+                        
+                        <!-- Desk Items -->
+                        <div class="form-group">
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Desk Items</h3>
+                            <div style="max-height: 100px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; font-size: 14px;">
+                                ${deskItemOptions}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- API Key -->
+                    <div class="form-group">
+                        <label for="api-key-${index}" style="display: block; margin-bottom: 5px; font-weight: bold;">API Key</label>
+                        <input type="text" id="api-key-${index}" value="${charData.apiKey}" placeholder="Individual API key..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; font-family: monospace;">
+                    </div>
+                </div>
+
+                <!-- Right Column: Portrait -->
+                <div class="w-80" style="width: 320px;">
+                    <div class="space-y-4">
+                        <!-- Character Portrait -->
+                        <div class="form-group">
+                            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Character Portrait</h3>
+                            <div style="text-align: center;">
+                                <canvas id="preview-canvas-${index}" width="96" height="96" style="border: 2px solid #ccc; border-radius: 8px; background: #f0f0f0;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Update tab name when character name changes
+     */
+    static updateTabName(index, firstName, lastName) {
+        const tab = document.getElementById(`character-tab-${index}`);
+        if (tab) {
+            tab.textContent = `${firstName} ${lastName}`;
+        }
     }
 }
 
-/**
- * Set up the main UI structure
- */
-function setupCharacterCreatorUI() {
-    // Clear existing content
-    const tabsContainer = document.getElementById('character-tabs');
-    const panelsContainer = document.getElementById('character-panels');
-    
-    if (tabsContainer) tabsContainer.innerHTML = '';
-    if (panelsContainer) panelsContainer.innerHTML = '';
-    
-    // Generate tabs and panels for each character
-    characters.forEach((character, index) => {
-        UIGenerator.createCharacterTab(index, character, tabsContainer);
-        UIGenerator.createCharacterPanel(index, character, panelsContainer, officeType);
-    });
-    
-    // Set up character management controls
-    setupCharacterManagementControls();
-    
-    // Initialize with first character active
-    switchToTab(0);
-}
+export { UIGenerator };
 
-/**
- * Set up character management controls (add/remove buttons)
- */
-function setupCharacterManagementControls() {
-    const managementControls = document.querySelector('.character-management');
-    if (!managementControls) return;
-    
-    const addBtn = document.getElementById('add-character-btn');
-    const removeBtn = document.getElementById('remove-character-btn');
-    
-    if (addBtn) {
-        addBtn.onclick = addCharacter;
-        addBtn.disabled = characters.length >= 5;
-    }
-    
-    if (removeBtn) {
-        removeBtn.onclick = removeCharacter;
-        removeBtn.disabled = characters.length <= 2;
-    }
-}
-
-/**
- * Set up global event handlers
- */
-function setupGlobalEventHandlers() {
-    // Global API key handler
-    const globalApiKeyInput = document.getElementById('global-api-key');
-    if (globalApiKeyInput) {
-        globalApiKeyInput.addEventListener('input', function() {
-            globalAPIKey = this.value;
-            // Update all character API keys that are using global
-            characters.forEach((char, index) => {
-                const charApiKeyInput = document.getElementById(`api-key-${index}`);
-                if (charApiKeyInput && charApiKeyInput.value === '') {
-                    char.apiKey = globalAPIKey;
-                }
-            });
-        });
-    }
-    
-    // Office type selector
-    const officeSelect = document.getElementById('office-type-select');
-    if (officeSelect) {
-        officeSelect.addEventListener('change', function() {
-            officeType = this.value;
-            // Refresh UI to update job role options
-            setupCharacterCreatorUI();
-        });
-    }
-    
-    // Start simulation button
-    const startBtn = document.getElementById('start-simulation-btn') || document.getElementById('start-simulation-button');
-    if (startBtn) {
-        startBtn.onclick = handleStartSimulation;
-        console.log('✅ Start Simulation button connected');
-    } else {
-        console.warn('⚠️ Start Simulation button not found');
-    }
-}
-
-/**
- * Switch to a specific character tab
- */
-function switchToTab(index) {
-    currentCharacterIndex = index;
-    
-    // Update tab appearances
-    document.querySelectorAll('.character-tab').forEach((tab, i) => {
-        tab.classList.toggle('active', i === index);
-    });
-    
-    // Update panel visibility
-    document.querySelectorAll('.creator-panel').forEach((panel, i) => {
-        panel.classList.toggle('hidden', i !== index);
-    });
-    
-    console.log(`🔄 Switched to character ${index + 1}`);
-}
-
-/**
- * Add a new character
- */
-function addCharacter() {
-    if (characters.length >= 5) return;
-    
-    const newIndex = characters.length;
-    const newCharacter = CharacterData.generateRandomCharacter(officeType);
-    newCharacter.id = `char_${newIndex + 1}`;
-    characters.push(newCharacter);
-    
-    // Update global reference
-    window.characters = characters;
-    
-    // Update UI
-    const tabsContainer = document.getElementById('character-tabs');
-    const panelsContainer = document.getElementById('character-panels');
-    
-    UIGenerator.createCharacterTab(newIndex, newCharacter, tabsContainer);
-    UIGenerator.createCharacterPanel(newIndex, newCharacter, panelsContainer, officeType);
-    
-    // Update management controls
-    setupCharacterManagementControls();
-    
-    // Switch to new character
-    switchToTab(newIndex);
-    
-    console.log(`➕ Added character ${newIndex + 1}`);
-}
-
-/**
- * Remove the last character
- */
-function removeCharacter() {
-    if (characters.length <= 2) return;
-    
-    const lastIndex = characters.length - 1;
-    characters.pop();
-    
-    // Update global reference
-    window.characters = characters;
-    
-    // Remove UI elements
-    const tab = document.getElementById(`character-tab-${lastIndex}`);
-    const panel = document.getElementById(`character-panel-${lastIndex}`);
-    
-    if (tab) tab.remove();
-    if (panel) panel.remove();
-    
-    // Update management controls
-    setupCharacterManagementControls();
-    
-    // Switch to previous character if we removed the active one
-    if (currentCharacterIndex >= characters.length) {
-        switchToTab(characters.length - 1);
-    }
-    
-    console.log(`➖ Removed character ${lastIndex + 1}`);
-}
-
-/**
+console.log('📦 UI Generator Module loaded - WORKING VERSION');
