@@ -1,238 +1,260 @@
 /**
- * Character Data Module
+ * Character Data Module - PHASE 2 COMPLETE ALIGNMENT
  * 
- * Handles all character data generation, randomization, and management.
- * Contains all the constants and data structures needed for character creation.
+ * Contains all character-related data structures, constants, and generation functions.
+ * Now matches the monolithic version exactly for full feature parity.
  */
 
-// Character data constants
-const GENDERS = ['Male', 'Female', 'Non-binary'];
-const PHYSICAL_BUILDS = ['Thin', 'Average', 'Athletic', 'Heavy'];
-
-const MALE_NAMES = [
-    'James', 'Michael', 'Robert', 'John', 'David', 'William', 'Richard', 'Joseph',
-    'Thomas', 'Christopher', 'Charles', 'Daniel', 'Matthew', 'Anthony', 'Mark',
-    'Donald', 'Steven', 'Paul', 'Joshua', 'Kenneth', 'Kevin', 'Brian', 'George',
-    'Timothy', 'Ronald', 'Jason', 'Edward', 'Jeffrey', 'Ryan', 'Jacob'
-];
-
-const FEMALE_NAMES = [
-    'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan',
-    'Jessica', 'Sarah', 'Karen', 'Nancy', 'Lisa', 'Betty', 'Dorothy', 'Sandra',
-    'Ashley', 'Kimberly', 'Emily', 'Donna', 'Margaret', 'Carol', 'Michelle',
-    'Laura', 'Sharon', 'Deborah', 'Cynthia', 'Angela', 'Melissa', 'Brenda', 'Emma'
-];
-
-const NONBINARY_NAMES = [
-    'Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn',
-    'Sage', 'River', 'Phoenix', 'Rowan', 'Skylar', 'Cameron', 'Blake', 'Drew',
-    'Emery', 'Finley', 'Hayden', 'Indigo', 'Kai', 'Lane', 'Marlowe', 'Nova'
-];
-
-const JOB_ROLES_BY_OFFICE = {
-    'Tech Startup': ['Software Engineer', 'Product Manager', 'UX Designer', 'Data Scientist', 'DevOps Engineer', 'Marketing Specialist'],
-    'Law Firm': ['Partner', 'Associate', 'Paralegal', 'Legal Secretary', 'Court Reporter', 'Law Clerk'],
-    'Medical Practice': ['Doctor', 'Nurse', 'Medical Assistant', 'Receptionist', 'Lab Technician', 'Office Manager'],
-    'Accounting Firm': ['CPA', 'Tax Specialist', 'Bookkeeper', 'Auditor', 'Financial Analyst', 'Administrative Assistant'],
-    'Marketing Agency': ['Creative Director', 'Account Manager', 'Copywriter', 'Graphic Designer', 'Social Media Manager', 'Media Planner']
+// ENHANCED CONSTANTS - Complete alignment with monolithic version
+export const JOB_ROLES_BY_OFFICE = {
+    "Game Studio": ["Lead Developer", "Game Designer", "3D Artist", "Sound Engineer", "QA Tester", "Producer"],
+    "Corporate": ["IT Specialist", "Admin Assistant", "Business Analyst", "HR Manager", "Project Manager", "Accountant"],
+    "PR Agency": ["Account Manager", "Creative Director", "Social Media Manager", "Copywriter", "Media Planner", "Brand Strategist"],
+    "Newspaper": ["Reporter", "Editor", "Photographer", "Layout Designer", "Copy Editor", "Columnist"]
 };
 
-const PERSONALITY_TAGS = [
-    'Analytical', 'Creative', 'Outgoing', 'Reserved', 'Ambitious', 'Laid-back',
-    'Detail-oriented', 'Big-picture', 'Collaborative', 'Independent', 'Optimistic',
-    'Pragmatic', 'Innovative', 'Traditional', 'Competitive', 'Supportive',
-    'Risk-taker', 'Cautious', 'Empathetic', 'Logical'
+export const PERSONALITY_TAGS = [
+    "Creative", "Introverted", "Extroverted", "Ambitious", "Laid-back", "Analytical", 
+    "Empathetic", "Competitive", "Collaborative", "Independent", "Detail-oriented", 
+    "Big-picture", "Optimistic", "Pessimistic", "Humorous", "Serious", "Spontaneous", 
+    "Organized", "Flexible", "Stubborn", "Patient", "Impatient", "Confident", 
+    "Self-doubting", "Innovative", "Traditional", "Risk-taker", "Cautious", "Witty", "Flirty"
 ];
 
-const INVENTORY_OPTIONS = [
-    'Laptop', 'Smartphone', 'Notebook', 'Pen', 'Coffee Mug', 'Water Bottle',
-    'Headphones', 'Charger', 'Business Cards', 'Sticky Notes', 'Calculator',
-    'USB Drive', 'Wallet', 'Keys', 'Sunglasses', 'Gum', 'Hand Sanitizer',
-    'Protein Bar', 'Energy Drink', 'Tissues'
+export const INVENTORY_OPTIONS = [
+    "Coffee Mug", "Smartphone", "Notebook", "Pen", "Laptop Charger", "Headphones", 
+    "Energy Bar", "Hand Sanitizer", "Reading Glasses", "Flash Drive", "Stress Ball", 
+    "Office Keys", "Business Cards", "Breath Mints", "Phone Charger"
 ];
 
-const DESK_ITEM_OPTIONS = [
-    'Monitor', 'Keyboard', 'Mouse', 'Desk Lamp', 'Plant', 'Picture Frame',
-    'Paperweight', 'Stapler', 'Hole Punch', 'Tape Dispenser', 'File Organizer',
-    'Pen Holder', 'Calendar', 'Stress Ball', 'Action Figure', 'Coffee Warmer',
-    'Phone Stand', 'Cable Organizer', 'Mini Fridge', 'Desk Fan'
+export const DESK_ITEM_OPTIONS = [
+    "Family Photo", "Plant", "Calendar", "Desk Lamp", "Coffee Maker", "Radio", 
+    "Stress Ball", "Award Trophy", "Book", "Fidget Toy", "Tissue Box", "Stapler"
 ];
 
-const SPRITE_OPTIONS = Array.from({ length: 20 }, (_, i) => 
-    `assets/characters/character-${String(i + 1).padStart(2, '0')}.png`
-);
+export const PHYSICAL_BUILDS = ["Slim", "Average", "Athletic", "Heavy"];
+export const GENDERS = ["Male", "Female", "Non-binary"];
 
-class CharacterData {
-    /**
-     * Generate a default character template
-     */
-    static generateDefaultCharacter(index, officeType) {
-        const gender = this.getRandomItem(GENDERS);
-        const firstName = this.getRandomNameByGender(gender);
-        const lastName = this.getRandomItem(['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia']);
-        
-        return {
-            id: `char_${index + 1}`,
-            isPlayerCharacter: index === 0, // First character is player
-            
-            // Basic Info
-            firstName: firstName,
-            lastName: lastName,
-            age: Math.floor(Math.random() * 25) + 25, // 25-50
-            jobRole: this.getRandomItem(JOB_ROLES_BY_OFFICE[officeType] || ['Employee']),
-            
-            // Physical Attributes
-            physicalAttributes: {
-                gender: gender,
-                height: Math.floor(Math.random() * 40) + 150, // 150-190cm
-                weight: Math.floor(Math.random() * 50) + 50,  // 50-100kg
-                build: this.getRandomItem(PHYSICAL_BUILDS),
-                looks: Math.floor(Math.random() * 6) + 5      // 5-10
-            },
-            
-            // Skills (1-10 scale)
-            skills: {
-                competence: Math.floor(Math.random() * 6) + 5,  // 5-10
-                laziness: Math.floor(Math.random() * 10) + 1,    // 1-10
-                charisma: Math.floor(Math.random() * 10) + 1,    // 1-10
-                leadership: Math.floor(Math.random() * 10) + 1   // 1-10
-            },
-            
-            // Personality & Items
-            personalityTags: this.getRandomItems(PERSONALITY_TAGS, 2, 4),
-            inventory: this.getRandomItems(INVENTORY_OPTIONS, 3, 6),
-            deskItems: this.getRandomItems(DESK_ITEM_OPTIONS, 3, 6),
-            
-            // Bio & Appearance
-            bio: '',
-            spriteSheet: this.getRandomItem(SPRITE_OPTIONS),
-            spriteColors: null,
-            portrait: null,
-            customPortrait: null,
-            
-            // API Configuration
-            apiKey: '',
-            
-            // Game engine fields (will be populated later)
-            position: { x: 0, y: 0 },
-            actionState: 'idle',
-            mood: 'Neutral',
-            facingAngle: 90,
-            maxSightRange: 250,
-            isBusy: false,
-            currentAction: null,
-            currentActionTranscript: [],
-            pendingIntent: null,
-            heldItem: null,
-            conversationId: null,
-            shortTermMemory: [],
-            longTermMemory: [],
-            longTermGoal: null,
-            assignedTask: null,
-            pixiArmature: null,
-            relationships: {}
-        };
+// Character count limits
+export const MIN_CHARACTERS = 2;
+export const MAX_CHARACTERS = 5;
+
+// Auto-detect sprite sheets (25+ sprites) - matches monolithic exactly
+function generateSpriteOptions() {
+    const sprites = [];
+    for (let i = 1; i <= 25; i++) {
+        const paddedNumber = i.toString().padStart(2, '0');
+        sprites.push(`assets/characters/character-${paddedNumber}.png`);
     }
-    
-    /**
-     * Generate multiple default characters
-     */
-    static generateDefaultCharacters(count, officeType) {
-        const characters = [];
-        for (let i = 0; i < count; i++) {
-            characters.push(this.generateDefaultCharacter(i, officeType));
-        }
-        
-        // Initialize relationships between characters
-        characters.forEach(char => {
-            characters.forEach(other => {
-                if (char.id !== other.id) {
-                    char.relationships[other.id] = 50; // Neutral starting relationship
-                }
-            });
-        });
-        
-        return characters;
-    }
-    
-    /**
-     * Generate a completely random character
-     */
-    static generateRandomCharacter(officeType) {
-        const character = this.generateDefaultCharacter(0, officeType);
-        
-        // Randomize more thoroughly
-        character.age = Math.floor(Math.random() * 30) + 20; // 20-50
-        character.physicalAttributes.height = Math.floor(Math.random() * 50) + 150; // 150-200cm
-        character.physicalAttributes.weight = Math.floor(Math.random() * 80) + 40;  // 40-120kg
-        character.skills.competence = Math.floor(Math.random() * 10) + 1;
-        character.skills.laziness = Math.floor(Math.random() * 10) + 1;
-        character.skills.charisma = Math.floor(Math.random() * 10) + 1;
-        character.skills.leadership = Math.floor(Math.random() * 10) + 1;
-        
-        return character;
-    }
-    
-    /**
-     * Finalize characters for game engine
-     */
-    static finalizeCharacters(characters, globalAPIKey) {
-        return characters.map(char => ({
-            ...char,
-            apiKey: char.apiKey || globalAPIKey,
-            // Initialize relationships if not set
-            relationships: characters.reduce((rel, otherChar) => {
-                if (otherChar.id !== char.id) {
-                    rel[otherChar.id] = char.relationships[otherChar.id] || 50;
-                }
-                return rel;
-            }, {})
-        }));
-    }
-    
-    /**
-     * Get random name based on gender
-     */
-    static getRandomNameByGender(gender) {
-        switch (gender) {
-            case 'Male':
-                return this.getRandomItem(MALE_NAMES);
-            case 'Female':
-                return this.getRandomItem(FEMALE_NAMES);
-            case 'Non-binary':
-                return this.getRandomItem(NONBINARY_NAMES);
-            default:
-                return this.getRandomItem([...MALE_NAMES, ...FEMALE_NAMES, ...NONBINARY_NAMES]);
-        }
-    }
-    
-    /**
-     * Get random item from array
-     */
-    static getRandomItem(array) {
-        return array[Math.floor(Math.random() * array.length)];
-    }
-    
-    /**
-     * Get random items from array
-     */
-    static getRandomItems(array, min, max) {
-        const count = Math.floor(Math.random() * (max - min + 1)) + min;
-        const shuffled = [...array].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, count);
-    }
+    return sprites;
 }
 
-// Export the class and constants
-export { 
-    CharacterData,
-    GENDERS,
-    PHYSICAL_BUILDS,
-    JOB_ROLES_BY_OFFICE,
-    PERSONALITY_TAGS,
-    INVENTORY_OPTIONS,
-    DESK_ITEM_OPTIONS,
-    SPRITE_OPTIONS
+export const SPRITE_OPTIONS = generateSpriteOptions();
+
+// Gender-linked name pools - matches monolithic exactly
+export const NAMES_BY_GENDER = {
+    Male: {
+        first: ['James', 'John', 'Robert', 'Michael', 'David', 'William', 'Richard', 'Joseph', 'Thomas', 'Christopher', 'Charles', 'Daniel', 'Matthew', 'Anthony', 'Mark', 'Donald', 'Steven', 'Paul', 'Andrew', 'Joshua'],
+        last: ['Smith', 'Johnson', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Lee', 'Clark', 'Lewis', 'Walker', 'Hall', 'Allen', 'Young', 'King', 'Wright', 'Scott', 'Green', 'Adams', 'Baker']
+    },
+    Female: {
+        first: ['Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Barbara', 'Susan', 'Jessica', 'Sarah', 'Karen', 'Lisa', 'Nancy', 'Betty', 'Helen', 'Sandra', 'Donna', 'Carol', 'Ruth', 'Sharon', 'Michelle'],
+        last: ['Smith', 'Johnson', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Lee', 'Clark', 'Lewis', 'Walker', 'Hall', 'Allen', 'Young', 'King', 'Wright', 'Scott', 'Green', 'Adams', 'Baker']
+    },
+    'Non-binary': {
+        first: ['Alex', 'Jordan', 'Taylor', 'Casey', 'Riley', 'Avery', 'Quinn', 'Sage', 'Morgan', 'Blake', 'Cameron', 'Drew', 'Emery', 'Finley', 'Hayden', 'Jamie', 'Kai', 'Logan', 'Micah', 'Nico'],
+        last: ['Smith', 'Johnson', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Lee', 'Clark', 'Lewis', 'Walker', 'Hall', 'Allen', 'Young', 'King', 'Wright', 'Scott', 'Green', 'Adams', 'Baker']
+    }
 };
 
-console.log('📊 Character Data Module loaded');
+/**
+ * Helper functions - matches monolithic exactly
+ */
+export function getRandomItem(array) {
+    return array[Math.floor(Math.random() * array.length)];
+}
+
+export function getRandomItems(array, min, max) {
+    const count = Math.floor(Math.random() * (max - min + 1)) + min;
+    const shuffled = [...array].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+}
+
+/**
+ * Generate name based on gender - matches monolithic exactly
+ */
+export function generateNameByGender(gender) {
+    const firstNames = NAMES_BY_GENDER[gender].first;
+    const lastNames = NAMES_BY_GENDER[gender].last;
+    return `${getRandomItem(firstNames)} ${getRandomItem(lastNames)}`;
+}
+
+/**
+ * Create complete randomized character - matches monolithic exactly
+ */
+export function createCompleteRandomCharacter(index, officeType = 'Game Studio') {
+    const gender = getRandomItem(GENDERS);
+    const randomTags = getRandomItems(PERSONALITY_TAGS, 3, 6);
+    const randomInventory = getRandomItems(INVENTORY_OPTIONS, 1, 3);
+    const randomDeskItems = getRandomItems(DESK_ITEM_OPTIONS, 1, 2);
+    
+    // Ensure sprite index is valid and sprite sheet exists
+    const validSpriteIndex = Math.floor(Math.random() * 5); // Only use first 5 sprites that exist
+    const spriteSheet = SPRITE_OPTIONS[validSpriteIndex];
+    
+    return {
+        id: `char_${index}`,
+        name: generateNameByGender(gender), // ALIGNED: Single name field
+        isPlayer: false, // ALIGNED: Player identification field
+        spriteSheet: spriteSheet,
+        spriteIndex: validSpriteIndex, // ALIGNED: Track current sprite
+        portrait: null, // Will be generated from sprite
+        customPortrait: null, // ALIGNED: Custom uploaded image
+        apiKey: '', // Individual API key override
+        jobRole: getRandomItem(JOB_ROLES_BY_OFFICE[officeType]),
+        physicalAttributes: {
+            age: Math.floor(Math.random() * 20) + 25,
+            height: Math.floor(Math.random() * 30) + 160,
+            weight: Math.floor(Math.random() * 40) + 60,
+            build: getRandomItem(PHYSICAL_BUILDS),
+            looks: Math.floor(Math.random() * 10) + 1,
+            gender: gender // ALIGNED: Gender field included
+        },
+        skills: {
+            competence: Math.floor(Math.random() * 10) + 1,
+            laziness: Math.floor(Math.random() * 10) + 1,
+            charisma: Math.floor(Math.random() * 10) + 1,
+            leadership: Math.floor(Math.random() * 10) + 1
+        },
+        personalityTags: randomTags,
+        experienceTags: [],
+        needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 },
+        inventory: randomInventory,
+        deskItems: randomDeskItems,
+        relationships: {},
+        appearance: {
+            body: 'body_skin_tone_1',
+            hair: 'hair_style_4_blonde',
+            shirt: 'shirt_style_2_red',
+            pants: 'pants_style_1_jeans'
+        }
+    };
+}
+
+/**
+ * Generate default characters - updated to match monolithic structure
+ */
+export function generateDefaultCharacters(count = 3, officeType = 'Game Studio') {
+    const characters = [];
+    
+    for (let i = 0; i < count; i++) {
+        const character = createCompleteRandomCharacter(i, officeType);
+        
+        // Make first character the player
+        if (i === 0) {
+            character.isPlayer = true;
+        }
+        
+        characters.push(character);
+    }
+    
+    return characters;
+}
+
+/**
+ * Generate random character - wrapper for createCompleteRandomCharacter
+ */
+export function generateRandomCharacter(officeType = 'Game Studio') {
+    return createCompleteRandomCharacter(0, officeType);
+}
+
+/**
+ * Validate characters before starting game - enhanced validation
+ */
+export function validateCharacters(characters) {
+    const errors = [];
+    
+    if (characters.length < MIN_CHARACTERS) {
+        errors.push(`Minimum ${MIN_CHARACTERS} characters required`);
+    }
+    
+    if (characters.length > MAX_CHARACTERS) {
+        errors.push(`Maximum ${MAX_CHARACTERS} characters allowed`);
+    }
+    
+    // Ensure exactly one player
+    const playerCount = characters.filter(char => char.isPlayer).length;
+    if (playerCount === 0) {
+        characters[0].isPlayer = true;
+        console.log('⚠️ No player character found, making first character the player');
+    } else if (playerCount > 1) {
+        // Keep only first player
+        let foundFirst = false;
+        characters.forEach(char => {
+            if (char.isPlayer && foundFirst) {
+                char.isPlayer = false;
+            } else if (char.isPlayer) {
+                foundFirst = true;
+            }
+        });
+        console.log('⚠️ Multiple player characters found, using first one');
+    }
+    
+    // Ensure all have names
+    characters.forEach((char, index) => {
+        if (!char.name || char.name.trim() === '') {
+            char.name = `Character ${index + 1}`;
+        }
+    });
+    
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
+}
+
+/**
+ * Format characters for game engine - complete game format conversion
+ */
+export function formatCharactersForGame(characters, globalAPIKey = '') {
+    return characters.map(char => ({
+        ...char,
+        // Use custom portrait if available, otherwise use sprite portrait
+        portrait: char.customPortrait || char.portrait,
+        // Use individual API key if set, otherwise use global for NPCs
+        apiKey: char.apiKey || (char.isPlayer ? '' : globalAPIKey),
+        // Game engine required fields
+        position: { x: 0, y: 0 },
+        actionState: 'idle',
+        mood: 'Neutral',
+        facingAngle: 90,
+        maxSightRange: 250,
+        isBusy: false,
+        currentAction: null,
+        currentActionTranscript: [],
+        pendingIntent: null,
+        heldItem: null,
+        conversationId: null,
+        shortTermMemory: [],
+        longTermMemory: [],
+        longTermGoal: null,
+        assignedTask: null,
+        pixiArmature: null,
+        // Initialize relationships with other characters
+        relationships: characters.reduce((rel, otherChar) => {
+            if (otherChar.id !== char.id) {
+                rel[otherChar.id] = 50; // Neutral starting relationship
+            }
+            return rel;
+        }, {})
+    }));
+}
+
+/**
+ * Finalize characters - wrapper for format function
+ */
+export function finalizeCharacters(characters, globalAPIKey = '') {
+    return formatCharactersForGame(characters, globalAPIKey);
+}
+
+console.log('📦 Character Data Module loaded - PHASE 2 COMPLETE ALIGNMENT');
