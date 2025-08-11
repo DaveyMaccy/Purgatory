@@ -250,7 +250,7 @@ window.startGameSimulation = async function(charactersFromCreator) {
         
         // Initialize character manager with characters
         characterManager = new CharacterManager();
-        characterManager.initializeFromCreatorData(charactersFromCreator);
+        characterManager.loadCharacters(charactersFromCreator);
         console.log('✅ Character manager initialized');
         
         // Initialize renderer with world container - FIXED: Use correct container ID
