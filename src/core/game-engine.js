@@ -1,6 +1,7 @@
 /**
  * Game Engine - Complete Stage 2-3 Integration
  * Lightweight coordinator for game systems with full renderer support
+ * CHANGE: Added setCharacterManager method and cleaned up constructor.
  */
 import { CharacterManager } from './characters/character-manager.js';
 import { World } from './world/world.js';
@@ -8,14 +9,15 @@ import { World } from './world/world.js';
 export class GameEngine {
     constructor() {
         // Core systems
-        this.characterManager = new CharacterManager();
+        // *** FIX: Changed to null. The manager is now provided by main.js. ***
+        this.characterManager = null;
         // World will be initialized after map data is loaded
         this.world = null;
-        
+
         // STAGE 2: Rendering system
         this.renderer = null;
         this.uiUpdater = null;
-        
+
         // STAGE 3: Systems that will be added in later stages
         this.interactionSystem = null;
         this.movementSystem = null;
@@ -24,7 +26,7 @@ export class GameEngine {
         this.conversationSystem = null;
         this.aiQueueManager = null;
         this.gameLoop = null;
-        
+
         // Game state
         this.gameTime = 0;
         this.isRunning = false;
@@ -36,30 +38,40 @@ export class GameEngine {
     initialize(mapData) {
         try {
             console.log('🎮 Initializing game engine...');
-            
+
             if (!mapData) {
                 throw new Error('Map data is required for initialization');
             }
-            
+
             // Initialize world with map data
             this.world = new World(this.characterManager, mapData);
-            
+
             // Generate navigation grid for character positioning
             this.world.generateNavGrid();
-            
+
             // Initialize characters (they should already be loaded by characterManager)
             this.characterManager.initializeCharacters();
-            
+
             // STAGE 2: Start the update loop
             this.startSimpleUpdateLoop();
             this.isRunning = true;
-            
+
             console.log('✅ Game engine initialized successfully');
-            
+
         } catch (error) {
             console.error('❌ Failed to initialize game engine:', error);
             throw error;
         }
+    }
+
+    /**
+     * *** FIX: This entire method was added to resolve the error. ***
+     * STAGE 3: Set character manager reference
+     * @param {CharacterManager} characterManager - The character manager instance
+     */
+    setCharacterManager(characterManager) {
+        this.characterManager = characterManager;
+        console.log('👥 Character Manager connected to game engine');
     }
 
     /**
@@ -85,11 +97,11 @@ export class GameEngine {
      */
     startSimpleUpdateLoop() {
         const updateInterval = 1000 / 60; // 60 FPS
-        
+
         this.updateLoop = setInterval(() => {
             this.update(updateInterval);
         }, updateInterval);
-        
+
         console.log('🔄 Update loop started at 60 FPS');
     }
 
@@ -99,30 +111,30 @@ export class GameEngine {
      */
     update(deltaTime) {
         if (!this.isRunning) return;
-        
+
         this.gameTime += deltaTime;
-        
+
         // Update characters (includes needs decay and observer notifications)
         if (this.characterManager) {
             this.characterManager.update(deltaTime);
         }
-        
+
         // STAGE 2: Update renderer if available
         if (this.renderer && this.renderer.isInitialized) {
             // Update character positions in renderer
             this.characterManager.characters.forEach(character => {
                 if (character.position) {
                     this.renderer.updateCharacterPosition(
-                        character.id, 
-                        character.position.x, 
+                        character.id,
+                        character.position.x,
                         character.position.y
                     );
                 }
             });
-            
+
             this.renderer.update();
         }
-        
+
         // STAGE 3: UI updates are handled by observer pattern
         // The UI updater automatically receives notifications from characters
     }
@@ -180,23 +192,23 @@ export class GameEngine {
      */
     stop() {
         this.isRunning = false;
-        
+
         if (this.updateLoop) {
             clearInterval(this.updateLoop);
             this.updateLoop = null;
         }
-        
+
         // Cleanup systems
         if (this.renderer) {
             this.renderer.destroy();
             this.renderer = null;
         }
-        
+
         if (this.uiUpdater) {
             this.uiUpdater.destroy();
             this.uiUpdater = null;
         }
-        
+
         console.log('⛔ Game stopped and cleaned up');
     }
 
@@ -221,7 +233,7 @@ export class GameEngine {
      */
     getCharacterPositions() {
         if (!this.characterManager) return [];
-        
+
         return this.characterManager.characters.map(char => ({
             id: char.id,
             name: char.name,
