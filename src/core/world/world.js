@@ -11,6 +11,7 @@
  * PHASE 4 ADDITIONS:
  * - isPositionWalkable() method for obstacle checking
  * - findPath() method for pathfinding integration
+ * - FIXED: Proper NavGrid instance creation and initialization
  */
 
 import { NavGrid } from './nav-grid.js';
@@ -27,7 +28,7 @@ export async function loadMapData() {
         
         if (!response.ok) {
             throw new Error(`Failed to load map: HTTP ${response.status}`);
-        }
+    }
         
         const mapData = await response.json();
         
@@ -99,6 +100,7 @@ export class World {
     /**
      * STAGE 2-3 CRITICAL: Generate navigation grid for character movement and positioning
      * This creates a 2D array representing walkable (0) and non-walkable (1) tiles
+     * PHASE 4 FIXED: Proper NavGrid instance creation and initialization
      */
     generateNavGrid() {
         console.log('🗺️ Generating navigation grid...');
@@ -107,9 +109,9 @@ export class World {
             // Initialize grid with all walkable tiles
             this.navGrid = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
             
-            // PHASE 4: Create NavGrid instance for pathfinding
-            this.navGridInstance = new NavGrid();
-            this.navGridInstance.initialize(this.width, this.height);
+            // PHASE 4 FIXED: Create NavGrid instance for A* pathfinding
+            this.navGridInstance = new NavGrid(this.width, this.height, this.navGrid);
+            console.log('✅ NavGrid A* instance created');
             
             // Mark obstacles based on map data or default office layout
             this.markObstacles();
@@ -240,116 +242,105 @@ export class World {
      */
     createTaskDictionary() {
         return {
-            'Manager': [
-                { displayName: 'Review Reports', requiredLocation: 'desk', duration: 30000 },
-                { displayName: 'Attend Meeting', requiredLocation: 'meeting_room', duration: 45000 },
-                { displayName: 'Plan Strategy', requiredLocation: 'desk', duration: 60000 }
-            ],
-            'Developer': [
-                { displayName: 'Write Code', requiredLocation: 'desk', duration: 120000 },
-                { displayName: 'Debug Issues', requiredLocation: 'desk', duration: 90000 },
-                { displayName: 'Code Review', requiredLocation: 'desk', duration: 60000 }
-            ],
-            'Designer': [
-                { displayName: 'Create Mockups', requiredLocation: 'desk', duration: 90000 },
-                { displayName: 'Review Designs', requiredLocation: 'meeting_room', duration: 45000 },
-                { displayName: 'Update Style Guide', requiredLocation: 'desk', duration: 60000 }
-            ],
-            'HR': [
-                { displayName: 'Review Resumes', requiredLocation: 'desk', duration: 45000 },
-                { displayName: 'Conduct Interview', requiredLocation: 'meeting_room', duration: 60000 },
-                { displayName: 'Update Policies', requiredLocation: 'desk', duration: 90000 }
-            ],
-            'Intern': [
-                { displayName: 'Make Coffee', requiredLocation: 'break_room', duration: 15000 },
-                { displayName: 'File Documents', requiredLocation: 'desk', duration: 30000 },
-                { displayName: 'Shadow Senior Staff', requiredLocation: 'desk', duration: 60000 }
-            ]
+            'work': {
+                type: 'work',
+                description: 'Working at desk',
+                requiredLocation: 'desk',
+                duration: 30000, // 30 seconds
+                energy: -10,
+                productivity: +5,
+                relationships: {}
+            },
+            'break': {
+                type: 'social',
+                description: 'Taking a break',
+                requiredLocation: 'break_area',
+                duration: 15000, // 15 seconds
+                energy: +5,
+                productivity: 0,
+                relationships: {}
+            },
+            'meeting': {
+                type: 'social',
+                description: 'In a meeting',
+                requiredLocation: 'meeting_room',
+                duration: 20000, // 20 seconds
+                energy: -5,
+                productivity: +3,
+                relationships: {}
+            },
+            'coffee': {
+                type: 'personal',
+                description: 'Getting coffee',
+                requiredLocation: 'kitchen',
+                duration: 10000, // 10 seconds
+                energy: +8,
+                productivity: +2,
+                relationships: {}
+            }
         };
     }
 
     /**
-     * Assign tasks to characters based on their roles
-     * This is called at game start to give everyone initial tasks
+     * PRESERVED: Get a random valid spawn position for character placement
+     * Ensures characters spawn on walkable tiles
      */
-    assignInitialTasks() {
-        console.log('📋 Assigning initial tasks to characters...');
-        
-        if (!this.characterManager) {
-            console.warn('⚠️ Cannot assign tasks: characterManager not available');
-            return;
-        }
-        
-        const characters = this.characterManager.characters;
-        
-        characters.forEach(character => {
-            const tasks = this.taskDictionary[character.jobRole];
-            if (tasks && tasks.length > 0) {
-                // Assign a random task from the available ones
-                const task = tasks[Math.floor(Math.random() * tasks.length)];
-                character.assignedTask = { ...task };
-                console.log(`✅ Assigned "${task.displayName}" to ${character.name} (${character.jobRole})`);
-            } else {
-                console.warn(`⚠️ No tasks available for role: ${character.jobRole}`);
-            }
-        });
-    }
-
-    /**
-     * Get a random walkable position in the world
-     * Used for initial character placement
-     * @returns {Object} Position object with x and y coordinates in pixels
-     */
-    getRandomWalkablePosition() {
-        const maxAttempts = 100;
+    getRandomSpawnPosition() {
         let attempts = 0;
+        const maxAttempts = 50;
         
         while (attempts < maxAttempts) {
-            const tileX = Math.floor(Math.random() * this.width);
-            const tileY = Math.floor(Math.random() * this.height);
+            const x = Math.random() * (this.width - 2) + 1; // Keep away from walls
+            const y = Math.random() * (this.height - 2) + 1;
             
-            if (this.navGrid[tileY][tileX] === 0) {
-                // Convert tile position to pixel position (center of tile)
-                return {
-                    x: (tileX * this.TILE_SIZE) + (this.TILE_SIZE / 2),
-                    y: (tileY * this.TILE_SIZE) + (this.TILE_SIZE / 2)
-                };
+            const pixelX = x * this.TILE_SIZE + this.TILE_SIZE / 2;
+            const pixelY = y * this.TILE_SIZE + this.TILE_SIZE / 2;
+            
+            if (this.isPositionWalkable(pixelX, pixelY)) {
+                return { x: pixelX, y: pixelY };
             }
             
             attempts++;
         }
         
-        // Fallback to a safe position if no walkable position found
-        console.warn('⚠️ Could not find random walkable position, using fallback');
-        return {
-            x: this.worldWidth / 2,
-            y: this.worldHeight / 2
+        // Fallback position if no valid position found
+        console.warn('⚠️ Could not find valid spawn position, using fallback');
+        return { 
+            x: 2 * this.TILE_SIZE + this.TILE_SIZE / 2, 
+            y: 2 * this.TILE_SIZE + this.TILE_SIZE / 2 
         };
     }
 
     /**
-     * Update world state
-     * Called each frame to update world systems
-     * @param {number} deltaTime - Time passed since last frame in milliseconds
+     * PRESERVED: Get the task dictionary for UI display
+     */
+    getTaskDictionary() {
+        return this.taskDictionary;
+    }
+
+    /**
+     * PRESERVED: Update world state (called each frame)
      */
     update(deltaTime) {
         this.gameTime += deltaTime;
         
-        // Future: Update weather, time of day, events, etc.
+        // Future: Update world objects, environmental effects, etc.
+        // This is where time-based world changes would be processed
     }
 
     /**
-     * Get world information for UI display
-     * @returns {Object} World state information
+     * PRESERVED: Get world status for debugging
      */
-    getWorldInfo() {
+    getStatus() {
         return {
-            officeType: this.officeType,
             gameTime: this.gameTime,
-            width: this.worldWidth,
-            height: this.worldHeight,
-            tileSize: this.TILE_SIZE
+            worldSize: `${this.width}x${this.height} tiles`,
+            pixelSize: `${this.worldWidth}x${this.worldHeight} pixels`,
+            tileSize: this.TILE_SIZE,
+            hasNavGrid: !!this.navGrid.length,
+            hasNavGridInstance: !!this.navGridInstance,
+            objectCount: this.objects.length,
+            roomCount: this.rooms.length,
+            taskTypes: Object.keys(this.taskDictionary).length
         };
     }
-}
-
