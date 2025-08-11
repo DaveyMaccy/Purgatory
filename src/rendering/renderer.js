@@ -22,7 +22,7 @@
  */
 
 // DORMANT CONTROL FLAG - Set to true when ready to enable enhanced sprites
-const USE_ENHANCED_SPRITES = false;
+const USE_ENHANCED_SPRITES = true;
 
 export class Renderer {
     constructor(containerElement) {
