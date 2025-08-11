@@ -1,7 +1,6 @@
 /**
- * Character Creator - Core Module - PHASE 3 EXACT MATCH
- * * Uses the modular system but maintains the EXACT functionality and structure
- * from the working Phase-3 monolithic version.
+ * Character Creator - Core Module - PHASE 3 FIXED
+ * Fixed the validateCharacters call to properly pass the characters array
  */
 
 // Import modular components
@@ -11,7 +10,7 @@ import {
     MAX_CHARACTERS,
     generateDefaultCharacters,
     createCompleteRandomCharacter,
-    validateCharacters,
+    validateCharacters as validateCharactersImported,
     finalizeCharacters,
     SPRITE_OPTIONS,
     generateNameByGender,
@@ -52,42 +51,34 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
         // Create global API key section
         createGlobalAPIKeySection();
         
-        // Create office type selector
-        createOfficeTypeSelector();
+        // Generate initial characters
+        characters = generateDefaultCharacters(MIN_CHARACTERS, officeType);
         
-        // Clear containers
-        tabsContainer.innerHTML = '';
-        panelsContainer.innerHTML = '';
-        characters.length = 0;
-        
-        // Create initial characters (start with 3)
-        const initialCharacterCount = 3;
-        for (let i = 0; i < initialCharacterCount; i++) {
-            characters.push(createCharacter(i));
-        }
-        
-        // Set first character as player
-        characters[0].isPlayer = true;
-        
-        // Generate enhanced UI for all characters
-        characters.forEach((character, index) => {
-            UIGenerator.createCharacterTab(index, character, tabsContainer);
-            UIGenerator.createCharacterPanel(index, character, panelsContainer, officeType);
-        });
+        // Create character tabs and panels
+        rebuildCharacterInterface();
         
         // Set first tab as active
         switchToTab(0);
         
-        // Initialize buttons
-        initializeCharacterCreatorButtons();
+        // Update count display
+        updateCharacterCountControls();
         
-        // Make characters available globally for event handlers
+        // Setup add/remove character handlers
+        setupCharacterCountHandlers();
+        
+        // Setup global randomize handler  
+        setupGlobalRandomizeHandler();
+        
+        // Setup start simulation handler
+        setupStartSimulationHandler();
+        
+        // Make characters available globally for debugging
         window.characters = characters;
         
-        console.log('✅ Enhanced character creator initialized successfully');
+        console.log('✅ Character creator initialized with', characters.length, 'characters');
         
     } catch (error) {
-        console.error('❌ Character creator initialization failed:', error);
+        console.error('❌ Failed to initialize character creator:', error);
         throw error;
     }
 }
@@ -96,280 +87,125 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
  * Create global API key section - EXACT from Phase-3
  */
 function createGlobalAPIKeySection() {
-    const creatorHeader = document.querySelector('.creator-header');
-    if (!creatorHeader) return;
-    
-    const apiSection = document.createElement('div');
-    apiSection.style.cssText = 'margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; border: 1px solid #e9ecef;';
-    
-    apiSection.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-            <label style="font-weight: bold; color: #495057;">Global API Key:</label>
-            <input type="text" id="global-api-key" value="${globalAPIKey}" placeholder="Enter global API key for all NPCs..." 
-                style="flex: 1; min-width: 300px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-family: monospace; font-size: 12px;">
-            <span style="font-size: 12px; color: #6c757d;">Used for all NPCs unless individual key specified</span>
-        </div>
-    `;
-    
-    creatorHeader.appendChild(apiSection);
-    
-    // Add event listener
-    const globalAPIInput = document.getElementById('global-api-key');
-    if (globalAPIInput) {
-        globalAPIInput.addEventListener('input', function() {
-            globalAPIKey = this.value;
-        });
-    }
-}
-
-/**
- * Create office type selector - EXACT from Phase-3
- */
-function createOfficeTypeSelector() {
-    const creatorHeader = document.querySelector('.creator-header');
-    if (!creatorHeader) return;
-    
-    const officeSection = document.createElement('div');
-    officeSection.style.cssText = 'margin-top: 10px; padding: 10px; background: #e8f4f8; border-radius: 4px; border: 1px solid #b8daff;';
-    
-    const officeTypes = Object.keys(JOB_ROLES_BY_OFFICE);
-    const officeOptions = officeTypes
-        .map(type => `<option value="${type}" ${type === officeType ? 'selected' : ''}>${type}</option>`)
-        .join('');
-    
-    officeSection.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-            <label style="font-weight: bold; color: #495057;">Office Type:</label>
-            <select id="office-type-selector" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-weight: bold;">
-                ${officeOptions}
-            </select>
-            <span style="font-size: 12px; color: #6c757d;">Determines available job roles and tasks</span>
-        </div>
-    `;
-    
-    // Insert before API key section
-    const apiSection = creatorHeader.querySelector('div[style*="background: #f8f9fa"]');
-    if (apiSection) {
-        creatorHeader.insertBefore(officeSection, apiSection);
-    } else {
-        creatorHeader.appendChild(officeSection);
-    }
-    
-    // Add event listener
-    const officeSelector = document.getElementById('office-type-selector');
-    if (officeSelector) {
-        officeSelector.addEventListener('change', function() {
-            officeType = this.value;
-            console.log(`🏢 Office type changed to: ${officeType}`);
-            updateAllCharacterJobRoles();
-        });
-    }
-}
-
-/**
- * Update all character job roles when office type changes - EXACT from Phase-3
- */
-function updateAllCharacterJobRoles() {
-    const availableRoles = JOB_ROLES_BY_OFFICE[officeType];
-    
-    characters.forEach((character, index) => {
-        // Set to first available role for new office type
-        character.jobRole = availableRoles[0];
-        
-        // Update the dropdown if panel exists
-        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
-        if (jobRoleSelect) {
-            // Rebuild options
-            jobRoleSelect.innerHTML = availableRoles
-                .map(role => `<option value="${role}">${role}</option>`)
-                .join('');
-            jobRoleSelect.value = character.jobRole;
-        }
-    });
-    
-    console.log(`📋 Updated all character job roles for ${officeType} office`);
-}
-
-/**
- * Initialize character creator buttons with enhanced functionality - EXACT from Phase-3
- */
-function initializeCharacterCreatorButtons() {
-    console.log('🔧 Setting up enhanced character creator buttons...');
-    
-    // Start Simulation Button
-    const startButton = document.getElementById('start-simulation-button');
-    if (startButton) {
-        const newStartButton = startButton.cloneNode(true);
-        startButton.parentNode.replaceChild(newStartButton, startButton);
-        newStartButton.addEventListener('click', handleStartSimulation);
-        console.log('✅ Start Simulation button connected');
-    }
-    
-    // Separate randomize button and checkbox
-    const randomizeButton = document.getElementById('randomize-btn');
-    if (randomizeButton) {
-        // Reset button to just say "Randomize"
-        randomizeButton.textContent = 'Randomize';
-        
-        const newRandomizeButton = randomizeButton.cloneNode(true);
-        randomizeButton.parentNode.replaceChild(newRandomizeButton, randomizeButton);
-        newRandomizeButton.addEventListener('click', handleRandomize);
-        
-        // Add separate checkbox next to button
-        const checkboxContainer = document.createElement('label');
-        checkboxContainer.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-left: 15px; cursor: pointer;';
-        checkboxContainer.innerHTML = `
-            <input type="checkbox" id="randomize-all-checkbox" style="margin: 0;">
-            <span>Randomize All</span>
+    const globalSection = document.getElementById('global-api-section');
+    if (globalSection) {
+        globalSection.innerHTML = `
+            <div class="bg-gray-50 p-4 rounded-lg border">
+                <h3 class="text-lg font-semibold mb-2">🔑 Global Settings</h3>
+                <div class="mb-3">
+                    <label for="global-api-key" class="block text-sm font-medium text-gray-700 mb-1">
+                        Global API Key (for NPCs)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="global-api-key" 
+                        value="${globalAPIKey}" 
+                        placeholder="Enter API key for NPC characters"
+                        class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">This key will be used for all NPC characters unless individually overridden</p>
+                </div>
+            </div>
         `;
         
-        // Insert after the randomize button
-        newRandomizeButton.parentNode.insertBefore(checkboxContainer, newRandomizeButton.nextSibling);
-        
-        console.log('✅ Enhanced Randomize button and checkbox connected');
-    }
-    
-    // Character count controls
-    createCharacterCountControls();
-}
-
-/**
- * Create character count controls (add/remove) - EXACT from Phase-3
- */
-function createCharacterCountControls() {
-    const creatorFooter = document.querySelector('.creator-footer');
-    if (!creatorFooter) return;
-    
-    const countControls = document.createElement('div');
-    countControls.style.cssText = 'display: flex; align-items: center; gap: 10px;';
-    
-    countControls.innerHTML = `
-        <span style="font-weight: bold;">Characters:</span>
-        <button id="remove-character-btn" class="action-button" style="background-color: #dc3545; padding: 8px 12px; font-size: 12px;">Remove (-)</button>
-        <span id="character-count">${characters.length}</span>
-        <button id="add-character-btn" class="action-button" style="background-color: #28a745; padding: 8px 12px; font-size: 12px;">Add (+)</button>
-        <span style="font-size: 12px; color: #6c757d;">(${MIN_CHARACTERS}-${MAX_CHARACTERS} allowed)</span>
-    `;
-    
-    // Insert before existing buttons
-    creatorFooter.insertBefore(countControls, creatorFooter.firstChild);
-    
-    // Add event listeners
-    document.getElementById('add-character-btn').addEventListener('click', addCharacter);
-    document.getElementById('remove-character-btn').addEventListener('click', removeCharacter);
-    
-    updateCharacterCountControls();
-}
-
-/**
- * Create character with full SSOT attributes - EXACT from Phase-3
- */
-function createCharacter(index) {
-    const gender = getRandomItem(GENDERS);
-    
-    return {
-        id: `char_${index}`,
-        name: generateNameByGender(gender),
-        isPlayer: index === 0,
-        spriteSheet: SPRITE_OPTIONS[index % SPRITE_OPTIONS.length] || SPRITE_OPTIONS[0],
-        spriteIndex: index % SPRITE_OPTIONS.length, // Track current sprite
-        portrait: null, // Generated from sprite
-        customPortrait: null, // Custom uploaded image
-        apiKey: '', // Individual API key override
-        jobRole: JOB_ROLES_BY_OFFICE[officeType][0],
-        physicalAttributes: { 
-            age: Math.floor(Math.random() * 20) + 25,
-            height: Math.floor(Math.random() * 30) + 160,
-            weight: Math.floor(Math.random() * 40) + 60,
-            build: getRandomItem(PHYSICAL_BUILDS),
-            looks: Math.floor(Math.random() * 6) + 5,
-            gender: gender
-        },
-        skills: { 
-            competence: Math.floor(Math.random() * 6) + 5, 
-            laziness: Math.floor(Math.random() * 6) + 3, 
-            charisma: Math.floor(Math.random() * 6) + 4, 
-            leadership: Math.floor(Math.random() * 6) + 4 
-        },
-        personalityTags: getRandomItems(PERSONALITY_TAGS, 2, 4),
-        experienceTags: [],
-        needs: { energy: 8, hunger: 8, social: 8, comfort: 8, stress: 2 },
-        inventory: getRandomItems(INVENTORY_OPTIONS, 1, 2),
-        deskItems: getRandomItems(DESK_ITEM_OPTIONS, 1, 2),
-        relationships: {},
-        appearance: {
-            body: 'body_skin_tone_1',
-            hair: 'hair_style_4_blonde',
-            shirt: 'shirt_style_2_red',
-            pants: 'pants_style_1_jeans'
+        // Setup global API key handler
+        const globalAPIInput = document.getElementById('global-api-key');
+        if (globalAPIInput) {
+            globalAPIInput.addEventListener('input', (e) => {
+                globalAPIKey = e.target.value;
+                console.log('🔑 Global API key updated');
+            });
         }
-    };
+    }
 }
 
 /**
- * Add a new character - EXACT from Phase-3
+ * Setup character count handlers - EXACT from Phase-3
  */
-function addCharacter() {
-    if (characters.length >= MAX_CHARACTERS) {
-        alert(`Maximum ${MAX_CHARACTERS} characters allowed`);
-        return;
+function setupCharacterCountHandlers() {
+    const addBtn = document.getElementById('add-character-btn');
+    const removeBtn = document.getElementById('remove-character-btn');
+    
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            if (characters.length < MAX_CHARACTERS) {
+                const newIndex = characters.length;
+                const newCharacter = createCompleteRandomCharacter(newIndex, officeType);
+                characters.push(newCharacter);
+                
+                rebuildCharacterInterface();
+                switchToTab(newIndex);
+                updateCharacterCountControls();
+                
+                console.log(`✅ Added character ${newIndex + 1}`);
+            }
+        });
     }
     
-    const newIndex = characters.length;
-    const newCharacter = createCharacter(newIndex);
-    characters.push(newCharacter);
-    
-    const tabsContainer = document.getElementById('character-tabs');
-    const panelsContainer = document.getElementById('character-panels');
-    
-    UIGenerator.createCharacterTab(newIndex, newCharacter, tabsContainer);
-    UIGenerator.createCharacterPanel(newIndex, newCharacter, panelsContainer, officeType);
-    
-    updateCharacterCountControls();
-    switchToTab(newIndex);
-    
-    // Update global reference
-    window.characters = characters;
-    
-    console.log(`➕ Added character ${newIndex + 1}`);
-}
-
-/**
- * Remove the current character - EXACT from Phase-3
- */
-function removeCharacter() {
-    if (characters.length <= MIN_CHARACTERS) {
-        alert(`Minimum ${MIN_CHARACTERS} characters required`);
-        return;
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+            if (characters.length > MIN_CHARACTERS) {
+                // Remove last character
+                characters.pop();
+                
+                // Rebuild interface
+                rebuildCharacterInterface();
+                
+                // Switch to last remaining tab if current was removed
+                if (currentCharacterIndex >= characters.length) {
+                    switchToTab(characters.length - 1);
+                }
+                
+                updateCharacterCountControls();
+                
+                console.log(`✅ Removed character, now have ${characters.length} characters`);
+            }
+        });
     }
-    
-    const indexToRemove = currentCharacterIndex;
-    
-    // Remove from array
-    characters.splice(indexToRemove, 1);
-    
-    // Remove tab and panel
-    const tab = document.querySelector(`#character-tabs button:nth-child(${indexToRemove + 1})`);
-    const panel = document.getElementById(`character-panel-${indexToRemove}`);
-    if (tab) tab.remove();
-    if (panel) panel.remove();
-    
-    // Rebuild tabs and panels with correct indices
-    rebuildCharacterUI();
-    
-    // Switch to a valid tab
-    const newIndex = Math.min(currentCharacterIndex, characters.length - 1);
-    switchToTab(newIndex);
-    
-    updateCharacterCountControls();
-    
-    console.log(`➖ Removed character, now have ${characters.length} characters`);
 }
 
 /**
- * Rebuild character UI after removal - EXACT from Phase-3
+ * Setup global randomize handler - EXACT from Phase-3
  */
-function rebuildCharacterUI() {
+function setupGlobalRandomizeHandler() {
+    const randomizeBtn = document.getElementById('randomize-btn');
+    if (randomizeBtn) {
+        randomizeBtn.addEventListener('click', () => {
+            try {
+                console.log('🎲 Randomizing all characters...');
+                
+                characters.forEach((char, index) => {
+                    const wasPlayer = char.isPlayer;
+                    characters[index] = createCompleteRandomCharacter(index, officeType);
+                    characters[index].isPlayer = wasPlayer; // Preserve player status
+                });
+                
+                rebuildCharacterInterface();
+                switchToTab(currentCharacterIndex);
+                
+                console.log('✅ All characters randomized');
+                
+            } catch (error) {
+                console.error('❌ Failed to randomize all characters:', error);
+            }
+        });
+    }
+}
+
+/**
+ * Setup start simulation handler - EXACT from Phase-3
+ */
+function setupStartSimulationHandler() {
+    const startBtn = document.getElementById('start-simulation-btn');
+    if (startBtn) {
+        startBtn.addEventListener('click', handleStartSimulation);
+    }
+}
+
+/**
+ * Rebuild character interface after changes - EXACT from Phase-3
+ */
+function rebuildCharacterInterface() {
     const tabsContainer = document.getElementById('character-tabs');
     const panelsContainer = document.getElementById('character-panels');
     
@@ -442,51 +278,52 @@ function updateCharactersFromForms() {
         if (apiKeyInput) char.apiKey = apiKeyInput.value || char.apiKey;
         if (buildSelect) char.physicalAttributes.build = buildSelect.value || char.physicalAttributes.build;
         
-        // Physical attributes from sliders
-        ['age', 'height', 'weight', 'looks'].forEach(attr => {
-            const slider = document.getElementById(`${attr}-${index}`);
-            if (slider) {
-                char.physicalAttributes[attr] = parseInt(slider.value);
+        // Skills
+        const skillInputs = ['competence', 'laziness', 'charisma', 'leadership'];
+        skillInputs.forEach(skill => {
+            const input = document.getElementById(`${skill}-${index}`);
+            if (input) {
+                char.skills[skill] = parseInt(input.value) || char.skills[skill];
             }
         });
         
-        // Skills from sliders
-        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
-            const slider = document.getElementById(`${skill}-${index}`);
-            if (slider) {
-                char.skills[skill] = parseInt(slider.value);
+        // Physical attributes
+        const physicalInputs = ['age', 'height', 'weight', 'looks'];
+        physicalInputs.forEach(attr => {
+            const input = document.getElementById(`${attr}-${index}`);
+            if (input) {
+                char.physicalAttributes[attr] = parseInt(input.value) || char.physicalAttributes[attr];
             }
         });
+        
+        // Checkbox arrays (personality tags, inventory, desk items)
+        updateCharacterArrayFromCheckboxes(char, index, 'personalityTags', PERSONALITY_TAGS);
+        updateCharacterArrayFromCheckboxes(char, index, 'inventory', INVENTORY_OPTIONS);
+        updateCharacterArrayFromCheckboxes(char, index, 'deskItems', DESK_ITEM_OPTIONS);
     });
 }
 
 /**
- * Enhanced randomize handling with proper checkbox separation - EXACT from Phase-3
+ * Update character array from checkboxes - EXACT from Phase-3
  */
-function handleRandomize() {
-    const randomizeAllCheckbox = document.getElementById('randomize-all-checkbox');
-    const isRandomizeAll = randomizeAllCheckbox && randomizeAllCheckbox.checked;
-    
-    if (isRandomizeAll) {
-        console.log('🎲 Randomizing all characters...');
-        characters.forEach((char, index) => {
-            const wasPlayer = char.isPlayer;
-            characters[index] = createCompleteRandomCharacter(index, officeType);
-            characters[index].isPlayer = wasPlayer; // Preserve player status
-            refreshSingleCharacterPanel(index);
-        });
-        console.log('✅ All characters randomized');
-    } else {
-        console.log(`🎲 Randomizing character ${currentCharacterIndex + 1}...`);
-        randomizeCurrentCharacter();
-    }
+function updateCharacterArrayFromCheckboxes(character, charIndex, arrayName, sourceArray) {
+    const checkedItems = [];
+    sourceArray.forEach(item => {
+        const checkbox = document.getElementById(`${arrayName}-${item.replace(/\s+/g, '-').toLowerCase()}-${charIndex}`);
+        if (checkbox && checkbox.checked) {
+            checkedItems.push(item);
+        }
+    });
+    character[arrayName] = checkedItems;
 }
 
 /**
- * Randomize current character only - EXACT from Phase-3
+ * Randomize current character - EXACT from Phase-3
  */
 function randomizeCurrentCharacter() {
     try {
+        console.log(`🎲 Randomizing character ${currentCharacterIndex + 1}...`);
+        
         if (currentCharacterIndex >= 0 && currentCharacterIndex < characters.length) {
             const wasPlayer = characters[currentCharacterIndex].isPlayer;
             characters[currentCharacterIndex] = createCompleteRandomCharacter(currentCharacterIndex, officeType);
@@ -537,7 +374,7 @@ function refreshSingleCharacterPanel(index) {
 }
 
 /**
- * Handle Start Simulation button click - EXACT from Phase-3
+ * Handle Start Simulation button click - FIXED VERSION
  */
 function handleStartSimulation() {
     console.log('🚀 Start Simulation clicked!');
@@ -546,8 +383,11 @@ function handleStartSimulation() {
         // Update characters from form data
         updateCharactersFromForms();
         
-        // Validate characters
-        validateCharacters();
+        // FIXED: Pass the characters array to the validation function
+        const validationResult = validateCharactersImported(characters);
+        if (!validationResult.isValid) {
+            throw new Error(validationResult.errors.join(', '));
+        }
         
         // Convert to game format
         const gameCharacters = formatCharactersForGame();
@@ -624,4 +464,4 @@ window.startSimulation = handleStartSimulation;
 // Export main initialization function
 export { initializeCharacterCreator };
 
-console.log('🎭 Enhanced character creator loaded and ready - PHASE 3 EXACT MATCH');
+console.log('🎭 Enhanced character creator loaded and ready - PHASE 3 FIXED');
