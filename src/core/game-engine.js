@@ -1,150 +1,239 @@
 /**
- * Game Engine - Corrected Update
- * This version applies the specified changes while preserving other essential methods.
+ * Game Engine - Complete Stage 2-3 Integration
+ * Lightweight coordinator for game systems with full renderer support
+ * CHANGE: Added setCharacterManager method and cleaned up constructor.
  */
+import { CharacterManager } from './characters/character-manager.js';
 import { World } from './world/world.js';
 
 export class GameEngine {
-    /**
-     * CONSTRUCTOR REPLACED AS PER INSTRUCTIONS
-     * @param {CharacterManager} characterManager - The manager for all characters.
-     * @param {Renderer} renderer - The PIXI.js-based rendering system.
-     */
-    constructor(characterManager, renderer) {
-        this.characterManager = characterManager;
-        this.renderer = renderer;
-        this.isRunning = false;
-        this.isInitialized = false; // This line was added as instructed
+    constructor() {
+        // Core systems
+        // *** FIX: Changed to null. The manager is now provided by main.js. ***
+        this.characterManager = null;
+        // World will be initialized after map data is loaded
+        this.world = null;
+
+        // STAGE 2: Rendering system
+        this.renderer = null;
+        this.uiUpdater = null;
+
+        // STAGE 3: Systems that will be added in later stages
+        this.interactionSystem = null;
+        this.movementSystem = null;
+        this.perceptionSystem = null;
+        this.eventSystem = null;
+        this.conversationSystem = null;
+        this.aiQueueManager = null;
         this.gameLoop = null;
-        this.lastTimestamp = 0; // For requestAnimationFrame delta time
-        this.world = null; // Will be initialized later
-        this.uiUpdater = null; // Note: UIUpdater is managed in main.js
-        console.log('🎮 GameEngine created with enhanced renderer support');
+
+        // Game state
+        this.gameTime = 0;
+        this.isRunning = false;
     }
 
     /**
-     * INITIALIZE METHOD REPLACED AS PER INSTRUCTIONS
+     * STAGE 2-3 COMPLETE: Initialize with full renderer support
      */
-    async initialize() {
-        console.log('🔧 Initializing Game Engine with enhanced renderer...');
-        
+    initialize(mapData) {
         try {
-            // Verify renderer is initialized (including sprite preloading)
-            if (!this.renderer || !this.renderer.isInitialized) {
-                throw new Error('Renderer must be initialized before GameEngine.initialize()');
+            console.log('🎮 Initializing game engine...');
+
+            if (!mapData) {
+                throw new Error('Map data is required for initialization');
             }
-            
-            // Check renderer status and log preloading results
-            const rendererStatus = this.renderer.getStatus();
-            console.log('🎨 Renderer status:', {
-                isInitialized: rendererStatus.isInitialized,
-                characterCount: rendererStatus.characterCount,
-                preloadedTextures: rendererStatus.preloadedTextures,
-                canvasSize: rendererStatus.canvasSize
-            });
-            
-            // Initialize character positions in the world
-            console.log('👥 Initializing character positions...');
-            // Create a simple world object for context, though renderer now handles map data
-            this.world = new World(this.characterManager, this.renderer.mapData);
+
+            // Initialize world with map data
+            this.world = new World(this.characterManager, mapData);
+
+            // Generate navigation grid for character positioning
             this.world.generateNavGrid();
-            this.characterManager.initializeCharacterPositions(this.world);
-            
-            // Render all characters using the enhanced sprite system
-            console.log('🎨 Rendering characters with enhanced sprites...');
-            const characters = this.characterManager.getCharacters();
-            
-            for (const character of characters) {
-                try {
-                    await this.renderer.renderCharacter(character);
-                    console.log(`✅ Rendered character: ${character.name}`);
-                } catch (error) {
-                    console.error(`❌ Failed to render character ${character.name}:`, error);
-                }
-            }
-            
-            console.log(`✅ Game Engine initialized successfully with ${characters.length} characters`);
-            this.isInitialized = true;
-            
+
+            // Initialize characters (they should already be loaded by characterManager)
+            this.characterManager.initializeCharacters();
+
+            // STAGE 2: Start the update loop
+            this.startSimpleUpdateLoop();
+            this.isRunning = true;
+
+            console.log('✅ Game engine initialized successfully');
+
         } catch (error) {
-            console.error('❌ Failed to initialize Game Engine:', error);
+            console.error('❌ Failed to initialize game engine:', error);
             throw error;
         }
     }
 
     /**
-     * New start method to work with the updated main.js and use requestAnimationFrame
+     * *** FIX: This entire method was added to resolve the error. ***
+     * STAGE 3: Set character manager reference
+     * @param {CharacterManager} characterManager - The character manager instance
      */
-    start() {
-        if (this.isRunning) return;
-        this.isRunning = true;
-        this.lastTimestamp = performance.now();
-        const gameLoop = (timestamp) => {
-            if (!this.isRunning) return;
-            const deltaTime = timestamp - this.lastTimestamp;
-            this.lastTimestamp = timestamp;
-            this.update(deltaTime);
-            this.gameLoop = requestAnimationFrame(gameLoop);
-        };
-        this.gameLoop = requestAnimationFrame(gameLoop);
-        console.log('▶️ Game loop started.');
+    setCharacterManager(characterManager) {
+        this.characterManager = characterManager;
+        console.log('👥 Character Manager connected to game engine');
     }
 
     /**
-     * UPDATE METHOD REPLACED AS PER INSTRUCTIONS
+     * STAGE 2: Set renderer reference
+     * @param {Renderer} renderer - The renderer instance
+     */
+    setRenderer(renderer) {
+        this.renderer = renderer;
+        console.log('🎨 Renderer connected to game engine');
+    }
+
+    /**
+     * STAGE 3: Set UI updater reference
+     * @param {UIUpdater} uiUpdater - The UI updater instance
+     */
+    setUIUpdater(uiUpdater) {
+        this.uiUpdater = uiUpdater;
+        console.log('🖥️ UI updater connected to game engine');
+    }
+
+    /**
+     * STAGE 2: Simple update loop for basic functionality
+     */
+    startSimpleUpdateLoop() {
+        const updateInterval = 1000 / 60; // 60 FPS
+
+        this.updateLoop = setInterval(() => {
+            this.update(updateInterval);
+        }, updateInterval);
+
+        console.log('🔄 Update loop started at 60 FPS');
+    }
+
+    /**
+     * STAGE 2-3: Enhanced update with renderer support
+     * @param {number} deltaTime - Time in milliseconds since last update
      */
     update(deltaTime) {
-        if (!this.isRunning || !this.renderer?.isInitialized) {
-            return;
-        }
-        
-        try {
-            // Update character logic (needs, etc.)
-            this.characterManager.update(deltaTime);
+        if (!this.isRunning) return;
 
-            // Update character positions in the renderer
-            const characters = this.characterManager.getCharacters();
-            characters.forEach(character => {
+        this.gameTime += deltaTime;
+
+        // Update characters (includes needs decay and observer notifications)
+        if (this.characterManager) {
+            this.characterManager.update(deltaTime);
+        }
+
+        // STAGE 2: Update renderer if available
+        if (this.renderer && this.renderer.isInitialized) {
+            // Update character positions in renderer
+            this.characterManager.characters.forEach(character => {
                 if (character.position) {
                     this.renderer.updateCharacterPosition(
-                        character.id, 
-                        character.position.x, 
+                        character.id,
+                        character.position.x,
                         character.position.y
                     );
                 }
             });
-            
-            // Update the renderer (triggers PIXI rendering)
+
             this.renderer.update();
-            
-        } catch (error) {
-            console.error('❌ Error in enhanced game loop:', error);
+        }
+
+        // STAGE 3: UI updates are handled by observer pattern
+        // The UI updater automatically receives notifications from characters
+    }
+
+    /**
+     * Variable update (for non-fixed updates in future stages)
+     * @param {number} deltaTime - Time in milliseconds since last update
+     */
+    variableUpdate(deltaTime) {
+        // Currently empty, but can be used for non-fixed updates in later stages
+    }
+
+    /**
+     * STAGE 2: Get game world bounds for movement/camera systems
+     */
+    getWorldBounds() {
+        if (this.renderer) {
+            return this.renderer.getWorldBounds();
+        }
+        return { width: 800, height: 600 }; // Default fallback
+    }
+
+    /**
+     * Add a prompt to the global queue (placeholder for Stage 5)
+     * @param {Object} promptData - Prompt data object
+     */
+    addToPromptQueue(promptData) {
+        console.log('🤖 AI queue not implemented yet (Stage 5):', promptData);
+    }
+
+    /**
+     * Pause the game
+     */
+    pause() {
+        this.isRunning = false;
+        if (this.updateLoop) {
+            clearInterval(this.updateLoop);
+        }
+        console.log('⏸️ Game paused');
+    }
+
+    /**
+     * Resume the game
+     */
+    resume() {
+        if (!this.isRunning) {
+            this.isRunning = true;
+            this.startSimpleUpdateLoop();
+            console.log('▶️ Game resumed');
         }
     }
 
-    // --- PRESERVED METHODS FROM ORIGINAL FILE ---
-
+    /**
+     * Stop and cleanup the game
+     */
     stop() {
         this.isRunning = false;
-        if (this.gameLoop) {
-            cancelAnimationFrame(this.gameLoop);
+
+        if (this.updateLoop) {
+            clearInterval(this.updateLoop);
+            this.updateLoop = null;
         }
-        console.log('⛔ Game stopped.');
+
+        // Cleanup systems
+        if (this.renderer) {
+            this.renderer.destroy();
+            this.renderer = null;
+        }
+
+        if (this.uiUpdater) {
+            this.uiUpdater.destroy();
+            this.uiUpdater = null;
+        }
+
+        console.log('⛔ Game stopped and cleaned up');
     }
 
+    /**
+     * Get comprehensive game status for debugging
+     */
     getStatus() {
         return {
             isRunning: this.isRunning,
-            isInitialized: this.isInitialized,
             gameTime: this.gameTime,
-            characterCount: this.characterManager ? this.characterManager.getCharacters().length : 0,
+            characterCount: this.characterManager ? this.characterManager.characters.length : 0,
+            hasRenderer: !!this.renderer,
             rendererInitialized: this.renderer ? this.renderer.isInitialized : false,
             hasWorld: !!this.world,
+            hasUIUpdater: !!this.uiUpdater,
+            worldNavGridSize: this.world ? `${this.world.navGrid.length}x${this.world.navGrid[0]?.length || 0}` : 'none'
         };
     }
 
+    /**
+     * STAGE 3: Debug function to get character positions
+     */
     getCharacterPositions() {
         if (!this.characterManager) return [];
+
         return this.characterManager.characters.map(char => ({
             id: char.id,
             name: char.name,
@@ -153,6 +242,9 @@ export class GameEngine {
         }));
     }
 
+    /**
+     * STAGE 3: Debug function to force UI update
+     */
     forceUIUpdate() {
         if (this.uiUpdater && this.characterManager) {
             const playerCharacter = this.characterManager.getPlayerCharacter();
