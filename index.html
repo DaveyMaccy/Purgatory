@@ -16,6 +16,9 @@
     <!-- Custom Icons from Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
+    <!-- CRITICAL: PixiJS library for game rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+
     <!-- Modular CSS Files from styles/ directory -->
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/character-creator.css">
@@ -68,6 +71,24 @@
                     <button id="start-simulation-button" class="action-button">Start Simulation</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Office Type Selection Modal (if needed) -->
+    <div id="office-type-modal-backdrop" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Select Your Office</h2>
+            <p class="text-gray-600 mb-6">Choose an office type to determine the available jobs for your team.</p>
+            <div class="form-group mb-6">
+                <label for="office-type-select" class="sr-only">Office Type</label>
+                <select id="office-type-select" class="w-full p-3 border border-gray-300 rounded-md">
+                    <option value="Game Studio">Game Studio</option>
+                    <option value="Corporate">Corporate</option>
+                    <option value="PR Agency">PR Agency</option>
+                    <option value="Newspaper">Newspaper</option>
+                </select>
+            </div>
+            <button id="select-office-button" class="start-button w-full">Continue</button>
         </div>
     </div>
 
