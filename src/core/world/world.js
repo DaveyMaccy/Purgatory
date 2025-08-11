@@ -236,19 +236,17 @@ export class World {
      * @returns {boolean} True if walkable
      */
     isPositionWalkable(x, y) {
-        const gridX = Math.floor(x / this.TILE_SIZE);
-        const gridY = Math.floor(y / this.TILE_SIZE);
+        // Convert pixel coordinates to tile coordinates
+        const tileX = Math.floor(x / this.TILE_SIZE);
+        const tileY = Math.floor(y / this.TILE_SIZE);
         
-        if (!this.navGrid || this.navGrid.length === 0) {
-            return true; // If no nav grid, assume walkable
+        // Check bounds
+        if (tileX < 0 || tileX >= this.width || tileY < 0 || tileY >= this.height) {
+            return false;
         }
         
-        if (gridX < 0 || gridX >= this.width || 
-            gridY < 0 || gridY >= this.height) {
-            return false; // Outside world bounds
-        }
-        
-        return this.navGrid[gridY][gridX] === 0;
+        // Check navigation grid (0 = walkable, 1 = obstacle)
+        return this.navGrid[tileY][tileX] === 0;
     }
 
     /**
@@ -361,3 +359,34 @@ export class World {
         return count;
     }
 }
+
+/**
+     * PHASE 4 ADD: Find path between two pixel positions
+     * Converts to tile coordinates and uses NavGrid's A* implementation
+     */
+    findPath(startPos, endPos) {
+        // Convert pixel positions to tile positions
+        const startTile = {
+            x: Math.floor(startPos.x / this.TILE_SIZE),
+            y: Math.floor(startPos.y / this.TILE_SIZE)
+        };
+        
+        const endTile = {
+            x: Math.floor(endPos.x / this.TILE_SIZE),
+            y: Math.floor(endPos.y / this.TILE_SIZE)
+        };
+        
+        // Use the NavGrid's findPath method
+        if (this.navGridInstance) {
+            const tilePath = this.navGridInstance.findPath(startTile, endTile);
+            
+            // Convert tile path back to pixel coordinates
+            return tilePath.map(tile => ({
+                x: (tile.x * this.TILE_SIZE) + (this.TILE_SIZE / 2),
+                y: (tile.y * this.TILE_SIZE) + (this.TILE_SIZE / 2)
+            }));
+        }
+        
+        return [];
+    }
+
