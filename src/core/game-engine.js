@@ -228,7 +228,7 @@ export class GameEngine {
         
         // Future: Open character interaction menu
         // For now, just log character info
-        const character = this.characterManager.getCharacterById(characterId);
+        const character = this.characterManager.getCharacter(characterId);
         if (character) {
             console.log('Character info:', character.getStatus());
         }
@@ -253,7 +253,7 @@ export class GameEngine {
         console.log(`✅ Task completed: ${taskId} by character ${characterId}`);
         
         // Assign a new task to the character
-        const character = this.characterManager.getCharacterById(characterId);
+        const character = this.characterManager.getCharacter(characterId);
         if (character && this.world) {
             const tasks = this.world.taskDictionary[character.jobRole];
             if (tasks && tasks.length > 0) {
@@ -284,4 +284,3 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
-
