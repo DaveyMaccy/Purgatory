@@ -1,13 +1,12 @@
 /**
- * Character Creator - Core Module - PHASE 2 ENHANCED
+ * Character Creator - Core Module - PHASE 3 ENHANCED UI
  * 
- * Now includes office type management, global API key handling,
- * and complete data structure alignment with monolithic version.
+ * Fixed import syntax error and integrated with the complete UI overhaul.
+ * Now matches the monolithic version exactly with enhanced two-column layout.
  */
 
-// Import all modules with new data structure
+// FIXED: Import individual functions instead of non-existent CharacterData object
 import { 
-    CharacterData,
     JOB_ROLES_BY_OFFICE,
     MIN_CHARACTERS,
     MAX_CHARACTERS,
@@ -28,10 +27,10 @@ let officeType = 'Game Studio'; // Default to Game Studio
 let globalAPIKey = 'sk-placeholder-key-for-development-testing-only';
 
 /**
- * Initialize the character creator system - PHASE 2 ENHANCED
+ * Initialize the character creator system - PHASE 3 ENHANCED UI
  */
 function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
-    console.log('🎭 Initializing enhanced character creator...');
+    console.log('🎭 Initializing enhanced character creator with complete UI...');
     
     try {
         officeType = selectedOfficeType;
@@ -64,7 +63,7 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
         // Set first character as player
         characters[0].isPlayer = true;
         
-        // Generate UI for all characters
+        // Generate enhanced UI for all characters
         characters.forEach((character, index) => {
             UIGenerator.createCharacterTab(index, character, tabsContainer);
             UIGenerator.createCharacterPanel(index, character, panelsContainer, officeType);
@@ -73,10 +72,10 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
         // Set first tab as active
         switchToTab(0);
         
-        // Initialize buttons
+        // Initialize enhanced buttons
         initializeCharacterCreatorButtons();
         
-        console.log('✅ Enhanced character creator initialized successfully');
+        console.log('✅ Enhanced character creator with complete UI initialized successfully');
         
     } catch (error) {
         console.error('❌ Character creator initialization failed:', error);
@@ -413,19 +412,32 @@ function refreshSingleCharacterPanel(index) {
     const panel = document.getElementById(`character-panel-${index}`);
     if (panel) {
         const character = characters[index];
-        panel.innerHTML = UIGenerator.generatePanelHTML(index, character, officeType);
+        panel.innerHTML = UIGenerator.generateEnhancedPanelHTML(index, character, officeType);
         EventHandlers.setupPanelEventListeners(index, characters, globalAPIKey);
         SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+        
+        // Initialize custom portrait canvas
+        SpriteManager.clearCustomPortrait(index, characters);
+        
+        // Initialize checkbox states after refresh
+        setTimeout(() => {
+            EventHandlers.updateCheckboxStates(index, 'personalityTags', 6);
+            EventHandlers.updateCheckboxStates(index, 'inventory', 3);
+            EventHandlers.updateCheckboxStates(index, 'deskItems', 2);
+        }, 50);
     }
 }
 
 /**
- * Handle start simulation - PHASE 2 ENHANCED with new validation
+ * Handle start simulation - PHASE 3 ENHANCED with new validation
  */
 function handleStartSimulation() {
     console.log('🚀 Starting simulation with characters:', characters.length);
     
     try {
+        // Update characters from form data before validation
+        updateCharactersFromForms();
+        
         // Validate all characters using new validation
         const validation = validateCharacters(characters);
         if (!validation.isValid) {
@@ -459,6 +471,44 @@ function handleStartSimulation() {
     }
 }
 
+/**
+ * Update characters from all form inputs - matches monolithic exactly
+ */
+function updateCharactersFromForms() {
+    characters.forEach((char, index) => {
+        // Basic info
+        const nameInput = document.getElementById(`name-${index}`);
+        const jobRoleSelect = document.getElementById(`jobRole-${index}`);
+        const genderSelect = document.getElementById(`gender-${index}`);
+        const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
+        const apiKeyInput = document.getElementById(`api-key-input-${index}`);
+        const buildSelect = document.getElementById(`build-${index}`);
+        
+        if (nameInput) char.name = nameInput.value || char.name;
+        if (jobRoleSelect) char.jobRole = jobRoleSelect.value || char.jobRole;
+        if (genderSelect) char.physicalAttributes.gender = genderSelect.value || char.physicalAttributes.gender;
+        if (isPlayerCheckbox) char.isPlayer = isPlayerCheckbox.checked;
+        if (apiKeyInput) char.apiKey = apiKeyInput.value || char.apiKey;
+        if (buildSelect) char.physicalAttributes.build = buildSelect.value || char.physicalAttributes.build;
+        
+        // Physical attributes from sliders
+        ['age', 'height', 'weight', 'looks'].forEach(attr => {
+            const slider = document.getElementById(`${attr}-${index}`);
+            if (slider) {
+                char.physicalAttributes[attr] = parseInt(slider.value);
+            }
+        });
+        
+        // Skills from sliders
+        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
+            const slider = document.getElementById(`${skill}-${index}`);
+            if (slider) {
+                char.skills[skill] = parseInt(slider.value);
+            }
+        });
+    });
+}
+
 // Export functions for global access (needed for HTML onclick handlers)
 window.switchTab = switchToTab;
 window.randomizeCurrentCharacter = randomizeCurrentCharacter;
@@ -467,4 +517,4 @@ window.startSimulation = handleStartSimulation;
 // Export main initialization function
 export { initializeCharacterCreator };
 
-console.log('📦 Character Creator Core Module loaded - PHASE 2 ENHANCED');
+console.log('📦 Character Creator Core Module loaded - PHASE 3 ENHANCED UI');
