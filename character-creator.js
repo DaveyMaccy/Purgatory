@@ -1,7 +1,6 @@
 /**
  * Character Creator - Core Module - PHASE 3 EXACT MATCH
- * 
- * Uses the modular system but maintains the EXACT functionality and structure
+ * * Uses the modular system but maintains the EXACT functionality and structure
  * from the working Phase-3 monolithic version.
  */
 
@@ -565,44 +564,6 @@ function handleStartSimulation() {
         console.error('❌ Failed to start simulation:', error);
         alert(`Failed to start simulation: ${error.message}`);
     }
-}
-
-/**
- * Validate characters before starting game - EXACT from Phase-3
- */
-function validateCharacters() {
-    if (characters.length < MIN_CHARACTERS) {
-        throw new Error(`Minimum ${MIN_CHARACTERS} characters required`);
-    }
-    
-    if (characters.length > MAX_CHARACTERS) {
-        throw new Error(`Maximum ${MAX_CHARACTERS} characters allowed`);
-    }
-    
-    // Ensure exactly one player
-    const playerCount = characters.filter(char => char.isPlayer).length;
-    if (playerCount === 0) {
-        characters[0].isPlayer = true;
-        console.log('⚠️ No player character found, making first character the player');
-    } else if (playerCount > 1) {
-        // Keep only first player
-        let foundFirst = false;
-        characters.forEach(char => {
-            if (char.isPlayer && foundFirst) {
-                char.isPlayer = false;
-            } else if (char.isPlayer) {
-                foundFirst = true;
-            }
-        });
-        console.log('⚠️ Multiple player characters found, using first one');
-    }
-    
-    // Ensure all have names
-    characters.forEach((char, index) => {
-        if (!char.name || char.name.trim() === '') {
-            char.name = `Character ${index + 1}`;
-        }
-    });
 }
 
 /**
