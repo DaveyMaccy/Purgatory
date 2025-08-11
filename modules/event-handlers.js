@@ -1,7 +1,7 @@
 /**
- * Event Handlers Module - PHASE 3 FIXED
- * Handles all event listeners and user interactions for the enhanced character creator.
- * FIXED: Proper null checks and array bounds validation to prevent undefined errors.
+ * Event Handlers Module - PHASE 3 COMPLETE
+ * * Handles all event listeners and user interactions for the enhanced character creator.
+ * FIXED: Proper player character enforcement and all functionality from Phase-3.
  */
 
 import { UIGenerator } from './ui-generator.js';
@@ -16,34 +16,22 @@ import {
 
 class EventHandlers {
     /**
-     * Setup enhanced event listeners for character panel - FIXED VERSION
+     * Setup enhanced event listeners for character panel - EXACT COPY from Phase-3
      */
     static setupPanelEventListeners(index, characters, globalAPIKey) {
-        // FIXED: Get the characters array from global scope if not passed and validate it
+        // Get the characters array from global scope if not passed
         if (!characters) {
             characters = window.characters || [];
         }
         
-        // FIXED: Validate index bounds and character existence
-        if (!characters || !Array.isArray(characters) || index < 0 || index >= characters.length || !characters[index]) {
-            console.error(`❌ Invalid character index ${index} or characters array:`, characters);
-            return;
-        }
-        
-        // FIXED: Player character checkbox - enforce single player with proper null checks
+        // FIXED: Player character checkbox - enforce single player (EXACT from Phase-3)
         const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
         if (isPlayerCheckbox) {
             isPlayerCheckbox.addEventListener('change', function() {
-                // FIXED: Add safety checks before accessing array elements
-                if (!characters[index]) {
-                    console.error(`❌ Character at index ${index} is undefined`);
-                    return;
-                }
-                
                 if (this.checked) {
                     // Uncheck all other player checkboxes
                     characters.forEach((char, otherIndex) => {
-                        if (char && otherIndex !== index) { // FIXED: Check char exists
+                        if (otherIndex !== index) {
                             char.isPlayer = false;
                             const otherCheckbox = document.getElementById(`isPlayer-${otherIndex}`);
                             if (otherCheckbox) otherCheckbox.checked = false;
@@ -56,15 +44,10 @@ class EventHandlers {
             });
         }
 
-        // Name generation button (FIXED with null checks)
+        // Name generation button (EXACT from Phase-3)
         const generateNameBtn = document.getElementById(`generate-name-${index}`);
         if (generateNameBtn) {
             generateNameBtn.addEventListener('click', function() {
-                if (!characters[index] || !characters[index].physicalAttributes) {
-                    console.error(`❌ Character or physical attributes missing for index ${index}`);
-                    return;
-                }
-                
                 const gender = characters[index].physicalAttributes.gender;
                 const newName = generateNameByGender(gender);
                 characters[index].name = newName;
@@ -73,15 +56,10 @@ class EventHandlers {
             });
         }
 
-        // Gender change - regenerate name (FIXED with null checks)
+        // Gender change - regenerate name (EXACT from Phase-3)
         const genderSelect = document.getElementById(`gender-${index}`);
         if (genderSelect) {
             genderSelect.addEventListener('change', function() {
-                if (!characters[index] || !characters[index].physicalAttributes) {
-                    console.error(`❌ Character or physical attributes missing for index ${index}`);
-                    return;
-                }
-                
                 characters[index].physicalAttributes.gender = this.value;
                 // Auto-generate new name for the gender
                 const newName = generateNameByGender(this.value);
@@ -91,95 +69,108 @@ class EventHandlers {
             });
         }
 
-        // Sprite navigation (FIXED with null checks)
-        const prevSpriteBtn = document.getElementById(`prev-sprite-${index}`);
-        const nextSpriteBtn = document.getElementById(`next-sprite-${index}`);
-        
-        if (prevSpriteBtn) {
-            prevSpriteBtn.addEventListener('click', function() {
-                if (!characters[index]) {
-                    console.error(`❌ Character missing for index ${index}`);
-                    return;
-                }
-                SpriteManager.navigateSprite(index, -1, characters);
-            });
+        // Sprite navigation arrows (EXACT from Phase-3)
+        const prevBtn = document.getElementById(`sprite-prev-${index}`);
+        const nextBtn = document.getElementById(`sprite-next-${index}`);
+        if (prevBtn && nextBtn) {
+            prevBtn.addEventListener('click', () => this.navigateSprite(index, -1, characters));
+            nextBtn.addEventListener('click', () => this.navigateSprite(index, 1, characters));
         }
-        
-        if (nextSpriteBtn) {
-            nextSpriteBtn.addEventListener('click', function() {
-                if (!characters[index]) {
-                    console.error(`❌ Character missing for index ${index}`);
-                    return;
-                }
-                SpriteManager.navigateSprite(index, 1, characters);
+
+        // Custom portrait upload (EXACT from Phase-3)
+        const portraitUpload = document.getElementById(`portrait-upload-${index}`);
+        if (portraitUpload) {
+            portraitUpload.addEventListener('change', function(e) {
+                EventHandlers.handleCustomPortraitUpload(index, e.target.files[0], characters);
             });
         }
 
-        // Personality tags (max 6) with greying out (FIXED with null checks)
+        // Clear custom portrait (EXACT from Phase-3)
+        const clearCustomBtn = document.getElementById(`clear-custom-${index}`);
+        if (clearCustomBtn) {
+            clearCustomBtn.addEventListener('click', () => EventHandlers.clearCustomPortrait(index));
+        }
+
+        // Physical attribute sliders (EXACT from Phase-3)
+        ['age', 'height', 'weight', 'looks'].forEach(attr => {
+            const slider = document.getElementById(`${attr}-${index}`);
+            const valueLabel = document.getElementById(`${attr}-val-${index}`);
+            if (slider && valueLabel) {
+                slider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    characters[index].physicalAttributes[attr] = value;
+                    
+                    if (attr === 'height') {
+                        valueLabel.textContent = `${value} cm`;
+                    } else if (attr === 'weight') {
+                        valueLabel.textContent = `${value} kg`;
+                    } else if (attr === 'looks') {
+                        valueLabel.textContent = `${value}/10`;
+                    } else {
+                        valueLabel.textContent = value;
+                    }
+                });
+            }
+        });
+
+        // Skill sliders (EXACT from Phase-3)
+        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
+            const slider = document.getElementById(`${skill}-${index}`);
+            const valueLabel = document.getElementById(`${skill}-val-${index}`);
+            if (slider && valueLabel) {
+                slider.addEventListener('input', function() {
+                    const value = parseInt(this.value);
+                    characters[index].skills[skill] = value;
+                    valueLabel.textContent = `${value}/10`;
+                });
+            }
+        });
+
+        // Personality tags (max 6) with greying out (EXACT from Phase-3)
         PERSONALITY_TAGS.forEach(tag => {
-            const checkbox = document.getElementById(`tags-${index}-${tag.replace(/\s+/g, '-').toLowerCase()}`);
+            const checkbox = document.getElementById(`tags-${index}-${tag}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
-                    if (!characters[index]) {
-                        console.error(`❌ Character missing for index ${index}`);
-                        return;
-                    }
                     EventHandlers.updateCharacterTags(index, 'personalityTags', 6, characters);
                     EventHandlers.updateCheckboxStates(index, 'personalityTags', 6, characters);
                 });
             }
         });
 
-        // Inventory items (max 3) with greying out (FIXED with null checks)
+        // Inventory items (max 3) with greying out (EXACT from Phase-3)
         INVENTORY_OPTIONS.forEach(item => {
             const checkbox = document.getElementById(`inventory-item-${index}-${item}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
-                    if (!characters[index]) {
-                        console.error(`❌ Character missing for index ${index}`);
-                        return;
-                    }
                     EventHandlers.updateCharacterItems(index, 'inventory', 3, characters);
                     EventHandlers.updateCheckboxStates(index, 'inventory', 3, characters);
                 });
             }
         });
 
-        // Desk items (max 2) with greying out (FIXED with null checks)
+        // Desk items (max 2) with greying out (EXACT from Phase-3)
         DESK_ITEM_OPTIONS.forEach(item => {
             const checkbox = document.getElementById(`desk-item-${index}-${item}`);
             if (checkbox) {
                 checkbox.addEventListener('change', function() {
-                    if (!characters[index]) {
-                        console.error(`❌ Character missing for index ${index}`);
-                        return;
-                    }
                     EventHandlers.updateCharacterItems(index, 'deskItems', 2, characters);
                     EventHandlers.updateCheckboxStates(index, 'deskItems', 2, characters);
                 });
             }
         });
         
-        // API key handler (FIXED with null checks)
+        // API key handler
         const apiKeyInput = document.getElementById(`api-key-input-${index}`);
         if (apiKeyInput) {
             apiKeyInput.addEventListener('input', function() {
-                if (!characters[index]) {
-                    console.error(`❌ Character missing for index ${index}`);
-                    return;
-                }
                 characters[index].apiKey = this.value;
             });
         }
 
-        // Basic form handlers (FIXED with null checks)
+        // Basic form handlers
         const jobRoleSelect = document.getElementById(`jobRole-${index}`);
         if (jobRoleSelect) {
             jobRoleSelect.addEventListener('change', function() {
-                if (!characters[index]) {
-                    console.error(`❌ Character missing for index ${index}`);
-                    return;
-                }
                 characters[index].jobRole = this.value;
             });
         }
@@ -187,94 +178,106 @@ class EventHandlers {
         const buildSelect = document.getElementById(`build-${index}`);
         if (buildSelect) {
             buildSelect.addEventListener('change', function() {
-                if (!characters[index] || !characters[index].physicalAttributes) {
-                    console.error(`❌ Character or physical attributes missing for index ${index}`);
-                    return;
-                }
                 characters[index].physicalAttributes.build = this.value;
             });
         }
         
-        // Initialize checkbox states with delay to ensure DOM is ready
+        // Initialize checkbox states
         setTimeout(() => {
-            // FIXED: Re-fetch characters from global scope and validate before use
-            const currentCharacters = window.characters || characters;
-            if (currentCharacters && currentCharacters[index]) {
-                EventHandlers.updateCheckboxStates(index, 'personalityTags', 6, currentCharacters);
-                EventHandlers.updateCheckboxStates(index, 'inventory', 3, currentCharacters);
-                EventHandlers.updateCheckboxStates(index, 'deskItems', 2, currentCharacters);
-            }
-        }, 100);
+            // FIX: Re-fetch characters from global scope to get the latest version,
+            // avoiding the race condition during initial setup.
+            const currentCharacters = window.characters || [];
+            if (!currentCharacters[index]) return; // Safety check in case character was removed
+
+            EventHandlers.updateCheckboxStates(index, 'personalityTags', 6, currentCharacters);
+            EventHandlers.updateCheckboxStates(index, 'inventory', 3, currentCharacters);
+            EventHandlers.updateCheckboxStates(index, 'deskItems', 2, currentCharacters);
+        }, 50);
     }
 
     /**
-     * Setup custom portrait upload handler (FIXED with null checks)
+     * Navigate through sprites with arrows (EXACT from Phase-3)
      */
-    static setupCustomPortraitHandler(index, characters) {
-        const uploadInput = document.getElementById(`custom-portrait-${index}`);
-        if (uploadInput) {
-            uploadInput.addEventListener('change', function(event) {
-                if (!characters[index]) {
-                    console.error(`❌ Character missing for index ${index}`);
-                    return;
-                }
-                
-                const file = event.target.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = new Image();
-                        img.onload = function() {
-                            EventHandlers.drawCustomPortrait(index, img, characters);
-                        };
-                        img.src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                }
+    static navigateSprite(index, direction, characters) {
+        const character = characters[index];
+        let newSpriteIndex = (character.spriteIndex || 0) + direction;
+        
+        // Import SPRITE_OPTIONS dynamically if needed
+        import('./character-data.js').then(({ SPRITE_OPTIONS }) => {
+            // Wrap around
+            if (newSpriteIndex < 0) newSpriteIndex = SPRITE_OPTIONS.length - 1;
+            if (newSpriteIndex >= SPRITE_OPTIONS.length) newSpriteIndex = 0;
+            
+            character.spriteIndex = newSpriteIndex;
+            character.spriteSheet = SPRITE_OPTIONS[newSpriteIndex];
+            
+            // Update portrait and info
+            SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+            EventHandlers.updateSpriteInfo(index, characters);
+        });
+    }
+
+    /**
+     * Update sprite info display (EXACT from Phase-3)
+     */
+    static updateSpriteInfo(index, characters) {
+        const spriteInfo = document.getElementById(`sprite-info-${index}`);
+        if (spriteInfo) {
+            import('./character-data.js').then(({ SPRITE_OPTIONS }) => {
+                const spriteIndex = characters[index].spriteIndex || 0;
+                spriteInfo.textContent = `Sprite ${spriteIndex + 1} of ${SPRITE_OPTIONS.length}`;
             });
         }
     }
 
     /**
-     * Draw custom portrait on canvas (FIXED with null checks)
+     * Handle custom portrait upload (EXACT from Phase-3)
      */
-    static drawCustomPortrait(index, img, characters) {
-        if (!characters[index]) {
-            console.error(`❌ Character missing for index ${index}`);
-            return;
-        }
+    static handleCustomPortraitUpload(index, file, characters) {
+        if (!file) return;
         
-        const canvas = document.getElementById(`custom-canvas-${index}`);
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Calculate scaling to fit image
-            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-            const scaledWidth = img.width * scale;
-            const scaledHeight = img.height * scale;
-            const x = (canvas.width - scaledWidth) / 2;
-            const y = (canvas.height - scaledHeight) / 2;
-            
-            // Draw image
-            ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
-            
-            // Store canvas data
-            characters[index].customPortrait = canvas.toDataURL();
-        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.getElementById(`custom-canvas-${index}`);
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Clear canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw image scaled to fit
+                    const aspectRatio = img.width / img.height;
+                    let drawWidth = canvas.width;
+                    let drawHeight = canvas.height;
+                    
+                    if (aspectRatio > 1) {
+                        drawHeight = canvas.width / aspectRatio;
+                    } else {
+                        drawWidth = canvas.height * aspectRatio;
+                    }
+                    
+                    const x = (canvas.width - drawWidth) / 2;
+                    const y = (canvas.height - drawHeight) / 2;
+                    
+                    ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                    
+                    // Store custom portrait
+                    characters[index].customPortrait = canvas.toDataURL();
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     }
 
     /**
-     * Clear custom portrait (FIXED with null checks)
+     * Clear custom portrait (EXACT from Phase-3)
      */
-    static clearCustomPortrait(index, characters) {
-        if (!characters || !characters[index]) {
-            console.error(`❌ Character missing for index ${index}`);
-            return;
-        }
-        
+    static clearCustomPortrait(index) {
+        const characters = window.characters || [];
+        characters[index].customPortrait = null;
         const canvas = document.getElementById(`custom-canvas-${index}`);
         if (canvas) {
             const ctx = canvas.getContext('2d');
@@ -286,35 +289,23 @@ class EventHandlers {
             ctx.textAlign = 'center';
             ctx.fillText('No Custom', canvas.width / 2, canvas.height / 2);
         }
-        
-        // Clear from character data
-        characters[index].customPortrait = null;
     }
 
     /**
-     * Update checkbox states - grey out when max reached (FIXED with null checks)
+     * Update checkbox states - grey out when max reached (EXACT from Phase-3)
      */
     static updateCheckboxStates(index, itemType, maxLimit, characters) {
-        // FIXED: Validate all parameters
-        if (!characters || !characters[index] || typeof index !== 'number' || index < 0) {
-            console.error(`❌ Invalid parameters for updateCheckboxStates:`, { index, characters: !!characters, itemType });
-            return;
-        }
-        
         let prefix, selectedCount;
         
         if (itemType === 'personalityTags') {
             prefix = 'tags';
-            selectedCount = characters[index].personalityTags ? characters[index].personalityTags.length : 0;
+            selectedCount = characters[index].personalityTags.length;
         } else if (itemType === 'inventory') {
             prefix = 'inventory-item';
-            selectedCount = characters[index].inventory ? characters[index].inventory.length : 0;
+            selectedCount = characters[index].inventory.length;
         } else if (itemType === 'deskItems') {
             prefix = 'desk-item';
-            selectedCount = characters[index].deskItems ? characters[index].deskItems.length : 0;
-        } else {
-            console.error(`❌ Invalid itemType: ${itemType}`);
-            return;
+            selectedCount = characters[index].deskItems.length;
         }
         
         const allCheckboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]`);
@@ -338,22 +329,15 @@ class EventHandlers {
     }
 
     /**
-     * Update character tags with limit enforcement (FIXED with null checks)
+     * Update character tags with limit enforcement (EXACT from Phase-3)
      */
     static updateCharacterTags(index, tagType, maxLimit, characters) {
-        // FIXED: Validate all parameters
-        if (!characters || !characters[index] || typeof index !== 'number' || index < 0) {
-            console.error(`❌ Invalid parameters for updateCharacterTags:`, { index, characters: !!characters, tagType });
-            return;
-        }
-        
-        const prefix = tagType === 'personalityTags' ? 'tags' : tagType;
-        const checkboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]:checked`);
+        const checkboxes = document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]:checked`);
         let selectedTags = Array.from(checkboxes).map(cb => cb.value);
         
         if (selectedTags.length > maxLimit) {
             // Find the last checked box and uncheck it
-            const lastChecked = Array.from(document.querySelectorAll(`input[id^="${prefix}-${index}-"]`))
+            const lastChecked = Array.from(document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]`))
                 .reverse()
                 .find(cb => cb.checked);
             if (lastChecked) {
@@ -362,23 +346,13 @@ class EventHandlers {
             }
         }
         
-        // FIXED: Ensure the array exists before assignment
-        if (!characters[index][tagType]) {
-            characters[index][tagType] = [];
-        }
         characters[index][tagType] = selectedTags;
     }
 
     /**
-     * Update character items with limit enforcement (FIXED with null checks)
+     * Update character items with limit enforcement (EXACT from Phase-3)
      */
     static updateCharacterItems(index, itemType, maxLimit, characters) {
-        // FIXED: Validate all parameters
-        if (!characters || !characters[index] || typeof index !== 'number' || index < 0) {
-            console.error(`❌ Invalid parameters for updateCharacterItems:`, { index, characters: !!characters, itemType });
-            return;
-        }
-        
         const prefix = itemType === 'inventory' ? 'inventory-item' : 'desk-item';
         const checkboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]:checked`);
         let selectedItems = Array.from(checkboxes).map(cb => cb.value);
@@ -394,14 +368,8 @@ class EventHandlers {
             }
         }
         
-        // FIXED: Ensure the array exists before assignment
-        if (!characters[index][itemType]) {
-            characters[index][itemType] = [];
-        }
         characters[index][itemType] = selectedItems;
     }
 }
 
 export { EventHandlers };
-
-console.log('📦 Event Handlers Module loaded - PHASE 3 FIXED');
