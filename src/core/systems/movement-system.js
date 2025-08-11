@@ -1,7 +1,7 @@
 // ============================================
-// FILE: src/core/systems/movement-system.js
-// MINIMAL CHANGES: Only direction update logic modified
+// FILE 2: src/core/systems/movement-system.js
 // ============================================
+// COMPLETE REPLACEMENT - Fixes obstacle checking
 
 export class MovementSystem {
     constructor() {
@@ -32,17 +32,11 @@ export class MovementSystem {
         const dy = target.y - character.position.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // FIXED: Update character facing direction continuously + trigger animation updates
-        const previousDirection = character.facingDirection;
+        // Update character facing direction for animation
         if (Math.abs(dx) > Math.abs(dy)) {
             character.facingDirection = dx > 0 ? 'right' : 'left';
         } else {
             character.facingDirection = dy > 0 ? 'down' : 'up';
-        }
-        
-        // FIXED: Update animation when direction changes
-        if (character.facingDirection !== previousDirection) {
-            character.setActionState('walking'); // Triggers animation update
         }
         
         // If we're close to the waypoint, move to next
