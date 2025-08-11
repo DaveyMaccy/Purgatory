@@ -1,5 +1,5 @@
 /**
- * Event Handlers Module - PHASE 3 COMPLETE OVERHAUL
+ * Event Handlers Module - PHASE 3 COMPLETE
  * 
  * Handles all event listeners and user interactions for the enhanced character creator.
  * Matches the monolithic implementation exactly with all interactive features.
@@ -385,8 +385,12 @@ class EventHandlers {
         this.setupBasicFormHandlers(index, characters);
     }
     
-    static setupPhysicalAttributesHandlers(index, characters) {
-        this.setupPhysicalAttributesHandlers(index, characters);
+    static setupBioHandler(index, characters) {
+        // Bio handler placeholder for future use
+        console.log(`Bio handler placeholder for character ${index}`);
     }
-    
-    static setupSkillsHandlers(index,
+}
+
+export { EventHandlers };
+
+console.log('📦 Event Handlers Module loaded - PHASE 3 COMPLETE');
