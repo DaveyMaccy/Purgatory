@@ -67,9 +67,6 @@ function initializeUIElements() {
     
     console.log('✅ UI elements initialized');
 }
-    
-    console.log('✅ UI elements initialized');
-}
 
 /**
  * Setup New Game button with proper event handling
@@ -784,5 +781,3 @@ function setupDebugPanel() {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
-
-
