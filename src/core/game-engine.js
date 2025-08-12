@@ -1,7 +1,7 @@
 // ============================================
 // FILE: src/core/game-engine.js
 // ============================================
-// REPLACEMENT - Adds a direct sync for character direction to the renderer.
+// REPLACEMENT - Adds the missing animation update call.
 
 /**
  * GameEngine Class - Central game coordination
@@ -11,7 +11,7 @@
  * - Time management
  * - State coordination
  * * FINAL FIX:
- * - Adds call to sync character direction with the renderer every frame.
+ * - Includes BOTH the direction sync and the animation frame update calls.
  */
 
 import { World } from './world/world.js';
@@ -97,6 +97,7 @@ export class GameEngine {
             });
         }
         
+        // Update character movement and rendering states
         if (this.movementSystem && this.characterManager && this.world) {
             const characters = this.characterManager.characters;
             
@@ -105,14 +106,16 @@ export class GameEngine {
                 this.movementSystem.moveCharacter(character, this.world, deltaTime / 1000);
                 
                 if (this.renderer) {
-                    // Update the sprite's x/y position on screen
                     this.renderer.updateCharacterPosition(character.id, character.position.x, character.position.y);
-                    
-                    // NEW: Force the renderer to sync with the character's true direction every frame.
-                    // This creates a direct, reliable connection for directional data.
                     this.renderer.syncCharacterDirection(character.id, character.facingDirection);
                 }
             }
+        }
+
+        // Run the animation frame-by-frame updates
+        if (this.renderer) {
+            // THIS LINE WAS MISSING. It makes the animations play.
+            this.renderer.updateAllCharacterAnimations(deltaTime / 1000);
         }
     }
     
