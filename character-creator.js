@@ -631,8 +631,10 @@ function formatCharactersForGame() {
         // ENSURE RELATIONSHIPS EXIST
         relationships: char.relationships || {},
         
-        // PORTRAIT PRIORITY: custom > generated > sprite
+        // PORTRAIT PRIORITY: custom > extracted portrait > sprite  
         portrait: char.customPortrait || char.portrait || char.spriteSheet,
+        customPortrait: char.customPortrait, // Preserve custom separately
+        spriteSheet: char.spriteSheet, // Preserve sprite sheet separately
         
         // GAME ENGINE REQUIRED FIELDS
         position: { x: 0, y: 0 },
