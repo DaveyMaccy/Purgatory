@@ -285,6 +285,9 @@ window.startGameSimulation = async function(charactersFromCreator) {
        // Initialize UI updater for real-time status updates
         uiUpdater = new UIUpdater(characterManager);
         console.log('✅ UI updater initialized');
+
+        // DEBUG: Check character data structure
+debugCharacterData();
         
         // FIXED: Set up character switching and initial UI update
         setupCharacterSwitching();
@@ -661,6 +664,26 @@ function showSuccessMessage(message) {
     }
 }
 
+/**
+ * Debug function to check character data structure
+ */
+function debugCharacterData() {
+    if (characterManager && characterManager.characters) {
+        console.log('🔍 DEBUG: Character data structure:');
+        characterManager.characters.forEach((char, index) => {
+            console.log(`Character ${index}:`, {
+                name: char.name,
+                id: char.id,
+                jobRole: char.jobRole,
+                hasNeeds: !!char.needs,
+                needs: char.needs,
+                hasInventory: !!char.inventory,
+                inventory: char.inventory
+            });
+        });
+    }
+}
+
 // Export for use in other modules
 export {
     setFocusTarget,
@@ -669,6 +692,7 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
 
 
