@@ -82,6 +82,10 @@ function setupNewGameButton() {
         newButton.addEventListener('click', handleNewGameClick);
         
         console.log('✅ New Game button enabled and connected');
+        
+        // Update loading status to show loaded
+        const loadingStatus = document.getElementById('loading-status');
+        if (loadingStatus) loadingStatus.textContent = 'Loaded';
     } else {
         console.warn('⚠️ New Game button not found');
         // Auto-start for testing if button missing
@@ -584,3 +588,4 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
