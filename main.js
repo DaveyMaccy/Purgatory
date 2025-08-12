@@ -49,8 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeUIElements() {
     console.log('🎨 Initializing UI elements...');
     
-    // Hide initial screens
-    hideStartScreen();
+    // Hide game elements first
     hideCharacterCreator();
     hideGameView();
     
@@ -60,7 +59,7 @@ function initializeUIElements() {
     // Inject tab CSS fixes
     injectTabCSS();
     
-    // Show start screen
+    // ALWAYS show start screen last
     showStartScreen();
     
     console.log('✅ UI elements initialized');
@@ -583,7 +582,7 @@ function showCharacterCreator() {
     const creator = document.getElementById('creator-modal-backdrop');
     if (creator) {
         creator.classList.remove('hidden');
-        creator.style.display = 'block';
+        creator.style.display = 'flex';
     } else {
         throw new Error('UI Error: Element with ID "creator-modal-backdrop" not found. Cannot open character creator.');
     }
@@ -696,3 +695,4 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
