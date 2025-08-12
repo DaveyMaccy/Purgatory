@@ -1,6 +1,8 @@
 /**
  * REPAIRED: Complete Rendering System with a Functional Animation Engine
  *
+ * DO NOT EDIT WITHOUT EXPRESS PERMISSION!
+ *
  * FINAL AUDIT COMPLETE:
  * - Rebuilt the animationData map from scratch based on corrected row numbers.
  * - All animations are now correctly mapped to the sprite sheet.
