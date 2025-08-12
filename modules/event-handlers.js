@@ -234,8 +234,6 @@ class EventHandlers {
             });
             EventHandlers.updateSpriteInfo(index, charactersArray);
             });
-            EventHandlers.updateSpriteInfo(index, charactersArray);
-        });
     }
 
     /**
