@@ -189,44 +189,38 @@ function injectTabCSS() {
 function setupStatusPanelTabs() {
     console.log('🔧 Setting up status panel tabs...');
     
-    // Make openTab function available globally (as required by HTML onclick)
-    window.openTab = function(evt, tabName) {
-        console.log(`📋 Switching to tab: ${tabName}`);
-        
-        // Hide all tab content
-        const tabContents = document.getElementsByClassName("tab-content");
-        for (let i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove("active");
-        }
-        
-        // Remove active class from all tab links
-        const tabLinks = document.getElementsByClassName("tab-link");
-        for (let i = 0; i < tabLinks.length; i++) {
-            tabLinks[i].classList.remove("active");
-        }
-        
-        // Show the selected tab content and mark button as active
-        const targetTab = document.getElementById(tabName);
-        if (targetTab) {
-            targetTab.classList.add("active");
-        }
-        
-        if (evt && evt.currentTarget) {
-            evt.currentTarget.classList.add("active");
-        }
-    };
+    const tabs = document.querySelectorAll('.status-tab');
+    const contents = document.querySelectorAll('.tab-content');
     
-    // Set up click handlers for tab buttons (backup to onclick)
-    const tabButtons = document.querySelectorAll('.tab-link');
-    tabButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tabName = button.textContent.toLowerCase();
-            window.openTab(e, tabName);
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.textContent.trim().toLowerCase();
+            console.log(`📋 Switching to tab: ${tabName}`);
+            
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Update content visibility
+            contents.forEach((content, contentIndex) => {
+                content.classList.toggle('hidden', contentIndex !== index);
+            });
+            
+            // FORCE UI UPDATE AFTER TAB SWITCH
+            if (characterManager && uiUpdater) {
+                setTimeout(() => {
+                    const focusedCharacter = characterManager.getPlayerCharacter();
+                    if (focusedCharacter) {
+                        console.log(`🔄 Forcing UI update for tab: ${tabName}`);
+                        uiUpdater.updateUI(focusedCharacter);
+                    }
+                }, 50);
+            }
         });
     });
     
     console.log('✅ Status panel tabs configured');
+}
 }
 
 /**
@@ -704,6 +698,7 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
 
 
