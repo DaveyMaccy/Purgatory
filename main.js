@@ -1,8 +1,7 @@
 /**
  * OFFICE PURGATORY - MAIN GAME FILE
  * PHASE 3 COMPATIBLE - COMPLETE VERSION WITH ALL FUNCTIONS
- * 
- * CRITICAL FIX: Updated all UI functions to use correct HTML element IDs
+ * * CRITICAL FIX: Updated all UI functions to use correct HTML element IDs
  * COMPLETE: Includes ALL functions from the original main.js
  */
 
@@ -221,7 +220,6 @@ function setupStatusPanelTabs() {
     
     console.log('✅ Status panel tabs configured');
 }
-}
 
 /**
  * MAIN GAME START FUNCTION - Called from character creator
@@ -281,7 +279,7 @@ window.startGameSimulation = async function(charactersFromCreator) {
         console.log('✅ UI updater initialized');
 
         // DEBUG: Check character data structure
-debugCharacterData();
+        debugCharacterData();
         
         // FIXED: Set up character switching and initial UI update
         setupCharacterSwitching();
@@ -698,9 +696,3 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
-
-
-
-
-
-
