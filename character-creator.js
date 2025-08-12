@@ -272,7 +272,7 @@ function createCharacter(index) {
         name: generateNameByGender(gender),
         isPlayer: index === 0,
         spriteSheet: SPRITE_OPTIONS[index % SPRITE_OPTIONS.length] || SPRITE_OPTIONS[0],
-        spriteIndex: index % SPRITE_OPTIONS.length, // Track current sprite
+        spriteIndex: index % SPRITE_OPTIONS.length || 0, // Track current sprite - ensure never undefined
         portrait: null, // Generated from sprite
         customPortrait: null, // Custom uploaded image
         apiKey: '', // Individual API key override
