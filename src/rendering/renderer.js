@@ -1,34 +1,25 @@
+// ============================================
+// FILE: src/core/renderer.js
+// ============================================
+// REPLACEMENT - Adds a dedicated function for syncing direction.
+
 /**
  * REPAIRED: Complete Rendering System with a Functional Animation Engine
- *
- * This file handles all visual rendering and now includes a robust animation
- * system tailored to the provided character sprite sheet.
- *
- * FIX HIGHLIGHTS:
- * - Added a detailed 'animationData' map to define all character animations.
- * - Implemented stateful animation tracking for each character sprite.
- * - Created an 'updateAllCharacterAnimations' method to be called in the main game loop.
- * - Rewrote 'updateCharacterAnimation' and 'updateSpriteFrame' to use the new system.
- * - Preserved all existing functionality (preloading, map rendering, etc.).
- * - CORRECTED y-coordinates for 'walking' and 'sit' animations.
+ * * FINAL FIX:
+ * - Adds a new `syncCharacterDirection` method for foolproof direction updates.
+ * - Modifies `updateCharacterAnimation` to only handle the action state ('idle', 'walking').
  */
 
-// DORMANT CONTROL FLAG - Set to true when ready to enable enhanced sprites
+// ... (animationData map and other unchanged code from the top of the file) ...
 const USE_ENHANCED_SPRITES = true;
-
-// NEW: Sprite sheet dimensions based on analysis.
-// Sprites are 48px wide and 96px tall.
 const SPRITE_WIDTH = 48;
 const SPRITE_HEIGHT = 96;
 
-// NEW: The Animation Data Map (Corrected Version)
-// This is the "brain" that tells the renderer where to find each animation on the sprite sheet.
-// 'y' and 'x' are the top-left pixel coordinates for the start of an animation sequence.
 const animationData = {
     'idle': {
         frames: 6,
         loop: true,
-        frameSpeed: 0.15, // seconds per frame
+        frameSpeed: 0.15,
         directions: {
             'up':    { y: 1 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
             'left':  { y: 1 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
@@ -41,7 +32,6 @@ const animationData = {
         loop: true,
         frameSpeed: 0.1,
         directions: {
-            // CORRECTED: y-coordinate changed from 3 to 2
             'up':    { y: 2 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
             'left':  { y: 2 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
             'right': { y: 2 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
@@ -50,98 +40,21 @@ const animationData = {
     },
     'sit': {
         frames: 6,
-        loop: false, // Sits once and holds the last frame
+        loop: false,
         frameSpeed: 0.1,
         directions: {
-            // CORRECTED: y-coordinate changed from 5 to 4
             'right': { y: 4 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
             'left':  { y: 4 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH }
-            // 'up' and 'down' are not available for this animation
         }
     },
-    'phone': {
-        frames: 12,
-        loop: false,
-        loopSection: { start: 3, end: 8 }, // Corresponds to frames 4-9
-        frameSpeed: 0.12,
-        directions: {
-            'down': { y: 7 * SPRITE_HEIGHT, x: 0 }
-        }
-    },
-    'book': {
-        frames: 12,
-        loop: true, // Replays the whole animation
-        frameSpeed: 0.15,
-        directions: {
-            'down': { y: 8 * SPRITE_HEIGHT, x: 0 }
-        }
-    },
-    'pickup': {
-        frames: 12,
-        loop: false,
-        frameSpeed: 0.08,
-        directions: {
-            'right': { y: 10 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 10 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
-            'left':  { y: 10 * SPRITE_HEIGHT, x: 24 * SPRITE_WIDTH },
-            'down':  { y: 10 * SPRITE_HEIGHT, x: 36 * SPRITE_WIDTH }
-        }
-    },
-    'give': {
-        frames: 9,
-        loop: false,
-        frameSpeed: 0.1,
-        directions: {
-            'right': { y: 11 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 11 * SPRITE_HEIGHT, x: 9 * SPRITE_WIDTH },
-            'left':  { y: 11 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH },
-            'down':  { y: 11 * SPRITE_HEIGHT, x: 27 * SPRITE_WIDTH }
-        }
-    },
-    'lift': {
-        frames: 14,
-        loop: false,
-        frameSpeed: 0.1,
-        directions: {
-            'right': { y: 12 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 12 * SPRITE_HEIGHT, x: 14 * SPRITE_WIDTH },
-            'left':  { y: 12 * SPRITE_HEIGHT, x: 28 * SPRITE_WIDTH },
-            'down':  { y: 12 * SPRITE_HEIGHT, x: 42 * SPRITE_WIDTH }
-        }
-    },
-    'throw': {
-        frames: 14,
-        loop: false,
-        frameSpeed: 0.07,
-        directions: {
-            'right': { y: 13 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 13 * SPRITE_HEIGHT, x: 14 * SPRITE_WIDTH },
-            'left':  { y: 13 * SPRITE_HEIGHT, x: 28 * SPRITE_WIDTH },
-            'down':  { y: 13 * SPRITE_HEIGHT, x: 42 * SPRITE_WIDTH }
-        }
-    },
-    'hit': {
-        frames: 6,
-        loop: false,
-        frameSpeed: 0.1,
-        directions: {
-            'right': { y: 14 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 14 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
-            'left':  { y: 14 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
-            'down':  { y: 14 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
-        }
-    },
-    'punch': {
-        frames: 6,
-        loop: false,
-        frameSpeed: 0.08,
-        directions: {
-            'right': { y: 15 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 15 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
-            'left':  { y: 15 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
-            'down':  { y: 15 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
-        }
-    }
+    'phone': { frames: 12, loop: false, loopSection: { start: 3, end: 8 }, frameSpeed: 0.12, directions: { 'down': { y: 7 * SPRITE_HEIGHT, x: 0 } } },
+    'book': { frames: 12, loop: true, frameSpeed: 0.15, directions: { 'down': { y: 8 * SPRITE_HEIGHT, x: 0 } } },
+    'pickup': { frames: 12, loop: false, frameSpeed: 0.08, directions: { 'right': { y: 10 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH }, 'up':    { y: 10 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH }, 'left':  { y: 10 * SPRITE_HEIGHT, x: 24 * SPRITE_WIDTH }, 'down':  { y: 10 * SPRITE_HEIGHT, x: 36 * SPRITE_WIDTH } } },
+    'give': { frames: 9, loop: false, frameSpeed: 0.1, directions: { 'right': { y: 11 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH }, 'up':    { y: 11 * SPRITE_HEIGHT, x: 9 * SPRITE_WIDTH }, 'left':  { y: 11 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }, 'down':  { y: 11 * SPRITE_HEIGHT, x: 27 * SPRITE_WIDTH } } },
+    'lift': { frames: 14, loop: false, frameSpeed: 0.1, directions: { 'right': { y: 12 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH }, 'up':    { y: 12 * SPRITE_HEIGHT, x: 14 * SPRITE_WIDTH }, 'left':  { y: 12 * SPRITE_HEIGHT, x: 28 * SPRITE_WIDTH }, 'down':  { y: 12 * SPRITE_HEIGHT, x: 42 * SPRITE_WIDTH } } },
+    'throw': { frames: 14, loop: false, frameSpeed: 0.07, directions: { 'right': { y: 13 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH }, 'up':    { y: 13 * SPRITE_HEIGHT, x: 14 * SPRITE_WIDTH }, 'left':  { y: 13 * SPRITE_HEIGHT, x: 28 * SPRITE_WIDTH }, 'down':  { y: 13 * SPRITE_HEIGHT, x: 42 * SPRITE_WIDTH } } },
+    'hit': { frames: 6, loop: false, frameSpeed: 0.1, directions: { 'right': { y: 14 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH }, 'up':    { y: 14 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH }, 'left':  { y: 14 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH }, 'down':  { y: 14 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH } } },
+    'punch': { frames: 6, loop: false, frameSpeed: 0.08, directions: { 'right': { y: 15 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH }, 'up':    { y: 15 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH }, 'left':  { y: 15 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH }, 'down':  { y: 15 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH } } }
 };
 
 
@@ -150,337 +63,45 @@ export class Renderer {
         this.container = containerElement;
         this.app = null;
         this.worldContainer = null;
-        this.characterSprites = new Map(); // Map character IDs to sprites
+        this.characterSprites = new Map();
         this.preloadedTextures = new Map();
         this.mapSprites = [];
         this.isInitialized = false;
-
         this.TILE_SIZE = 48;
         this.CHARACTER_WIDTH = SPRITE_WIDTH;
         this.CHARACTER_HEIGHT = SPRITE_HEIGHT;
-
         this.BASE_WIDTH = 1280;
         this.BASE_HEIGHT = 720;
         this.WORLD_WIDTH = this.BASE_WIDTH;
         this.WORLD_HEIGHT = this.BASE_HEIGHT;
-
         if (USE_ENHANCED_SPRITES) {
             console.log('🎨 Enhanced Renderer with Animation Engine enabled');
         } else {
             console.log('🎨 Renderer constructor (enhanced sprites DORMANT)');
         }
     }
-
-    async preloadCharacterSprites() {
-        if (!USE_ENHANCED_SPRITES) {
-            console.log('💤 Sprite preloading DORMANT - skipping');
-            return 0;
-        }
-
-        console.log('🔄 Preloading character sprite textures...');
-        
-        const spritePromises = [];
-        
-        for (let i = 1; i <= 25; i++) {
-            const paddedNumber = i.toString().padStart(2, '0');
-            const spritePath = `assets/characters/character-${paddedNumber}.png`;
-            
-            const promise = this.loadSpriteTexture(spritePath).catch(error => {
-                console.warn(`⚠️ Failed to preload sprite: ${spritePath}`, error);
-                return null;
-            });
-            
-            spritePromises.push(promise);
-        }
-        
-        const results = await Promise.allSettled(spritePromises);
-        const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
-        
-        console.log(`✅ Preloaded ${successCount}/25 character sprites`);
-        return successCount;
-    }
-
-    async loadSpriteTexture(spritePath) {
-        if (!USE_ENHANCED_SPRITES) {
-            throw new Error('Enhanced sprites are dormant');
-        }
-
-        if (this.preloadedTextures.has(spritePath)) {
-            return this.preloadedTextures.get(spritePath);
-        }
-        
-        try {
-            const texture = await PIXI.Texture.fromURL(spritePath);
-            
-            if (texture && texture.valid && texture.width > 0 && texture.height > 0) {
-                this.preloadedTextures.set(spritePath, texture);
-                console.log(`📦 Cached texture: ${spritePath} (${texture.width}x${texture.height})`);
-                return texture;
-            } else {
-                throw new Error('Invalid texture dimensions or failed to load');
-            }
-        } catch (error) {
-            console.error(`❌ Failed to load texture: ${spritePath}`, error);
-            throw error;
-        }
-    }
-
-    async initialize(mapData) {
-        try {
-            if (USE_ENHANCED_SPRITES) {
-                console.log('🔧 Initializing enhanced PixiJS renderer with sprite preloading...');
-            } else {
-                console.log('🔧 Initializing PixiJS renderer (enhanced sprites dormant)...');
-            }
-
-            if (!this.container) {
-                throw new Error('Container element is required for renderer initialization');
-            }
-
-            this.calculateCanvasSize();
-
-            this.app = new PIXI.Application({
-                width: this.WORLD_WIDTH,
-                height: this.WORLD_HEIGHT,
-                backgroundColor: 0x2c3e50,
-                antialias: true,
-                resolution: window.devicePixelRatio || 1,
-                autoDensity: true
-            });
-
-            this.setupResponsiveCanvas();
-            this.container.appendChild(this.app.view);
-
-            this.worldContainer = new PIXI.Container();
-            this.app.stage.addChild(this.worldContainer);
-
-            this.mapLayer = new PIXI.Container();
-            this.characterLayer = new PIXI.Container();
-
-            this.worldContainer.addChild(this.mapLayer);
-            this.worldContainer.addChild(this.characterLayer);
-
-            this.setupResizeListener();
-
-            let preloadedCount = 0;
-            if (USE_ENHANCED_SPRITES) {
-                preloadedCount = await this.preloadCharacterSprites();
-                console.log(`🎮 Sprite preloading complete: ${preloadedCount} textures cached`);
-            } else {
-                console.log('💤 Sprite preloading skipped (dormant mode)');
-            }
-
-            if (mapData) {
-                this.renderMap(mapData);
-            }
-
-            this.isInitialized = true;
-            
-            if (USE_ENHANCED_SPRITES) {
-                console.log(`✅ Enhanced PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`);
-            } else {
-                console.log(`✅ PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9) - Enhanced sprites DORMANT`);
-            }
-
-        } catch (error) {
-            console.error('❌ Failed to initialize renderer:', error);
-            throw error;
-        }
-    }
-
-    calculateCanvasSize() {
-        if (!this.container) {
-            console.warn('⚠️ No container provided, using fallback dimensions');
-            this.WORLD_WIDTH = this.BASE_WIDTH;
-            this.WORLD_HEIGHT = this.BASE_HEIGHT;
-            return;
-        }
-
-        const containerRect = this.container.getBoundingClientRect();
-        const containerWidth = containerRect.width || this.container.clientWidth || 800;
-        const containerHeight = containerRect.height || this.container.clientHeight || 600;
-
-        const targetAspectRatio = 16 / 9;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        if (containerAspectRatio > targetAspectRatio) {
-            this.WORLD_HEIGHT = Math.min(containerHeight * 0.85, this.BASE_HEIGHT);
-            this.WORLD_WIDTH = this.WORLD_HEIGHT * targetAspectRatio;
-        } else {
-            this.WORLD_WIDTH = Math.min(containerWidth * 0.85, this.BASE_WIDTH);
-            this.WORLD_HEIGHT = this.WORLD_WIDTH / targetAspectRatio;
-        }
-
-        this.WORLD_WIDTH = Math.max(this.WORLD_WIDTH, 800);
-        this.WORLD_HEIGHT = Math.max(this.WORLD_HEIGHT, 450);
-
-        console.log(`📐 Canvas sized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9 aspect ratio)`);
-    }
-
-    setupResponsiveCanvas() {
-        if (this.app && this.app.view) {
-            const canvas = this.app.view;
-            canvas.style.display = 'block';
-            canvas.style.margin = '0 auto';
-            canvas.style.maxWidth = '100%';
-            canvas.style.maxHeight = '100%';
-            canvas.style.border = '2px solid #34495e';
-            canvas.style.borderRadius = '8px';
-        }
-    }
-
-    setupResizeListener() {
-        this.resizeHandler = () => {
-            this.calculateCanvasSize();
-            if (this.app) {
-                this.app.renderer.resize(this.WORLD_WIDTH, this.WORLD_HEIGHT);
-                this.setupResponsiveCanvas();
-            }
-        };
-        
-        window.addEventListener('resize', this.resizeHandler);
-    }
-
-    renderMap(mapData) {
-        console.log('🗺️ Rendering office map...');
-
-        this.mapSprites.forEach(sprite => {
-            this.mapLayer.removeChild(sprite);
-        });
-        this.mapSprites = [];
-
-        const background = new PIXI.Graphics();
-        background.beginFill(0x95a5a6); // Light gray floor
-        background.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT);
-        background.endFill();
-        this.mapLayer.addChild(background);
-        this.mapSprites.push(background);
-
-        const walls = new PIXI.Graphics();
-        walls.beginFill(0x2c3e50); // Dark walls
-        
-        const wallThickness = 20;
-        walls.drawRect(0, 0, this.WORLD_WIDTH, wallThickness);
-        walls.drawRect(0, this.WORLD_HEIGHT - wallThickness, this.WORLD_WIDTH, wallThickness);
-        walls.drawRect(0, 0, wallThickness, this.WORLD_HEIGHT);
-        walls.drawRect(this.WORLD_WIDTH - wallThickness, 0, wallThickness, this.WORLD_HEIGHT);
-        
-        walls.endFill();
-        this.mapLayer.addChild(walls);
-        this.mapSprites.push(walls);
-
-        const deskPositions = [
-            { x: 100, y: 150, width: 120, height: 60 },
-            { x: 300, y: 150, width: 120, height: 60 },
-            { x: 500, y: 150, width: 120, height: 60 },
-            { x: 100, y: 350, width: 120, height: 60 },
-            { x: 300, y: 350, width: 120, height: 60 }
-        ];
-
-        deskPositions.forEach((desk, index) => {
-            const deskSprite = new PIXI.Graphics();
-            deskSprite.beginFill(0x8b4513); // Brown desk color
-            deskSprite.drawRect(desk.x, desk.y, desk.width, desk.height);
-            deskSprite.endFill();
-            
-            const deskLabel = new PIXI.Text(`Desk ${index + 1}`, {
-                fontSize: 12,
-                fill: 0xffffff,
-                align: 'center'
-            });
-            deskLabel.x = desk.x + desk.width / 2 - deskLabel.width / 2;
-            deskLabel.y = desk.y + desk.height / 2 - deskLabel.height / 2;
-            
-            this.mapLayer.addChild(deskSprite);
-            this.mapLayer.addChild(deskLabel);
-            this.mapSprites.push(deskSprite, deskLabel);
-        });
-
-        console.log('✅ Office map rendered with walls and desks');
-    }
-
-    async renderCharacter(character) {
-        if (!this.isInitialized) {
-            console.warn('❌ Cannot render character: renderer not initialized');
-            return;
-        }
-
-        if (this.characterSprites.has(character.id)) {
-            this.removeCharacter(character.id);
-        }
-
-        try {
-            let sprite;
-            const texture = await PIXI.Texture.fromURL(character.spriteSheet);
-            
-            if (!texture || !texture.valid) {
-                 throw new Error('Texture failed to load or is invalid');
-            }
-            
-            const baseTexture = texture.baseTexture;
-
-            const initialFrameRect = new PIXI.Rectangle(
-                animationData.idle.directions.down.x,
-                animationData.idle.directions.down.y,
-                SPRITE_WIDTH,
-                SPRITE_HEIGHT
-            );
-            
-            const frameTexture = new PIXI.Texture(baseTexture, initialFrameRect);
-            sprite = new PIXI.Sprite(frameTexture);
-
-            sprite.width = this.CHARACTER_WIDTH;
-            sprite.height = this.CHARACTER_HEIGHT;
-            sprite.anchor.set(0.5, 1.0);
-            sprite.x = character.position?.x || 100;
-            sprite.y = character.position?.y || 100;
-
-            sprite.animationState = {
-                name: 'idle',
-                direction: 'down',
-                frame: 0,
-                timer: 0,
-            };
-            
-            sprite.characterId = character.id;
-            this.characterLayer.addChild(sprite);
-            this.characterSprites.set(character.id, sprite);
-
-            console.log(`✅ Character rendered: ${character.name}`);
-
-        } catch (error) {
-            console.error(`❌ Failed to render character ${character.name}:`, error);
-        }
-    }
     
-    createSimpleCharacterSprite(character) {
-        const graphics = new PIXI.Graphics();
+    // ... (preloadCharacterSprites, loadSpriteTexture, initialize, etc... )
+    // ... (These methods are unchanged from the last version) ...
 
-        graphics.beginFill(0x4a90e2); 
-        graphics.drawRect(-this.CHARACTER_WIDTH/2, -this.CHARACTER_HEIGHT, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT);
-        graphics.endFill();
+    async preloadCharacterSprites() { if (!USE_ENHANCED_SPRITES) { console.log('💤 Sprite preloading DORMANT - skipping'); return 0; } console.log('🔄 Preloading character sprite textures...'); const spritePromises = []; for (let i = 1; i <= 25; i++) { const paddedNumber = i.toString().padStart(2, '0'); const spritePath = `assets/characters/character-${paddedNumber}.png`; const promise = this.loadSpriteTexture(spritePath).catch(error => { console.warn(`⚠️ Failed to preload sprite: ${spritePath}`, error); return null; }); spritePromises.push(promise); } const results = await Promise.allSettled(spritePromises); const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length; console.log(`✅ Preloaded ${successCount}/25 character sprites`); return successCount; }
+    async loadSpriteTexture(spritePath) { if (!USE_ENHANCED_SPRITES) { throw new Error('Enhanced sprites are dormant'); } if (this.preloadedTextures.has(spritePath)) { return this.preloadedTextures.get(spritePath); } try { const texture = await PIXI.Texture.fromURL(spritePath); if (texture && texture.valid && texture.width > 0 && texture.height > 0) { this.preloadedTextures.set(spritePath, texture); console.log(`📦 Cached texture: ${spritePath} (${texture.width}x${texture.height})`); return texture; } else { throw new Error('Invalid texture dimensions or failed to load'); } } catch (error) { console.error(`❌ Failed to load texture: ${spritePath}`, error); throw error; } }
+    async initialize(mapData) { try { if (USE_ENHANCED_SPRITES) { console.log('🔧 Initializing enhanced PixiJS renderer with sprite preloading...'); } else { console.log('🔧 Initializing PixiJS renderer (enhanced sprites dormant)...'); } if (!this.container) { throw new Error('Container element is required for renderer initialization'); } this.calculateCanvasSize(); this.app = new PIXI.Application({ width: this.WORLD_WIDTH, height: this.WORLD_HEIGHT, backgroundColor: 0x2c3e50, antialias: true, resolution: window.devicePixelRatio || 1, autoDensity: true }); this.setupResponsiveCanvas(); this.container.appendChild(this.app.view); this.worldContainer = new PIXI.Container(); this.app.stage.addChild(this.worldContainer); this.mapLayer = new PIXI.Container(); this.characterLayer = new PIXI.Container(); this.worldContainer.addChild(this.mapLayer); this.worldContainer.addChild(this.characterLayer); this.setupResizeListener(); let preloadedCount = 0; if (USE_ENHANCED_SPRITES) { preloadedCount = await this.preloadCharacterSprites(); console.log(`🎮 Sprite preloading complete: ${preloadedCount} textures cached`); } else { console.log('💤 Sprite preloading skipped (dormant mode)'); } if (mapData) { this.renderMap(mapData); } this.isInitialized = true; if (USE_ENHANCED_SPRITES) { console.log(`✅ Enhanced PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`); } else { console.log(`✅ PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9) - Enhanced sprites DORMANT`); } } catch (error) { console.error('❌ Failed to initialize renderer:', error); throw error; } }
+    calculateCanvasSize() { if (!this.container) { console.warn('⚠️ No container provided, using fallback dimensions'); this.WORLD_WIDTH = this.BASE_WIDTH; this.WORLD_HEIGHT = this.BASE_HEIGHT; return; } const containerRect = this.container.getBoundingClientRect(); const containerWidth = containerRect.width || this.container.clientWidth || 800; const containerHeight = containerRect.height || this.container.clientHeight || 600; const targetAspectRatio = 16 / 9; const containerAspectRatio = containerWidth / containerHeight; if (containerAspectRatio > targetAspectRatio) { this.WORLD_HEIGHT = Math.min(containerHeight * 0.85, this.BASE_HEIGHT); this.WORLD_WIDTH = this.WORLD_HEIGHT * targetAspectRatio; } else { this.WORLD_WIDTH = Math.min(containerWidth * 0.85, this.BASE_WIDTH); this.WORLD_HEIGHT = this.WORLD_WIDTH / targetAspectRatio; } this.WORLD_WIDTH = Math.max(this.WORLD_WIDTH, 800); this.WORLD_HEIGHT = Math.max(this.WORLD_HEIGHT, 450); console.log(`📐 Canvas sized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9 aspect ratio)`); }
+    setupResponsiveCanvas() { if (this.app && this.app.view) { const canvas = this.app.view; canvas.style.display = 'block'; canvas.style.margin = '0 auto'; canvas.style.maxWidth = '100%'; canvas.style.maxHeight = '100%'; canvas.style.border = '2px solid #34495e'; canvas.style.borderRadius = '8px'; } }
+    setupResizeListener() { this.resizeHandler = () => { this.calculateCanvasSize(); if (this.app) { this.app.renderer.resize(this.WORLD_WIDTH, this.WORLD_HEIGHT); this.setupResponsiveCanvas(); } }; window.addEventListener('resize', this.resizeHandler); }
+    renderMap(mapData) { console.log('🗺️ Rendering office map...'); this.mapSprites.forEach(sprite => { this.mapLayer.removeChild(sprite); }); this.mapSprites = []; const background = new PIXI.Graphics(); background.beginFill(0x95a5a6); background.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT); background.endFill(); this.mapLayer.addChild(background); this.mapSprites.push(background); const walls = new PIXI.Graphics(); walls.beginFill(0x2c3e50); const wallThickness = 20; walls.drawRect(0, 0, this.WORLD_WIDTH, wallThickness); walls.drawRect(0, this.WORLD_HEIGHT - wallThickness, this.WORLD_WIDTH, wallThickness); walls.drawRect(0, 0, wallThickness, this.WORLD_HEIGHT); walls.drawRect(this.WORLD_WIDTH - wallThickness, 0, wallThickness, this.WORLD_HEIGHT); walls.endFill(); this.mapLayer.addChild(walls); this.mapSprites.push(walls); const deskPositions = [ { x: 100, y: 150, width: 120, height: 60 }, { x: 300, y: 150, width: 120, height: 60 }, { x: 500, y: 150, width: 120, height: 60 }, { x: 100, y: 350, width: 120, height: 60 }, { x: 300, y: 350, width: 120, height: 60 } ]; deskPositions.forEach((desk, index) => { const deskSprite = new PIXI.Graphics(); deskSprite.beginFill(0x8b4513); deskSprite.drawRect(desk.x, desk.y, desk.width, desk.height); deskSprite.endFill(); const deskLabel = new PIXI.Text(`Desk ${index + 1}`, { fontSize: 12, fill: 0xffffff, align: 'center' }); deskLabel.x = desk.x + desk.width / 2 - deskLabel.width / 2; deskLabel.y = desk.y + desk.height / 2 - deskLabel.height / 2; this.mapLayer.addChild(deskSprite); this.mapLayer.addChild(deskLabel); this.mapSprites.push(deskSprite, deskLabel); }); console.log('✅ Office map rendered with walls and desks'); }
+    async renderCharacter(character) { if (!this.isInitialized) { console.warn('❌ Cannot render character: renderer not initialized'); return; } if (this.characterSprites.has(character.id)) { this.removeCharacter(character.id); } try { let sprite; const texture = await PIXI.Texture.fromURL(character.spriteSheet); if (!texture || !texture.valid) { throw new Error('Texture failed to load or is invalid'); } const baseTexture = texture.baseTexture; const initialFrameRect = new PIXI.Rectangle( animationData.idle.directions.down.x, animationData.idle.directions.down.y, SPRITE_WIDTH, SPRITE_HEIGHT ); const frameTexture = new PIXI.Texture(baseTexture, initialFrameRect); sprite = new PIXI.Sprite(frameTexture); sprite.width = this.CHARACTER_WIDTH; sprite.height = this.CHARACTER_HEIGHT; sprite.anchor.set(0.5, 1.0); sprite.x = character.position?.x || 100; sprite.y = character.position?.y || 100; sprite.animationState = { name: 'idle', direction: 'down', frame: 0, timer: 0, }; sprite.characterId = character.id; this.characterLayer.addChild(sprite); this.characterSprites.set(character.id, sprite); console.log(`✅ Character rendered: ${character.name}`); } catch (error) { console.error(`❌ Failed to render character ${character.name}:`, error); } }
+    createSimpleCharacterSprite(character) { const graphics = new PIXI.Graphics(); graphics.beginFill(0x4a90e2); graphics.drawRect(-this.CHARACTER_WIDTH/2, -this.CHARACTER_HEIGHT, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT); graphics.endFill(); graphics.beginFill(0xfdbcb4); graphics.drawCircle(0, -this.CHARACTER_HEIGHT + 15, 12); graphics.endFill(); graphics.beginFill(0x000000); graphics.drawCircle(-4, -this.CHARACTER_HEIGHT + 12, 1); graphics.drawCircle(4, -this.CHARACTER_HEIGHT + 12, 1); graphics.endFill(); return graphics; }
+    updateCharacterPosition(characterId, x, y) { const sprite = this.characterSprites.get(characterId); if (sprite) { sprite.x = x; sprite.y = y; } }
 
-        graphics.beginFill(0xfdbcb4);
-        graphics.drawCircle(0, -this.CHARACTER_HEIGHT + 15, 12);
-        graphics.endFill();
-
-        graphics.beginFill(0x000000);
-        graphics.drawCircle(-4, -this.CHARACTER_HEIGHT + 12, 1);
-        graphics.drawCircle(4, -this.CHARACTER_HEIGHT + 12, 1);
-        graphics.endFill();
-
-        return graphics;
-    }
-
-    updateCharacterPosition(characterId, x, y) {
-        const sprite = this.characterSprites.get(characterId);
-        if (sprite) {
-            sprite.x = x;
-            sprite.y = y;
-        }
-    }
-
-    updateCharacterAnimation(characterId, actionState, facingDirection) {
+    /**
+     * MODIFIED: This function is now ONLY responsible for the ACTION state.
+     * The direction is handled separately by syncCharacterDirection.
+     * @param {string} characterId - Character ID
+     * @param {string} actionState - Action state ('idle', 'walking', etc.)
+     */
+    updateCharacterAnimation(characterId, actionState) {
         const sprite = this.characterSprites.get(characterId);
         if (!sprite) return;
 
@@ -488,22 +109,29 @@ export class Renderer {
             console.warn(`Animation '${actionState}' not found. Defaulting to 'idle'.`);
             actionState = 'idle';
         }
-
-        let newDirection = facingDirection;
-        if (!animationData[actionState].directions[newDirection]) {
-            newDirection = sprite.animationState.direction || 'down';
-            if (!animationData[actionState].directions[newDirection]) {
-                 newDirection = Object.keys(animationData[actionState].directions)[0];
-            }
-        }
         
-        const state = sprite.animationState;
-        if (state.name !== actionState || state.direction !== newDirection) {
-            state.name = actionState;
-            state.direction = newDirection;
-            state.frame = 0;
-            state.timer = 0;
-            this.updateSpriteVisualFrame(sprite); 
+        // Only update if the action itself has changed
+        if (sprite.animationState.name !== actionState) {
+            sprite.animationState.name = actionState;
+            sprite.animationState.frame = 0; // Reset frame for new action
+            sprite.animationState.timer = 0;
+        }
+    }
+
+    /**
+     * NEW: This function is the single source of truth for direction.
+     * It's called every frame by the game engine.
+     * @param {string} characterId 
+     * @param {string} facingDirection 
+     */
+    syncCharacterDirection(characterId, facingDirection) {
+        const sprite = this.characterSprites.get(characterId);
+        if (!sprite) return;
+
+        // Make sure the direction is valid for the current animation
+        const currentAnim = animationData[sprite.animationState.name];
+        if (currentAnim && currentAnim.directions[facingDirection]) {
+            sprite.animationState.direction = facingDirection;
         }
     }
 
@@ -548,6 +176,7 @@ export class Renderer {
         let directionData = anim.directions[state.direction];
         
         if (!directionData) {
+            // Fallback to the first available direction for that animation if current one is invalid
             directionData = anim.directions[Object.keys(anim.directions)[0]];
         }
 
@@ -563,63 +192,11 @@ export class Renderer {
         sprite.texture.updateUvs();
     }
     
-    removeCharacter(characterId) {
-        const sprite = this.characterSprites.get(characterId);
-        if (sprite) {
-            this.characterLayer.removeChild(sprite);
-            this.characterSprites.delete(characterId);
-        }
-    }
-
-    update() {
-        if (this.app && this.isInitialized) {
-            this.app.render();
-        }
-    }
-
-    destroy() {
-        if (this.resizeHandler) {
-            window.removeEventListener('resize', this.resizeHandler);
-        }
-
-        if (this.app) {
-            this.app.destroy(true);
-            this.app = null;
-        }
-        
-        this.characterSprites.clear();
-        this.preloadedTextures.clear();
-        this.isInitialized = false;
-        
-        if (USE_ENHANCED_SPRITES) {
-            console.log('🧹 Enhanced renderer destroyed and cleaned up');
-        } else {
-            console.log('🧹 Renderer destroyed and cleaned up');
-        }
-    }
-
-    getWorldBounds() {
-        return {
-            width: this.WORLD_WIDTH,
-            height: this.WORLD_HEIGHT,
-            aspectRatio: 16/9
-        };
-    }
-
-    getStatus() {
-        return {
-            isInitialized: this.isInitialized,
-            hasApp: !!this.app,
-            hasContainer: !!this.container,
-            characterCount: this.characterSprites.size,
-            enhancedSpritesEnabled: USE_ENHANCED_SPRITES,
-            preloadedTextures: this.preloadedTextures.size,
-            worldBounds: this.getWorldBounds(),
-            canvasSize: `${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`,
-            aspectRatio: '16:9',
-            textureCache: USE_ENHANCED_SPRITES ? 
-                `${this.preloadedTextures.size} textures cached` : 
-                'Texture caching dormant'
-        };
-    }
+    // ... (removeCharacter, update, destroy, and other methods are unchanged) ...
+    
+    removeCharacter(characterId) { const sprite = this.characterSprites.get(characterId); if (sprite) { this.characterLayer.removeChild(sprite); this.characterSprites.delete(characterId); } }
+    update() { if (this.app && this.isInitialized) { this.app.render(); } }
+    destroy() { if (this.resizeHandler) { window.removeEventListener('resize', this.resizeHandler); } if (this.app) { this.app.destroy(true); this.app = null; } this.characterSprites.clear(); this.preloadedTextures.clear(); this.isInitialized = false; if (USE_ENHANCED_SPRITES) { console.log('🧹 Enhanced renderer destroyed and cleaned up'); } else { console.log('🧹 Renderer destroyed and cleaned up'); } }
+    getWorldBounds() { return { width: this.WORLD_WIDTH, height: this.WORLD_HEIGHT, aspectRatio: 16/9 }; }
+    getStatus() { return { isInitialized: this.isInitialized, hasApp: !!this.app, hasContainer: !!this.container, characterCount: this.characterSprites.size, enhancedSpritesEnabled: USE_ENHANCED_SPRITES, preloadedTextures: this.preloadedTextures.size, worldBounds: this.getWorldBounds(), canvasSize: `${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`, aspectRatio: '16:9', textureCache: USE_ENHANCED_SPRITES ? `${this.preloadedTextures.size} textures cached` : 'Texture caching dormant' }; }
 }
