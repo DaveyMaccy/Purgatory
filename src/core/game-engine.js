@@ -1,7 +1,7 @@
 // ============================================
 // FILE: src/core/game-engine.js
 // ============================================
-// REPLACEMENT - Adds the missing animation update call.
+// REPLACEMENT - Fixes animation acceleration when tab is inactive.
 
 /**
  * GameEngine Class - Central game coordination
@@ -11,7 +11,7 @@
  * - Time management
  * - State coordination
  * * FINAL FIX:
- * - Includes BOTH the direction sync and the animation frame update calls.
+ * - Clamps deltaTime to prevent animation speed-up after tab inactivity.
  */
 
 import { World } from './world/world.js';
@@ -70,8 +70,18 @@ export class GameEngine {
     gameLoop(currentTime) {
         if (!this.isRunning) return;
         
-        const deltaTime = currentTime - this.lastFrameTime;
+        // Calculate delta time
+        let deltaTime = currentTime - this.lastFrameTime;
         this.lastFrameTime = currentTime;
+
+        // --- NEW: Clamp deltaTime ---
+        // Prevents massive spikes when the tab is inactive.
+        // If more than 100ms (0.1s) has passed, treat it as if only 100ms passed.
+        const MAX_DELTA_TIME = 100;
+        if (deltaTime > MAX_DELTA_TIME) {
+            deltaTime = MAX_DELTA_TIME;
+        }
+        // --- END FIX ---
         
         this.updateFPS(currentTime);
         
@@ -102,7 +112,6 @@ export class GameEngine {
             const characters = this.characterManager.characters;
             
             for (const character of characters) {
-                // This function updates character.position AND character.facingDirection
                 this.movementSystem.moveCharacter(character, this.world, deltaTime / 1000);
                 
                 if (this.renderer) {
@@ -114,7 +123,6 @@ export class GameEngine {
 
         // Run the animation frame-by-frame updates
         if (this.renderer) {
-            // THIS LINE WAS MISSING. It makes the animations play.
             this.renderer.updateAllCharacterAnimations(deltaTime / 1000);
         }
     }
@@ -125,8 +133,6 @@ export class GameEngine {
         }
     }
     
-    // ... (rest of the file is unchanged) ...
-
     updateFPS(currentTime) {
         this.frameCount++;
         
