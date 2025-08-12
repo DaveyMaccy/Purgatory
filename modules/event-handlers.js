@@ -24,22 +24,7 @@ class EventHandlers {
             characters = window.characters || [];
         }
         
-       // FIXED: Player character checkbox - enforce single player (EXACT from Phase-3)
-        const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
-        if (isPlayerCheckbox) {
-            isPlayerCheckbox.addEventListener('change', function() {
-                if (this.checked) {
-                    // Uncheck all other player checkboxes UI and data
-                    characters.forEach((char, otherIndex) => {
-                        if (otherIndex !== index) {
-                            char.isPlayer = false;
-                            const otherCheckbox = document.getElementById(`isPlayer-${otherIndex}`);
-                            if (otherCheckbox) {
-                                otherCheckbox.checked = false;
-                            }
-                        }
-                    });
-               // BULLETPROOF: Player character checkbox - enforce single player
+       // BULLETPROOF: Player character checkbox - enforce single player
         const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
         if (isPlayerCheckbox) {
             isPlayerCheckbox.addEventListener('change', function() {
@@ -77,7 +62,6 @@ class EventHandlers {
                     charactersArray[index].isPlayer = false;
                 }
             });
-        }
         }
 
         // Name generation button (EXACT from Phase-3)
@@ -316,6 +300,12 @@ class EventHandlers {
                     } else {
                         console.warn(`⚠️ Character ${index} not found for custom portrait`);
                     }
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
 
     /**
      * Clear custom portrait (EXACT from Phase-3)
@@ -400,12 +390,6 @@ class EventHandlers {
         // Update checkbox states to grey out/enable as needed
         requestAnimationFrame(() => {
             EventHandlers.updateCheckboxStates(index, tagType, maxLimit, charactersArray);
-        });
-    }
-        
-        // BULLETPROOF FIX: Use requestAnimationFrame instead of setTimeout for UI updates
-        requestAnimationFrame(() => {
-            EventHandlers.updateCheckboxStates(index, tagType, maxLimit, characters);
         });
     }
 
