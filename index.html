@@ -262,19 +262,21 @@
                     <div class="flex items-center gap-3"><i class="ph-fill ph-fire text-red-500 text-xl"></i><div class="w-full"><div class="flex justify-between mb-1 text-xs font-semibold"><span>Stress</span><span id="stress-value">0%</span></div><div class="stat-bar-container bg-gray-200 rounded-full h-2"><div id="stress-bar" class="stat-bar-fill bg-red-500 h-2 rounded-full" style="width: 0%;"></div></div></div></div>
                 </div>
             </div>
-           <div class="widget flex-grow flex flex-col">
-                <div class="tabs flex items-center gap-2 mb-2">
-                    <button class="tab-link active tab-inventory" onclick="openTab(event, 'inventory')" title="Inventory">
-                        <i class="ph ph-bag text-lg"></i>
-                    </button>
-                    <button class="tab-link tab-tasks" onclick="openTab(event, 'tasks')" title="Tasks">
-                        <i class="ph ph-list-checks text-lg"></i>
-                    </button>
-                    <button class="tab-link tab-relationships" onclick="openTab(event, 'relationships')" title="Relationships">
-                        <i class="ph ph-users text-lg"></i>
-                    </button>
+       <div class="widget flex-grow flex flex-col tab-widget">
+                <div class="tab-widget-header">
+                    <div class="tabs flex items-center gap-2">
+                        <button class="tab-link active tab-inventory" onclick="openTab(event, 'inventory')" title="Inventory">
+                            <i class="ph ph-bag text-lg"></i>
+                        </button>
+                        <button class="tab-link tab-tasks" onclick="openTab(event, 'tasks')" title="Tasks">
+                            <i class="ph ph-list-checks text-lg"></i>
+                        </button>
+                        <button class="tab-link tab-relationships" onclick="openTab(event, 'relationships')" title="Relationships">
+                            <i class="ph ph-users text-lg"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="flex-grow overflow-y-auto">
+                <div class="tab-widget-content flex-grow overflow-y-auto">
                     <div id="inventory" class="tab-content active"><ul id="inventory-list" class="space-y-2 text-sm"></ul></div>
                     <div id="tasks" class="tab-content"><div id="task-content"></div></div>
                     <div id="relationships" class="tab-content"><ul id="relationships-list" class="space-y-3"></ul></div>
@@ -304,5 +306,6 @@
     <script type="module" src="character-creator.js"></script>
 </body>
 </html>
+
 
 
