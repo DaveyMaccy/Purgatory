@@ -1,12 +1,12 @@
 /**
- * FIXED UI Updater - Complete implementation for Stage 3: Character Status Integration
- * Handles all status panel updates, real-time clock, and character data binding
- * FIXED: Proper tab content handling and relationships display
+ * BULLETPROOF UI Updater - Complete implementation
+ * Handles all status panel updates without spam
  */
 export class UIUpdater {
     constructor(characterManager) {
         this.characterManager = characterManager;
         this.lastFocusCharacter = null;
+        this.lastPortraitSrc = null; // Track portrait changes
         this.clockInterval = null;
         
         // Start the real-time clock
@@ -32,13 +32,12 @@ export class UIUpdater {
             }
         };
         
-        // Update immediately and then every second
         updateClock();
         this.clockInterval = setInterval(updateClock, 1000);
     }
 
     /**
-     * Stop the clock (cleanup)
+     * Stop the clock
      */
     stopClock() {
         if (this.clockInterval) {
@@ -48,29 +47,19 @@ export class UIUpdater {
     }
 
     /**
-     * Update all UI elements for the given character
-     * This is the main UI sync function called from the game loop
-     * @param {Character} character - The focus character to display
+     * BULLETPROOF: Main UI update function
      */
-   updateUI(character) {
+    updateUI(character) {
         if (!character) {
             console.warn('⚠️ No character provided to updateUI');
             return;
         }
-        
-        // BULLETPROOF: Update UI components in dependency order
+
         try {
             this.updateCharacterBasics(character);
             this.updateStatusBars(character);
             this.updatePortrait(character);
-            
-            // BULLETPROOF: Always update character tab if it exists
-            if (this.updateCharacterTab) {
-                this.updateCharacterTab(character);
-            } else {
-                console.warn('⚠️ updateCharacterTab method not found');
-            }
-            
+            this.updateCharacterTab(character);
             this.updateInventoryTab(character);
             this.updateTasksTab(character);
             this.updateRelationshipsTab(character);
@@ -80,7 +69,6 @@ export class UIUpdater {
             
         } catch (error) {
             console.error('❌ Error updating UI:', error);
-            console.error('Character data:', character);
         }
     }
 
@@ -96,7 +84,7 @@ export class UIUpdater {
     }
 
     /**
-     * Update all status bars (energy, hunger, social, stress)
+     * Update all status bars
      */
     updateStatusBars(character) {
         if (!character.needs) return;
@@ -109,8 +97,6 @@ export class UIUpdater {
 
     /**
      * Update a single status bar
-     * @param {string} statName - The stat name (energy, hunger, social, stress)
-     * @param {number} value - The value (1-10, converted to percentage)
      */
     updateStatusBar(statName, value) {
         const percentage = Math.round((value / 10) * 100);
@@ -127,150 +113,109 @@ export class UIUpdater {
         }
     }
 
-   /**
-     * BULLETPROOF: Update character portrait with absolute priority system
+    /**
+     * BULLETPROOF: Only update portrait when it actually changes
      */
     updatePortrait(character) {
         const portraitCanvas = document.getElementById('player-portrait-canvas');
-        if (!portraitCanvas) return;
+        if (!portraitCanvas || !character) return;
+        
+        // CHECK IF PORTRAIT ACTUALLY CHANGED
+        const newPortraitSrc = character.customPortrait || character.portrait || character.spriteSheet;
+        if (this.lastPortraitSrc === newPortraitSrc) return; // NO CHANGE, DON'T REDRAW
+        
+        this.lastPortraitSrc = newPortraitSrc;
         
         const ctx = portraitCanvas.getContext('2d');
-        
-        // Clear the canvas
         ctx.clearRect(0, 0, portraitCanvas.width, portraitCanvas.height);
         
-        // BULLETPROOF PRIORITY SYSTEM: Check each source in absolute priority order
-        if (character.customPortrait && character.customPortrait.trim() !== '') {
-            // #1 PRIORITY: Custom portrait - ALWAYS WINS
+        if (newPortraitSrc) {
             const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
-                console.log('✅ Custom portrait loaded successfully');
+                console.log('✅ Portrait updated successfully');
             };
             img.onerror = () => {
-                console.warn('⚠️ Custom portrait failed to load, falling back');
-                this.drawSpritePortrait(ctx, portraitCanvas, character);
+                console.warn('⚠️ Portrait failed to load, drawing placeholder');
+                this.drawPortraitPlaceholder(ctx, portraitCanvas, character);
             };
-            img.src = character.customPortrait;
-            return; // ABSOLUTE EXIT - nothing else runs
-        }
-        
-        if (character.portrait && character.portrait.trim() !== '') {
-            // #2 PRIORITY: Generated portrait
-            const img = new Image();
-            img.onload = () => {
-                ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
-                console.log('✅ Generated portrait loaded successfully');
-            };
-            img.onerror = () => {
-                console.warn('⚠️ Generated portrait failed to load, falling back');
-                this.drawSpritePortrait(ctx, portraitCanvas, character);
-            };
-            img.src = character.portrait;
-            return; // ABSOLUTE EXIT - sprite won't override
-        }
-        
-        if (character.spriteSheet) {
-            // Fallback to sprite sheet if no portraits available
-            const img = new Image();
-            img.onload = () => {
-                // Draw first frame of sprite as portrait
-                ctx.drawImage(img, 0, 0, 48, 96, 0, 0, portraitCanvas.width, portraitCanvas.height);
-            };
-            img.src = character.spriteSheet;
+            img.src = newPortraitSrc;
         } else {
-            // Draw a simple placeholder with character's first initial
-            ctx.fillStyle = '#4f46e5';
-            ctx.fillRect(0, 0, portraitCanvas.width, portraitCanvas.height);
-            
-            ctx.fillStyle = 'white';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(character.name.charAt(0).toUpperCase(), 
-                portraitCanvas.width / 2, portraitCanvas.height / 2 + 6);
+            this.drawPortraitPlaceholder(ctx, portraitCanvas, character);
         }
     }
 
     /**
-     * Draw sprite as portrait fallback
+     * Draw placeholder portrait
      */
-    drawSpritePortrait(ctx, canvas, character) {
-        if (character.spriteSheet) {
-            const img = new Image();
-            img.onload = () => {
-                // Draw first frame of sprite as portrait
-                ctx.drawImage(img, 0, 0, 48, 96, 0, 0, canvas.width, canvas.height);
-            };
-            img.src = character.spriteSheet;
-        } else {
-            // Final fallback - draw placeholder
-            ctx.fillStyle = '#4f46e5';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'white';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const initial = character.name ? character.name.charAt(0).toUpperCase() : '?';
-            ctx.fillText(initial, canvas.width / 2, canvas.height / 2);
-        }
+    drawPortraitPlaceholder(ctx, canvas, character) {
+        ctx.fillStyle = '#4f46e5';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const initial = character.name ? character.name.charAt(0).toUpperCase() : '?';
+        ctx.fillText(initial, canvas.width / 2, canvas.height / 2);
     }
+
     /**
-     * Update character stats tab content
-     * @param {Object} character - Character object
+     * BULLETPROOF: Update character stats tab
      */
     updateCharacterTab(character) {
-        if (!character) return;
-
         const characterStats = document.getElementById('character-stats');
-        if (!characterStats) return;
-
+        if (!characterStats || !character) return;
+        
         try {
-            // Clear existing content
             characterStats.innerHTML = '';
             
-            // Physical Attributes
-            const physicalSection = document.createElement('div');
-            physicalSection.className = 'mb-4';
-            physicalSection.innerHTML = `
-                <h4 class="font-semibold text-base mb-2 text-purple-800">Physical Attributes</h4>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div><span class="font-medium">Age:</span> ${character.physicalAttributes?.age || 'N/A'}</div>
-                    <div><span class="font-medium">Height:</span> ${character.physicalAttributes?.height || 'N/A'}cm</div>
-                    <div><span class="font-medium">Weight:</span> ${character.physicalAttributes?.weight || 'N/A'}kg</div>
-                    <div><span class="font-medium">Build:</span> ${character.physicalAttributes?.build || 'N/A'}</div>
-                    <div><span class="font-medium">Looks:</span> ${character.physicalAttributes?.looks || 'N/A'}/10</div>
-                    <div><span class="font-medium">Gender:</span> ${character.physicalAttributes?.gender || 'N/A'}</div>
-                </div>
-            `;
-            characterStats.appendChild(physicalSection);
+            // Physical Attributes (SAFE ACCESS)
+            if (character.physicalAttributes) {
+                const physicalSection = document.createElement('div');
+                physicalSection.className = 'mb-4';
+                physicalSection.innerHTML = `
+                    <h4 class="font-semibold text-base mb-2 text-purple-800">Physical Attributes</h4>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div><span class="font-medium">Age:</span> ${character.physicalAttributes.age || 'N/A'}</div>
+                        <div><span class="font-medium">Height:</span> ${character.physicalAttributes.height || 'N/A'}cm</div>
+                        <div><span class="font-medium">Weight:</span> ${character.physicalAttributes.weight || 'N/A'}kg</div>
+                        <div><span class="font-medium">Build:</span> ${character.physicalAttributes.build || 'N/A'}</div>
+                        <div><span class="font-medium">Looks:</span> ${character.physicalAttributes.looks || 'N/A'}/10</div>
+                        <div><span class="font-medium">Gender:</span> ${character.physicalAttributes.gender || 'N/A'}</div>
+                    </div>
+                `;
+                characterStats.appendChild(physicalSection);
+            }
             
-            // Skills
-            const skillsSection = document.createElement('div');
-            skillsSection.className = 'mb-4';
-            skillsSection.innerHTML = `
-                <h4 class="font-semibold text-base mb-2 text-blue-800">Skills</h4>
-                <div class="space-y-1 text-xs">
-                    <div class="flex justify-between">
-                        <span>Competence:</span>
-                        <span class="font-medium">${character.skills?.competence || 0}/10</span>
+            // Skills (SAFE ACCESS)  
+            if (character.skills) {
+                const skillsSection = document.createElement('div');
+                skillsSection.className = 'mb-4';
+                skillsSection.innerHTML = `
+                    <h4 class="font-semibold text-base mb-2 text-blue-800">Skills</h4>
+                    <div class="space-y-1 text-xs">
+                        <div class="flex justify-between">
+                            <span>Competence:</span>
+                            <span class="font-medium">${character.skills.competence || 0}/10</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Laziness:</span>
+                            <span class="font-medium">${character.skills.laziness || 0}/10</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Charisma:</span>
+                            <span class="font-medium">${character.skills.charisma || 0}/10</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Leadership:</span>
+                            <span class="font-medium">${character.skills.leadership || 0}/10</span>
+                        </div>
                     </div>
-                    <div class="flex justify-between">
-                        <span>Laziness:</span>
-                        <span class="font-medium">${character.skills?.laziness || 0}/10</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Charisma:</span>
-                        <span class="font-medium">${character.skills?.charisma || 0}/10</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Leadership:</span>
-                        <span class="font-medium">${character.skills?.leadership || 0}/10</span>
-                    </div>
-                </div>
-            `;
-            characterStats.appendChild(skillsSection);
+                `;
+                characterStats.appendChild(skillsSection);
+            }
             
-            // Personality Tags
+            // Personality Tags (SAFE ACCESS)
             if (character.personalityTags && character.personalityTags.length > 0) {
                 const personalitySection = document.createElement('div');
                 personalitySection.className = 'mb-4';
@@ -291,37 +236,12 @@ export class UIUpdater {
     }
 
     /**
-     * Add chat message to chat log
-     * @param {string} message - Message to add
-     * @param {string} type - Message type (system, character, player)
-     */
-    addChatMessage(message, type = 'system') {
-        const chatLog = document.getElementById('chat-log');
-        if (!chatLog) return;
-
-        try {
-            const messageElement = document.createElement('div');
-            messageElement.className = `chat-message chat-${type}`;
-            messageElement.textContent = message;
-            
-            chatLog.appendChild(messageElement);
-            
-            // Auto-scroll to bottom
-            chatLog.scrollTop = chatLog.scrollHeight;
-            
-        } catch (error) {
-            console.error('❌ Failed to add chat message:', error);
-        }
-    }
-
-    /**
-     * FIXED: Update the Inventory tab content
+     * BULLETPROOF: Handle both string and object inventory items
      */
     updateInventoryTab(character) {
         const inventoryList = document.getElementById('inventory-list');
         if (!inventoryList) return;
         
-        // Clear existing content
         inventoryList.innerHTML = '';
         
         // Add held item if any
@@ -332,23 +252,25 @@ export class UIUpdater {
             inventoryList.appendChild(li);
         }
         
-        // Add inventory items
         if (character.inventory && character.inventory.length > 0) {
             character.inventory.forEach(item => {
                 const li = document.createElement('li');
                 li.className = 'p-2 bg-gray-50 border border-gray-200 rounded text-sm';
                 
-                // FIXED: Handle both string items (from character creator) and object items (from game)
+                // HANDLE BOTH STRING AND OBJECT FORMATS
                 if (typeof item === 'string') {
                     li.textContent = item;
-                } else {
+                } else if (item && item.originalString) {
+                    li.textContent = item.originalString;
+                } else if (item) {
                     li.textContent = item.name || item.type || 'Unknown Item';
+                } else {
+                    li.textContent = 'Unknown Item';
                 }
                 
                 inventoryList.appendChild(li);
             });
         } else if (!character.heldItem) {
-            // Show empty state
             const li = document.createElement('li');
             li.className = 'p-2 text-gray-500 italic text-sm';
             li.textContent = 'No items';
@@ -357,13 +279,12 @@ export class UIUpdater {
     }
 
     /**
-     * FIXED: Update the Tasks tab content
+     * Update the Tasks tab content
      */
     updateTasksTab(character) {
         const taskContent = document.getElementById('task-content');
         if (!taskContent) return;
         
-        // Clear existing content
         taskContent.innerHTML = '';
         
         if (character.assignedTask) {
@@ -435,16 +356,15 @@ export class UIUpdater {
     }
 
     /**
-     * FIXED: Update the Relationships tab content with all characters
+     * BULLETPROOF: Update relationships with all characters
      */
     updateRelationshipsTab(character) {
         const relationshipsList = document.getElementById('relationships-list');
         if (!relationshipsList) return;
         
-        // Clear existing content
         relationshipsList.innerHTML = '';
         
-        // FIXED: Get all other characters from character manager
+        // BULLETPROOF: Get all other characters from character manager
         const allCharacters = this.characterManager.characters;
         const otherCharacters = allCharacters.filter(c => c.id !== character.id);
         
@@ -456,7 +376,6 @@ export class UIUpdater {
             return;
         }
         
-        // FIXED: Show all characters, not just 3
         otherCharacters.forEach(otherChar => {
             const relationshipScore = character.relationships[otherChar.id] || 50; // Default neutral
             const li = document.createElement('li');
@@ -488,8 +407,6 @@ export class UIUpdater {
 
     /**
      * Get color for relationship score
-     * @param {number} score - Relationship score (0-100)
-     * @returns {string} CSS color
      */
     getRelationshipColor(score) {
         if (score >= 80) return '#10b981'; // green-500
@@ -500,18 +417,35 @@ export class UIUpdater {
     }
 
     /**
-     * Update character UI elements (legacy method for compatibility)
-     * @param {Character} character - The character to update
-     * @param {Array} allCharacters - All characters in the game
+     * Add chat message to chat log
+     */
+    addChatMessage(message, type = 'system') {
+        const chatLog = document.getElementById('chat-log');
+        if (!chatLog) return;
+
+        try {
+            const messageElement = document.createElement('div');
+            messageElement.className = `chat-message chat-${type}`;
+            messageElement.textContent = message;
+            
+            chatLog.appendChild(messageElement);
+            
+            // Auto-scroll to bottom
+            chatLog.scrollTop = chatLog.scrollHeight;
+            
+        } catch (error) {
+            console.error('❌ Failed to add chat message:', error);
+        }
+    }
+
+    /**
+     * Legacy methods for compatibility
      */
     updateCharacterUI(character, allCharacters) {
         this.updateUI(character);
         console.log(`UI updated for ${character.name}`);
     }
 
-    /**
-     * Update all characters' UI (legacy method)
-     */
     updateAllCharactersUI() {
         const playerCharacter = this.characterManager.getPlayerCharacter();
         if (playerCharacter) {
@@ -519,36 +453,25 @@ export class UIUpdater {
         }
     }
     
-    /**
-     * Subscribe to character state changes
-     * @param {Character} character - The character to observe
-     */
     subscribeToCharacter(character) {
-        character.addObserver(this);
+        if (character.addObserver) {
+            character.addObserver(this);
+        }
     }
     
-    /**
-     * Unsubscribe from character state changes
-     * @param {Character} character - The character to stop observing
-     */
     unsubscribeFromCharacter(character) {
-        character.removeObserver(this);
+        if (character.removeObserver) {
+            character.removeObserver(this);
+        }
     }
     
-    /**
-     * Handle character state changes (Observer pattern)
-     * @param {Character} character - The character whose state changed
-     * @param {string} property - The property that changed
-     */
     onCharacterStateChange(character, property) {
-        // Only update UI for properties that affect the display
         const uiRelevantProperties = [
             'needs', 'mood', 'actionState', 'assignedTask', 'relationships', 
             'currentAction', 'heldItem', 'inventory', 'longTermGoal'
         ];
         
         if (uiRelevantProperties.includes(property)) {
-            // Only update if this is the currently displayed character
             if (this.lastFocusCharacter && this.lastFocusCharacter.id === character.id) {
                 this.updateUI(character);
             }
@@ -561,7 +484,6 @@ export class UIUpdater {
     destroy() {
         this.stopClock();
         
-        // Unsubscribe from all characters
         if (this.characterManager && this.characterManager.characters) {
             this.characterManager.characters.forEach(character => {
                 this.unsubscribeFromCharacter(character);
@@ -569,7 +491,3 @@ export class UIUpdater {
         }
     }
 }
-
-
-
-
