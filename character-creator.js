@@ -601,7 +601,6 @@ function handleStartSimulation() {
         alert(`Failed to start simulation: ${error.message}`);
     }
 }
-
 /**
  * Format characters for game engine with custom portrait priority - EXACT from Phase-3
  */
