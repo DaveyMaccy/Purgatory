@@ -35,8 +35,11 @@ let globalAPIKey = 'sk-placeholder-key-for-development-testing-only';
 /**
  * Initialize the character creator system - EXACT from Phase-3 but modular
  */
+/**
+ * BULLETPROOF: Initialize character creator with proper setup order
+ */
 function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
-    console.log('🎭 Initializing enhanced character creator with complete UI...');
+    console.log('🎭 Initializing bulletproof character creator...');
     
     try {
         officeType = selectedOfficeType;
@@ -52,28 +55,35 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
         // Create global API key section
         createGlobalAPIKeySection();
         
-        // Create office type selector
-        createOfficeTypeSelector();
-        
-        // Clear containers
-        tabsContainer.innerHTML = '';
-        panelsContainer.innerHTML = '';
+        // STEP 1: CREATE CHARACTERS FIRST
         characters.length = 0;
-        
-        // Create initial characters (start with 3)
-        const initialCharacterCount = 3;
-        for (let i = 0; i < initialCharacterCount; i++) {
+        for (let i = 0; i < 3; i++) {
             characters.push(createCharacter(i));
         }
-        
-        // Set first character as player
         characters[0].isPlayer = true;
         
-        // Generate enhanced UI for all characters
+        // STEP 2: SET GLOBAL REFERENCE IMMEDIATELY
+        window.characters = characters;
+        
+        // STEP 3: THEN CREATE UI
+        tabsContainer.innerHTML = '';
+        panelsContainer.innerHTML = '';
+        
         characters.forEach((character, index) => {
             UIGenerator.createCharacterTab(index, character, tabsContainer);
             UIGenerator.createCharacterPanel(index, character, panelsContainer, officeType);
         });
+        
+        // STEP 4: INITIALIZE ALL CHECKBOX STATES WITH PROPER DELAY
+        setTimeout(() => {
+            import('./event-handler-shield.js').then(({ EventHandlerShield }) => {
+                characters.forEach((char, index) => {
+                    EventHandlerShield.safeUpdateCheckboxStates(index, 'personalityTags', 6);
+                    EventHandlerShield.safeUpdateCheckboxStates(index, 'inventory', 3);
+                    EventHandlerShield.safeUpdateCheckboxStates(index, 'deskItems', 2);
+                });
+            });
+        }, 200);
         
         // Set first tab as active
         switchToTab(0);
@@ -81,10 +91,7 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
         // Initialize buttons
         initializeCharacterCreatorButtons();
         
-        // Make characters available globally for event handlers
-        window.characters = characters;
-        
-        console.log('✅ Enhanced character creator initialized successfully');
+        console.log('✅ Bulletproof character creator initialized successfully');
         
     } catch (error) {
         console.error('❌ Character creator initialization failed:', error);
@@ -425,6 +432,9 @@ function switchToTab(index) {
 /**
  * Update characters from all form inputs - EXACT from Phase-3
  */
+/**
+ * BULLETPROOF: Update characters from ALL form inputs including checkboxes
+ */
 function updateCharactersFromForms() {
     characters.forEach((char, index) => {
         // Basic info
@@ -449,6 +459,32 @@ function updateCharactersFromForms() {
                 char.physicalAttributes[attr] = parseInt(slider.value);
             }
         });
+        
+        // Skills from sliders
+        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
+            const slider = document.getElementById(`${skill}-${index}`);
+            if (slider) {
+                char.skills[skill] = parseInt(slider.value);
+            }
+        });
+        
+        // BULLETPROOF: Capture ALL checkbox data
+        // Personality tags
+        const personalityCheckboxes = document.querySelectorAll(`input[id^="tags-${index}-"]:checked`);
+        char.personalityTags = Array.from(personalityCheckboxes).map(cb => cb.value);
+        
+        // Inventory items  
+        const inventoryCheckboxes = document.querySelectorAll(`input[id^="inventory-item-${index}-"]:checked`);
+        char.inventory = Array.from(inventoryCheckboxes).map(cb => cb.value);
+        
+        // Desk items
+        const deskCheckboxes = document.querySelectorAll(`input[id^="desk-item-${index}-"]:checked`);
+        char.deskItems = Array.from(deskCheckboxes).map(cb => cb.value);
+    });
+    
+    // Update global reference
+    window.characters = characters;
+}
         
         // Skills from sliders
         ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
@@ -569,14 +605,48 @@ function handleStartSimulation() {
 /**
  * Format characters for game engine with custom portrait priority - EXACT from Phase-3
  */
+/**
+ * BULLETPROOF: Format characters for game engine preserving ALL data
+ */
 function formatCharactersForGame() {
     return characters.map(char => ({
+        // PRESERVE ALL ORIGINAL DATA
         ...char,
-        // Use custom portrait if available, otherwise use sprite portrait
-        portrait: char.customPortrait || char.portrait,
-        // Use individual API key if set, otherwise use global for NPCs
-        apiKey: char.apiKey || (char.isPlayer ? '' : globalAPIKey),
-        // Game engine required fields
+        
+        // CONVERT INVENTORY TO MIXED FORMAT FOR UI COMPATIBILITY
+        inventory: (char.inventory || []).map(item => {
+            if (typeof item === 'string') {
+                return {
+                    name: item,
+                    type: item,
+                    id: `${char.id}_${item}`,
+                    originalString: item
+                };
+            }
+            return item;
+        }),
+        
+        // ENSURE NEEDS OBJECT EXISTS
+        needs: char.needs || {
+            energy: 8,
+            hunger: 6, 
+            social: 7,
+            stress: 3
+        },
+        
+        // PRESERVE ALL CHARACTER CREATOR DATA
+        physicalAttributes: char.physicalAttributes || {},
+        skills: char.skills || {},
+        personalityTags: char.personalityTags || [],
+        deskItems: char.deskItems || [],
+        
+        // ENSURE RELATIONSHIPS EXIST
+        relationships: char.relationships || {},
+        
+        // PORTRAIT PRIORITY: custom > generated > sprite
+        portrait: char.customPortrait || char.portrait || char.spriteSheet,
+        
+        // GAME ENGINE REQUIRED FIELDS
         position: { x: 0, y: 0 },
         actionState: 'idle',
         mood: 'Neutral',
@@ -592,14 +662,7 @@ function formatCharactersForGame() {
         longTermMemory: [],
         longTermGoal: null,
         assignedTask: null,
-        pixiArmature: null,
-        // Initialize relationships with other characters
-        relationships: characters.reduce((rel, otherChar) => {
-            if (otherChar.id !== char.id) {
-                rel[otherChar.id] = 50; // Neutral starting relationship
-            }
-            return rel;
-        }, {})
+        pixiArmature: null
     }));
 }
 
