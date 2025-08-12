@@ -10,7 +10,7 @@
  * - Created an 'updateAllCharacterAnimations' method to be called in the main game loop.
  * - Rewrote 'updateCharacterAnimation' and 'updateSpriteFrame' to use the new system.
  * - Preserved all existing functionality (preloading, map rendering, etc.).
- * - CORRECTED all typos in the 'punch' animation definition.
+ * - CORRECTED y-coordinates for 'walking' and 'sit' animations.
  */
 
 // DORMANT CONTROL FLAG - Set to true when ready to enable enhanced sprites
@@ -21,9 +21,8 @@ const USE_ENHANCED_SPRITES = true;
 const SPRITE_WIDTH = 48;
 const SPRITE_HEIGHT = 96;
 
-// NEW: The Animation Data Map
+// NEW: The Animation Data Map (Corrected Version)
 // This is the "brain" that tells the renderer where to find each animation on the sprite sheet.
-// It's based on your detailed breakdown.
 // 'y' and 'x' are the top-left pixel coordinates for the start of an animation sequence.
 const animationData = {
     'idle': {
@@ -42,10 +41,11 @@ const animationData = {
         loop: true,
         frameSpeed: 0.1,
         directions: {
-            'up':    { y: 3 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'left':  { y: 3 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
-            'right': { y: 3 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
-            'down':  { y: 3 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
+            // CORRECTED: y-coordinate changed from 3 to 2
+            'up':    { y: 2 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'left':  { y: 2 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
+            'right': { y: 2 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
+            'down':  { y: 2 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
     },
     'sit': {
@@ -53,8 +53,9 @@ const animationData = {
         loop: false, // Sits once and holds the last frame
         frameSpeed: 0.1,
         directions: {
-            'right': { y: 5 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'left':  { y: 5 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH }
+            // CORRECTED: y-coordinate changed from 5 to 4
+            'right': { y: 4 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'left':  { y: 4 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH }
             // 'up' and 'down' are not available for this animation
         }
     },
