@@ -5,6 +5,7 @@
  */
 
 // Import modular components
+import { EventHandlerShield } from './modules/event-handler-shield.js';
 import { 
     JOB_ROLES_BY_OFFICE,
     MIN_CHARACTERS,
@@ -75,15 +76,13 @@ function initializeCharacterCreator(selectedOfficeType = 'Game Studio') {
         });
         
         // STEP 4: INITIALIZE ALL CHECKBOX STATES WITH PROPER DELAY
-        setTimeout(() => {
-            import('./event-handler-shield.js').then(({ EventHandlerShield }) => {
-                characters.forEach((char, index) => {
-                    EventHandlerShield.safeUpdateCheckboxStates(index, 'personalityTags', 6);
-                    EventHandlerShield.safeUpdateCheckboxStates(index, 'inventory', 3);
-                    EventHandlerShield.safeUpdateCheckboxStates(index, 'deskItems', 2);
-                });
-            });
-        }, 200);
+       setTimeout(() => {
+    characters.forEach((char, index) => {
+        EventHandlerShield.safeUpdateCheckboxStates(index, 'personalityTags', 6);
+        EventHandlerShield.safeUpdateCheckboxStates(index, 'inventory', 3);
+        EventHandlerShield.safeUpdateCheckboxStates(index, 'deskItems', 2);
+    });
+}, 200);
         
         // Set first tab as active
         switchToTab(0);
@@ -484,16 +483,6 @@ function updateCharactersFromForms() {
     
     // Update global reference
     window.characters = characters;
-}
-        
-        // Skills from sliders
-        ['competence', 'laziness', 'charisma', 'leadership'].forEach(skill => {
-            const slider = document.getElementById(`${skill}-${index}`);
-            if (slider) {
-                char.skills[skill] = parseInt(slider.value);
-            }
-        );
-    );
 }
 
 /**
