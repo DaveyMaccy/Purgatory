@@ -211,10 +211,18 @@
             overflow: hidden;
         }
 
-        .tab-widget-header {
+       .tab-widget-header {
             background: linear-gradient(90deg, var(--widget-bg-color) 0%, var(--panel-bg-color) 100%);
             padding: 12px;
             border-bottom: 1px solid var(--border-color);
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
         }
 
         .tab-widget-content {
@@ -365,14 +373,14 @@
                         </button>
                     </div>
                 </div>
-                <div class="tab-widget-content flex-grow overflow-y-auto">
-                    <div id="character" class="tab-content active">
+               <div class="tab-widget-content flex-grow overflow-y-auto">
+                    <div id="character" class="tab-content active" style="display: block;">
                         <div id="character-stats" class="space-y-3 text-sm"></div>
                     </div>
-                    <div id="inventory" class="tab-content"><ul id="inventory-list" class="space-y-2 text-sm"></ul></div>
-                    <div id="tasks" class="tab-content"><div id="task-content"></div></div>
-                    <div id="relationships" class="tab-content"><ul id="relationships-list" class="space-y-3"></ul></div>
-                    <div id="options" class="tab-content">
+                    <div id="inventory" class="tab-content" style="display: none;"><ul id="inventory-list" class="space-y-2 text-sm"></ul></div>
+                    <div id="tasks" class="tab-content" style="display: none;"><div id="task-content"></div></div>
+                    <div id="relationships" class="tab-content" style="display: none;"><ul id="relationships-list" class="space-y-3"></ul></div>
+                    <div id="options" class="tab-content" style="display: none;">
                         <div class="space-y-4 text-sm">
                             <button class="w-full p-2 bg-gray-100 hover:bg-gray-200 rounded border text-left">
                                 <i class="ph ph-floppy-disk mr-2"></i>Save Game
@@ -391,25 +399,44 @@
     </div>
     
     <script>
-        // FIX: This function handles switching between tabs in the status panel.
+        <script>
+        // FIXED: This function handles switching between tabs in the status panel.
         function openTab(evt, tabName) {
-            var i, tabcontent, tablinks;
-            tabcontent = document.getElementsByClassName("tab-content");
-            for (i = 0; i < tabcontent.length; i++) {
+            console.log('🔄 Switching to tab:', tabName);
+            
+            // Hide all tab content
+            var tabcontent = document.getElementsByClassName("tab-content");
+            for (var i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
                 tabcontent[i].classList.remove("active");
             }
-            tablinks = document.getElementsByClassName("tab-link");
-            for (i = 0; i < tablinks.length; i++) {
+            
+            // Remove active class from all tab buttons
+            var tablinks = document.getElementsByClassName("tab-link");
+            for (var i = 0; i < tablinks.length; i++) {
                 tablinks[i].classList.remove("active");
             }
-            document.getElementById(tabName).classList.add("active");
-            evt.currentTarget.classList.add("active");
+            
+            // Show the selected tab and mark button as active
+            var targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.style.display = "block";
+                targetTab.classList.add("active");
+                console.log('✅ Activated tab:', tabName);
+            } else {
+                console.error('❌ Tab not found:', tabName);
+            }
+            
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.add("active");
+            }
         }
     </script>
     <script type="module" src="main.js"></script>
     <script type="module" src="character-creator.js"></script>
 </body>
 </html>
+
 
 
 
