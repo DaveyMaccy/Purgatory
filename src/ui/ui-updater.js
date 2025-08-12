@@ -52,12 +52,13 @@ export class UIUpdater {
      * This is the main UI sync function called from the game loop
      * @param {Character} character - The focus character to display
      */
-    updateUI(character) {
+   updateUI(character) {
         if (!character) return;
         
         this.updateCharacterBasics(character);
         this.updateStatusBars(character);
         this.updatePortrait(character);
+        this.updateCharacterTab(character);
         this.updateInventoryTab(character);
         this.updateTasksTab(character);
         this.updateRelationshipsTab(character);
@@ -182,6 +183,105 @@ export class UIUpdater {
             ctx.textBaseline = 'middle';
             const initial = character.name ? character.name.charAt(0).toUpperCase() : '?';
             ctx.fillText(initial, canvas.width / 2, canvas.height / 2);
+        }
+    }
+    /**
+     * Update character stats tab content
+     * @param {Object} character - Character object
+     */
+    updateCharacterTab(character) {
+        if (!character) return;
+
+        const characterStats = document.getElementById('character-stats');
+        if (!characterStats) return;
+
+        try {
+            // Clear existing content
+            characterStats.innerHTML = '';
+            
+            // Physical Attributes
+            const physicalSection = document.createElement('div');
+            physicalSection.className = 'mb-4';
+            physicalSection.innerHTML = `
+                <h4 class="font-semibold text-base mb-2 text-purple-800">Physical Attributes</h4>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div><span class="font-medium">Age:</span> ${character.physicalAttributes?.age || 'N/A'}</div>
+                    <div><span class="font-medium">Height:</span> ${character.physicalAttributes?.height || 'N/A'}cm</div>
+                    <div><span class="font-medium">Weight:</span> ${character.physicalAttributes?.weight || 'N/A'}kg</div>
+                    <div><span class="font-medium">Build:</span> ${character.physicalAttributes?.build || 'N/A'}</div>
+                    <div><span class="font-medium">Looks:</span> ${character.physicalAttributes?.looks || 'N/A'}/10</div>
+                    <div><span class="font-medium">Gender:</span> ${character.physicalAttributes?.gender || 'N/A'}</div>
+                </div>
+            `;
+            characterStats.appendChild(physicalSection);
+            
+            // Skills
+            const skillsSection = document.createElement('div');
+            skillsSection.className = 'mb-4';
+            skillsSection.innerHTML = `
+                <h4 class="font-semibold text-base mb-2 text-blue-800">Skills</h4>
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between">
+                        <span>Competence:</span>
+                        <span class="font-medium">${character.skills?.competence || 0}/10</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Laziness:</span>
+                        <span class="font-medium">${character.skills?.laziness || 0}/10</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Charisma:</span>
+                        <span class="font-medium">${character.skills?.charisma || 0}/10</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Leadership:</span>
+                        <span class="font-medium">${character.skills?.leadership || 0}/10</span>
+                    </div>
+                </div>
+            `;
+            characterStats.appendChild(skillsSection);
+            
+            // Personality Tags
+            if (character.personalityTags && character.personalityTags.length > 0) {
+                const personalitySection = document.createElement('div');
+                personalitySection.className = 'mb-4';
+                personalitySection.innerHTML = `
+                    <h4 class="font-semibold text-base mb-2 text-green-800">Personality</h4>
+                    <div class="flex flex-wrap gap-1">
+                        ${character.personalityTags.map(tag => 
+                            `<span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">${tag}</span>`
+                        ).join('')}
+                    </div>
+                `;
+                characterStats.appendChild(personalitySection);
+            }
+            
+        } catch (error) {
+            console.error('❌ Failed to update character tab:', error);
+        }
+    }
+
+    /**
+     * Add chat message to chat log
+     * @param {string} message - Message to add
+     * @param {string} type - Message type (system, character, player)
+     */
+    addChatMessage(message, type = 'system') {
+        const chatLog = document.getElementById('chat-log');
+        if (!chatLog) return;
+
+        try {
+            const messageElement = document.createElement('div');
+            messageElement.className = `chat-message chat-${type}`;
+            messageElement.textContent = message;
+            
+            chatLog.appendChild(messageElement);
+            
+            // Auto-scroll to bottom
+            chatLog.scrollTop = chatLog.scrollHeight;
+            
+        } catch (error) {
+            console.error('❌ Failed to add chat message:', error);
         }
     }
 
@@ -440,5 +540,6 @@ export class UIUpdater {
         }
     }
 }
+
 
 
