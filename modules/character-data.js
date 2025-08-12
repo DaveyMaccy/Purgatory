@@ -42,7 +42,7 @@ export const MAX_CHARACTERS = 5;
 // Auto-detect sprite sheets (25+ sprites) - matches monolithic exactly
 function generateSpriteOptions() {
     const sprites = [];
-    for (let i = 1; i <= 25; i++) {
+    for (let i = 1; i <= 20; i++) {
         const paddedNumber = i.toString().padStart(2, '0');
         sprites.push(`assets/characters/character-${paddedNumber}.png`);
     }
