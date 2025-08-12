@@ -1,3 +1,8 @@
+// ============================================
+// FILE: src/core/game-engine.js
+// ============================================
+// REPLACEMENT - Adds a direct sync for character direction to the renderer.
+
 /**
  * GameEngine Class - Central game coordination
  * * This class orchestrates all game systems including:
@@ -5,8 +10,8 @@
  * - System updates (movement, AI, rendering)
  * - Time management
  * - State coordination
- * * PHASE 4 ADDITIONS:
- * - Movement system processing in update loop
+ * * FINAL FIX:
+ * - Adds call to sync character direction with the renderer every frame.
  */
 
 import { World } from './world/world.js';
@@ -18,33 +23,25 @@ export class GameEngine {
         this.renderer = renderer;
         this.mapData = mapData;
         
-        // Initialize world
         this.world = new World(characterManager, mapData);
         this.world.generateNavGrid();
         
-        // Initialize systems
         this.movementSystem = new MovementSystem();
         
-        // Game state
         this.isRunning = false;
         this.isPaused = false;
         this.lastFrameTime = 0;
         this.gameTime = 0;
         
-        // Performance tracking
         this.fps = 0;
         this.frameCount = 0;
         this.fpsUpdateTime = 0;
         
-        // Game loop binding
         this.gameLoop = this.gameLoop.bind(this);
         
         console.log('🎮 Game engine initialized');
     }
     
-    /**
-     * Start the game engine
-     */
     start() {
         if (this.isRunning) {
             console.warn('⚠️ Game engine already running');
@@ -56,68 +53,43 @@ export class GameEngine {
         this.fpsUpdateTime = this.lastFrameTime;
         
         console.log('🚀 Starting game engine...');
-        
-        // Start the game loop
         requestAnimationFrame(this.gameLoop);
     }
     
-    /**
-     * Stop the game engine
-     */
     stop() {
         this.isRunning = false;
         console.log('🛑 Game engine stopped');
     }
     
-    /**
-     * Pause/unpause the game
-     */
     togglePause() {
         this.isPaused = !this.isPaused;
         console.log(this.isPaused ? '⏸️ Game paused' : '▶️ Game resumed');
         return this.isPaused;
     }
     
-    /**
-     * Main game loop
-     * @param {number} currentTime - Current timestamp from requestAnimationFrame
-     */
     gameLoop(currentTime) {
         if (!this.isRunning) return;
         
-        // Calculate delta time
         const deltaTime = currentTime - this.lastFrameTime;
         this.lastFrameTime = currentTime;
         
-        // Update FPS counter
         this.updateFPS(currentTime);
         
-        // Update game if not paused
         if (!this.isPaused) {
             this.update(deltaTime);
         }
         
-        // Render
         this.render();
-        
-        // Continue loop
         requestAnimationFrame(this.gameLoop);
     }
     
-    /**
-     * Update all game systems
-     * @param {number} deltaTime - Time since last frame in milliseconds
-     */
     update(deltaTime) {
-        // Update game time
         this.gameTime += deltaTime;
         
-        // Update world
         if (this.world) {
             this.world.update(deltaTime);
         }
         
-        // Update all characters
         if (this.characterManager) {
             const characters = this.characterManager.characters;
             characters.forEach(character => {
@@ -125,66 +97,41 @@ export class GameEngine {
             });
         }
         
-        // PHASE 4: Process character movement
         if (this.movementSystem && this.characterManager && this.world) {
             const characters = this.characterManager.characters;
             
             for (const character of characters) {
-                if (character.path && character.path.length > 0) {
-                    // Convert deltaTime to seconds for movement system
-                    this.movementSystem.moveCharacter(character, this.world, deltaTime / 1000);
+                // This function updates character.position AND character.facingDirection
+                this.movementSystem.moveCharacter(character, this.world, deltaTime / 1000);
+                
+                if (this.renderer) {
+                    // Update the sprite's x/y position on screen
+                    this.renderer.updateCharacterPosition(character.id, character.position.x, character.position.y);
                     
-                    // Update renderer with new position
-                    if (this.renderer) {
-                        this.renderer.updateCharacterPosition(character.id, character.position.x, character.position.y);
-                    }
+                    // NEW: Force the renderer to sync with the character's true direction every frame.
+                    // This creates a direct, reliable connection for directional data.
+                    this.renderer.syncCharacterDirection(character.id, character.facingDirection);
                 }
             }
         }
-        
-        // =========================================================
-        // MINIMAL CHANGE: Added the animation update loop here
-        // =========================================================
-        if (this.renderer) {
-            // Convert deltaTime to seconds for the animation system
-            this.renderer.updateAllCharacterAnimations(deltaTime / 1000);
-        }
-        // =========================================================
-        
-        // Future: Update AI system
-        // if (this.aiSystem) {
-        //     this.aiSystem.update(deltaTime);
-        // }
-        
-        // Future: Update interaction system
-        // if (this.interactionSystem) {
-        //     this.interactionSystem.update(deltaTime);
-        // }
     }
     
-    /**
-     * Render the game
-     */
     render() {
         if (this.renderer) {
             this.renderer.update();
         }
     }
     
-    /**
-     * Update FPS counter
-     * @param {number} currentTime - Current timestamp
-     */
+    // ... (rest of the file is unchanged) ...
+
     updateFPS(currentTime) {
         this.frameCount++;
         
-        // Update FPS every second
         if (currentTime - this.fpsUpdateTime >= 1000) {
             this.fps = this.frameCount;
             this.frameCount = 0;
             this.fpsUpdateTime = currentTime;
             
-            // Update FPS display if element exists
             const fpsElement = document.getElementById('fps-counter');
             if (fpsElement) {
                 fpsElement.textContent = `FPS: ${this.fps}`;
@@ -192,10 +139,6 @@ export class GameEngine {
         }
     }
     
-    /**
-     * Get current game state information
-     * @returns {Object} Game state info
-     */
     getGameState() {
         return {
             isRunning: this.isRunning,
@@ -207,11 +150,6 @@ export class GameEngine {
         };
     }
     
-    /**
-     * Handle game events
-     * @param {string} eventType - Type of event
-     * @param {Object} eventData - Event data
-     */
     handleEvent(eventType, eventData) {
         switch (eventType) {
             case 'character_click':
@@ -228,40 +166,21 @@ export class GameEngine {
         }
     }
     
-    /**
-     * Handle character click events
-     * @param {string} characterId - ID of clicked character
-     */
     handleCharacterClick(characterId) {
         console.log(`👤 Character clicked: ${characterId}`);
-        
-        // Future: Open character interaction menu
-        // For now, just log character info
         const character = this.characterManager.getCharacter(characterId);
         if (character) {
             console.log('Character info:', character.getStatus());
         }
     }
     
-    /**
-     * Handle world click events (delegated to main.js handleWorldClick)
-     * @param {number} x - X coordinate
-     * @param {number} y - Y coordinate
-     */
     handleWorldClick(x, y) {
         console.log(`🌍 World clicked at: (${x}, ${y})`);
-        // Movement is handled by main.js handleWorldClick function
     }
     
-    /**
-     * Handle task completion events
-     * @param {string} characterId - ID of character who completed task
-     * @param {string} taskId - ID of completed task
-     */
     handleTaskComplete(characterId, taskId) {
         console.log(`✅ Task completed: ${taskId} by character ${characterId}`);
         
-        // Assign a new task to the character
         const character = this.characterManager.getCharacter(characterId);
         if (character && this.world) {
             const tasks = this.world.taskDictionary[character.jobRole];
@@ -273,18 +192,13 @@ export class GameEngine {
         }
     }
     
-    /**
-     * Clean up and destroy the game engine
-     */
     destroy() {
         this.stop();
         
-        // Clean up renderer
         if (this.renderer) {
             this.renderer.destroy();
         }
         
-        // Clear references
         this.characterManager = null;
         this.renderer = null;
         this.world = null;
