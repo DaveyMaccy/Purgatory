@@ -1,1 +1,560 @@
+/**
+ * Dialogue Router - Context-Based Pool Selection System
+ * Routes conversations to specialized dialogue pools based on context analysis
+ * 
+ * ROUTING FLOWCHART:
+ * 1. Analyze incoming message/context for topic indicators
+ * 2. Check environmental context (location, time, people present)
+ * 3. Consider character personality and interests
+ * 4. Route to appropriate specialized dialogue pool
+ * 5. Fallback to general conversational pool if no specific match
+ * 
+ * POOL STRUCTURE:
+ * - General (default) - basic conversations, small talk
+ * - Work - professional discussions, meetings, deadlines
+ * - Sports - athletics, games, competitions, team discussions
+ * - Hobbies - personal interests, crafts, collections, activities
+ * - Politics - current events, governance, social issues
+ * - Banter - jokes, teasing, playful exchanges, humor
+ * - Food - meals, cooking, restaurants, dietary topics
+ * - Technology - gadgets, software, digital trends
+ * - Entertainment - movies, TV, music, books, celebrities
+ * - Personal - life events, relationships, family, emotions
+ * 
+ * ROUTING PRIORITY:
+ * 1. Explicit topic keywords in message
+ * 2. Environmental context clues
+ * 3. Character personality preferences
+ * 4. Conversation history/threading
+ * 5. Default to general pool
+ */
 
+// Import all dialogue pools
+import { GeneralDialoguePool } from './pools/generalDialoguePool.js';
+import { WorkDialoguePool } from './pools/workDialoguePool.js';
+import { SportsDialoguePool } from './pools/sportsDialoguePool.js';
+import { HobbiesDialoguePool } from './pools/hobbiesDialoguePool.js';
+import { PoliticsDialoguePool } from './pools/politicsDialoguePool.js';
+import { BanterDialoguePool } from './pools/banterDialoguePool.js';
+import { FoodDialoguePool } from './pools/foodDialoguePool.js';
+import { TechnologyDialoguePool } from './pools/technologyDialoguePool.js';
+import { EntertainmentDialoguePool } from './pools/entertainmentDialoguePool.js';
+import { PersonalDialoguePool } from './pools/personalDialoguePool.js';
+
+export class DialogueRouter {
+    constructor() {
+        // Initialize all dialogue pools
+        this.pools = {
+            general: new GeneralDialoguePool(),
+            work: new WorkDialoguePool(),
+            sports: new SportsDialoguePool(),
+            hobbies: new HobbiesDialoguePool(),
+            politics: new PoliticsDialoguePool(),
+            banter: new BanterDialoguePool(),
+            food: new FoodDialoguePool(),
+            technology: new TechnologyDialoguePool(),
+            entertainment: new EntertainmentDialoguePool(),
+            personal: new PersonalDialoguePool()
+        };
+        
+        // Topic detection keywords for routing
+        this.topicKeywords = {
+            work: {
+                primary: ['work', 'job', 'project', 'deadline', 'meeting', 'boss', 'client', 'task', 'office', 'business'],
+                secondary: ['email', 'presentation', 'report', 'budget', 'schedule', 'conference', 'teamwork', 'management'],
+                weight: 1.0
+            },
+            
+            sports: {
+                primary: ['game', 'team', 'score', 'player', 'match', 'season', 'championship', 'league', 'coach'],
+                secondary: ['football', 'basketball', 'baseball', 'soccer', 'tennis', 'golf', 'hockey', 'athlete', 'stadium'],
+                weight: 0.9
+            },
+            
+            hobbies: {
+                primary: ['hobby', 'collect', 'craft', 'build', 'create', 'paint', 'draw', 'garden', 'cook'],
+                secondary: ['weekend project', 'free time', 'passion', 'interest', 'skill', 'art', 'music', 'photography'],
+                weight: 0.8
+            },
+            
+            politics: {
+                primary: ['politics', 'government', 'election', 'vote', 'policy', 'president', 'congress', 'law'],
+                secondary: ['news', 'debate', 'opinion', 'rights', 'economy', 'healthcare', 'education', 'taxes'],
+                weight: 0.7 // Lower weight due to sensitivity
+            },
+            
+            banter: {
+                primary: ['joke', 'funny', 'hilarious', 'ridiculous', 'silly', 'amusing', 'laugh', 'humor'],
+                secondary: ['haha', 'lol', 'weird', 'crazy', 'absurd', 'ironic', 'sarcastic', 'witty'],
+                weight: 0.9
+            },
+            
+            food: {
+                primary: ['food', 'eat', 'lunch', 'dinner', 'restaurant', 'recipe', 'cook', 'meal', 'hungry'],
+                secondary: ['delicious', 'taste', 'flavor', 'cuisine', 'diet', 'ingredients', 'kitchen', 'chef'],
+                weight: 1.0
+            },
+            
+            technology: {
+                primary: ['computer', 'software', 'app', 'digital', 'internet', 'website', 'tech', 'gadget'],
+                secondary: ['phone', 'laptop', 'update', 'bug', 'feature', 'AI', 'data', 'programming'],
+                weight: 0.8
+            },
+            
+            entertainment: {
+                primary: ['movie', 'show', 'TV', 'film', 'music', 'song', 'book', 'celebrity', 'actor'],
+                secondary: ['streaming', 'Netflix', 'concert', 'album', 'author', 'director', 'plot', 'character'],
+                weight: 0.9
+            },
+            
+            personal: {
+                primary: ['family', 'relationship', 'friend', 'personal', 'private', 'emotional', 'feel', 'love'],
+                secondary: ['life', 'experience', 'memory', 'childhood', 'parent', 'sibling', 'partner', 'wedding'],
+                weight: 0.6 // Lower weight, more sensitive
+            }
+        };
+        
+        // Environmental context routing rules
+        this.contextRules = {
+            location: {
+                'break_room': ['food', 'banter', 'general'],
+                'meeting_room': ['work', 'general'],
+                'office': ['work', 'technology', 'general'],
+                'gym': ['sports', 'banter', 'general'],
+                'cafeteria': ['food', 'general'],
+                'outdoor': ['sports', 'general']
+            },
+            
+            timeOfDay: {
+                'morning': ['work', 'general'],
+                'lunch_time': ['food', 'banter', 'general'],
+                'afternoon': ['work', 'general'],
+                'evening': ['entertainment', 'personal', 'general'],
+                'weekend': ['hobbies', 'sports', 'entertainment', 'general']
+            },
+            
+            groupSize: {
+                'one_on_one': ['personal', 'work', 'general'],
+                'small_group': ['banter', 'work', 'general'],
+                'large_group': ['general', 'banter']
+            }
+        };
+        
+        // Personality preferences for pool selection
+        this.personalityPreferences = {
+            'Professional': ['work', 'technology', 'general'],
+            'Gossip': ['personal', 'entertainment', 'banter'],
+            'Ambitious': ['work', 'politics', 'general'],
+            'Lazy': ['entertainment', 'food', 'banter'],
+            'Extroverted': ['banter', 'sports', 'entertainment'],
+            'Introverted': ['hobbies', 'technology', 'general'],
+            'Organized': ['work', 'hobbies', 'general'],
+            'Chaotic': ['banter', 'entertainment', 'general']
+        };
+        
+        console.log('🎯 Dialogue Router initialized with', Object.keys(this.pools).length, 'specialized pools');
+    }
+
+    /**
+     * Main routing method - determines which dialogue pool to use
+     * @param {string} incomingMessage - Message being responded to
+     * @param {Object} character - Character who will respond
+     * @param {Object} context - Environmental and social context
+     * @param {Object} conversationHistory - Previous conversation context
+     * @returns {Object} - Selected pool and routing information
+     */
+    routeToPool(incomingMessage, character, context, conversationHistory = null) {
+        console.log(`🧭 Routing dialogue for ${character.name}: "${incomingMessage}"`);
+        
+        // Step 1: Analyze message for topic keywords
+        const topicScores = this.analyzeTopicKeywords(incomingMessage);
+        
+        // Step 2: Analyze environmental context
+        const contextScores = this.analyzeEnvironmentalContext(context);
+        
+        // Step 3: Apply personality preferences
+        const personalityScores = this.applyPersonalityPreferences(character);
+        
+        // Step 4: Consider conversation threading (continue existing topic)
+        const threadingScores = this.analyzeConversationThreading(conversationHistory);
+        
+        // Step 5: Combine all scores with weights
+        const finalScores = this.combineRoutingScores(topicScores, contextScores, personalityScores, threadingScores);
+        
+        // Step 6: Select highest scoring pool
+        const selectedPool = this.selectPool(finalScores);
+        
+        // Step 7: Get pool instance and routing metadata
+        const poolInstance = this.pools[selectedPool];
+        const routingInfo = {
+            selectedPool: selectedPool,
+            confidence: finalScores[selectedPool] || 0,
+            alternatives: this.getAlternativePools(finalScores, selectedPool),
+            reasoning: this.generateRoutingReasoning(selectedPool, topicScores, contextScores, personalityScores),
+            scores: finalScores
+        };
+        
+        console.log(`📍 Routed to: ${selectedPool} (confidence: ${routingInfo.confidence.toFixed(2)})`);
+        
+        return {
+            pool: poolInstance,
+            routing: routingInfo
+        };
+    }
+
+    /**
+     * Analyze message content for topic-specific keywords
+     * @param {string} message - Message to analyze
+     * @returns {Object} - Topic scores
+     */
+    analyzeTopicKeywords(message) {
+        const scores = {};
+        const messageLower = message.toLowerCase();
+        
+        Object.entries(this.topicKeywords).forEach(([topic, keywords]) => {
+            let score = 0;
+            
+            // Check primary keywords (higher weight)
+            keywords.primary.forEach(keyword => {
+                if (messageLower.includes(keyword)) {
+                    score += 1.0;
+                }
+            });
+            
+            // Check secondary keywords (lower weight)
+            keywords.secondary.forEach(keyword => {
+                if (messageLower.includes(keyword)) {
+                    score += 0.5;
+                }
+            });
+            
+            // Apply topic weight and normalize
+            scores[topic] = score * keywords.weight;
+        });
+        
+        return scores;
+    }
+
+    /**
+     * Analyze environmental context for routing hints
+     * @param {Object} context - Environmental context
+     * @returns {Object} - Context-based scores
+     */
+    analyzeEnvironmentalContext(context) {
+        const scores = {};
+        
+        // Location-based routing
+        const location = context.location?.type || context.location || 'office';
+        const locationRules = this.contextRules.location[location];
+        if (locationRules) {
+            locationRules.forEach((pool, index) => {
+                scores[pool] = (scores[pool] || 0) + (1.0 - index * 0.2); // Decreasing weight
+            });
+        }
+        
+        // Time-based routing
+        const timeOfDay = this.getTimeOfDay(context.time_context);
+        const timeRules = this.contextRules.timeOfDay[timeOfDay];
+        if (timeRules) {
+            timeRules.forEach((pool, index) => {
+                scores[pool] = (scores[pool] || 0) + (0.8 - index * 0.15);
+            });
+        }
+        
+        // Group size routing
+        const groupSize = this.categorizeGroupSize(context.nearbyEntities?.length || 0);
+        const groupRules = this.contextRules.groupSize[groupSize];
+        if (groupRules) {
+            groupRules.forEach((pool, index) => {
+                scores[pool] = (scores[pool] || 0) + (0.6 - index * 0.1);
+            });
+        }
+        
+        return scores;
+    }
+
+    /**
+     * Apply character personality preferences
+     * @param {Object} character - Character object
+     * @returns {Object} - Personality-based scores
+     */
+    applyPersonalityPreferences(character) {
+        const scores = {};
+        const personality = character.personalityTags || [];
+        
+        personality.forEach(trait => {
+            const preferences = this.personalityPreferences[trait];
+            if (preferences) {
+                preferences.forEach((pool, index) => {
+                    scores[pool] = (scores[pool] || 0) + (0.8 - index * 0.2);
+                });
+            }
+        });
+        
+        return scores;
+    }
+
+    /**
+     * Analyze conversation history for topic threading
+     * @param {Object} conversationHistory - Previous conversation context
+     * @returns {Object} - Threading-based scores
+     */
+    analyzeConversationThreading(conversationHistory) {
+        const scores = {};
+        
+        if (!conversationHistory || !conversationHistory.topics) {
+            return scores;
+        }
+        
+        // Continue existing topics with high weight
+        conversationHistory.topics.forEach(topic => {
+            if (this.topicKeywords[topic]) {
+                scores[topic] = (scores[topic] || 0) + 1.5; // High weight for continuation
+            }
+        });
+        
+        // Recent message analysis
+        if (conversationHistory.history && conversationHistory.history.length > 0) {
+            const recentMessages = conversationHistory.history.slice(-3);
+            recentMessages.forEach(msg => {
+                const msgTopicScores = this.analyzeTopicKeywords(msg.message || '');
+                Object.entries(msgTopicScores).forEach(([topic, score]) => {
+                    scores[topic] = (scores[topic] || 0) + score * 0.3; // Moderate weight for recent topics
+                });
+            });
+        }
+        
+        return scores;
+    }
+
+    /**
+     * Combine all routing scores with appropriate weights
+     * @param {Object} topicScores - Keyword-based scores
+     * @param {Object} contextScores - Environment-based scores
+     * @param {Object} personalityScores - Personality-based scores
+     * @param {Object} threadingScores - Conversation threading scores
+     * @returns {Object} - Final combined scores
+     */
+    combineRoutingScores(topicScores, contextScores, personalityScores, threadingScores) {
+        const finalScores = {};
+        const weights = {
+            topic: 2.0,        // Highest weight - explicit content
+            threading: 1.5,    // High weight - conversation continuity
+            context: 1.0,      // Medium weight - environmental hints
+            personality: 0.8   // Lower weight - character preferences
+        };
+        
+        // Combine all pools mentioned in any scoring system
+        const allPools = new Set([
+            ...Object.keys(topicScores),
+            ...Object.keys(contextScores),
+            ...Object.keys(personalityScores),
+            ...Object.keys(threadingScores),
+            'general' // Always include general as fallback
+        ]);
+        
+        allPools.forEach(pool => {
+            finalScores[pool] = 
+                (topicScores[pool] || 0) * weights.topic +
+                (threadingScores[pool] || 0) * weights.threading +
+                (contextScores[pool] || 0) * weights.context +
+                (personalityScores[pool] || 0) * weights.personality;
+        });
+        
+        // Ensure general pool has minimum score for fallback
+        if (finalScores.general < 0.5) {
+            finalScores.general = 0.5;
+        }
+        
+        return finalScores;
+    }
+
+    /**
+     * Select the highest scoring pool
+     * @param {Object} scores - Final combined scores
+     * @returns {string} - Selected pool name
+     */
+    selectPool(scores) {
+        let maxScore = -1;
+        let selectedPool = 'general';
+        
+        Object.entries(scores).forEach(([pool, score]) => {
+            if (score > maxScore && this.pools[pool]) {
+                maxScore = score;
+                selectedPool = pool;
+            }
+        });
+        
+        return selectedPool;
+    }
+
+    /**
+     * Get alternative pools for fallback
+     * @param {Object} scores - All pool scores
+     * @param {string} selectedPool - Currently selected pool
+     * @returns {Array} - Alternative pools in order of score
+     */
+    getAlternativePools(scores, selectedPool) {
+        return Object.entries(scores)
+            .filter(([pool, score]) => pool !== selectedPool && this.pools[pool])
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 3)
+            .map(([pool, score]) => ({ pool, score }));
+    }
+
+    /**
+     * Generate human-readable reasoning for routing decision
+     * @param {string} selectedPool - Selected pool
+     * @param {Object} topicScores - Topic analysis scores
+     * @param {Object} contextScores - Context analysis scores
+     * @param {Object} personalityScores - Personality scores
+     * @returns {string} - Reasoning text
+     */
+    generateRoutingReasoning(selectedPool, topicScores, contextScores, personalityScores) {
+        const reasons = [];
+        
+        // Topic-based reasoning
+        const topTopicScore = Object.entries(topicScores).reduce((max, [topic, score]) => 
+            score > max.score ? { topic, score } : max, { topic: null, score: 0 });
+        
+        if (topTopicScore.score > 0.5) {
+            reasons.push(`detected ${topTopicScore.topic} keywords`);
+        }
+        
+        // Context-based reasoning
+        const topContextScore = Object.entries(contextScores).reduce((max, [topic, score]) => 
+            score > max.score ? { topic, score } : max, { topic: null, score: 0 });
+        
+        if (topContextScore.score > 0.5) {
+            reasons.push(`environmental context suggests ${topContextScore.topic}`);
+        }
+        
+        // Personality reasoning
+        const topPersonalityScore = Object.entries(personalityScores).reduce((max, [topic, score]) => 
+            score > max.score ? { topic, score } : max, { topic: null, score: 0 });
+        
+        if (topPersonalityScore.score > 0.5) {
+            reasons.push(`personality prefers ${topPersonalityScore.topic} topics`);
+        }
+        
+        if (reasons.length === 0) {
+            reasons.push('default routing to general conversation');
+        }
+        
+        return reasons.join(', ');
+    }
+
+    /**
+     * Utility methods
+     */
+    getTimeOfDay(timeContext) {
+        if (timeContext?.period) {
+            return timeContext.period;
+        }
+        
+        const hour = new Date().getHours();
+        if (hour < 9) return 'morning';
+        if (hour >= 12 && hour <= 13) return 'lunch_time';
+        if (hour < 17) return 'afternoon';
+        if (hour < 19) return 'evening';
+        return 'weekend'; // Simplified
+    }
+
+    categorizeGroupSize(count) {
+        if (count <= 1) return 'one_on_one';
+        if (count <= 4) return 'small_group';
+        return 'large_group';
+    }
+
+    /**
+     * Generate conversation using selected pool
+     * @param {string} poolName - Name of pool to use
+     * @param {string} incomingMessage - Message to respond to
+     * @param {Object} character - Character responding
+     * @param {Object} context - Full context
+     * @returns {string} - Generated response
+     */
+    generateResponse(poolName, incomingMessage, character, context) {
+        const pool = this.pools[poolName];
+        if (!pool) {
+            console.warn(`Pool ${poolName} not found, falling back to general`);
+            return this.pools.general.generateResponse(incomingMessage, character, context);
+        }
+        
+        return pool.generateResponse(incomingMessage, character, context);
+    }
+
+    /**
+     * Get routing statistics for debugging
+     * @returns {Object} - Routing statistics
+     */
+    getRoutingStats() {
+        return {
+            availablePools: Object.keys(this.pools),
+            topicKeywordCounts: Object.entries(this.topicKeywords).map(([topic, data]) => ({
+                topic,
+                primaryKeywords: data.primary.length,
+                secondaryKeywords: data.secondary.length,
+                weight: data.weight
+            })),
+            contextRules: {
+                locations: Object.keys(this.contextRules.location).length,
+                timeRules: Object.keys(this.contextRules.timeOfDay).length,
+                groupSizeRules: Object.keys(this.contextRules.groupSize).length
+            },
+            personalityMappings: Object.keys(this.personalityPreferences).length
+        };
+    }
+
+    /**
+     * Add new dialogue pool dynamically
+     * @param {string} poolName - Name of new pool
+     * @param {Object} poolInstance - Pool instance
+     * @param {Object} keywords - Topic keywords for routing
+     */
+    addDialoguePool(poolName, poolInstance, keywords = null) {
+        this.pools[poolName] = poolInstance;
+        
+        if (keywords) {
+            this.topicKeywords[poolName] = keywords;
+        }
+        
+        console.log(`➕ Added new dialogue pool: ${poolName}`);
+    }
+
+    /**
+     * Remove dialogue pool
+     * @param {string} poolName - Name of pool to remove
+     */
+    removeDialoguePool(poolName) {
+        if (poolName === 'general') {
+            console.warn('Cannot remove general pool - it\'s the fallback');
+            return;
+        }
+        
+        delete this.pools[poolName];
+        delete this.topicKeywords[poolName];
+        
+        console.log(`➖ Removed dialogue pool: ${poolName}`);
+    }
+
+    /**
+     * Test routing with a sample message
+     * @param {string} message - Test message
+     * @param {Object} character - Test character
+     * @param {Object} context - Test context
+     * @returns {Object} - Routing test results
+     */
+    testRouting(message, character, context) {
+        const routing = this.routeToPool(message, character, context);
+        
+        return {
+            message,
+            selectedPool: routing.routing.selectedPool,
+            confidence: routing.routing.confidence,
+            reasoning: routing.routing.reasoning,
+            allScores: routing.routing.scores,
+            alternatives: routing.routing.alternatives
+        };
+    }
+}
