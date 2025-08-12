@@ -120,7 +120,7 @@ export class UIUpdater {
         // Clear the canvas
         ctx.clearRect(0, 0, portraitCanvas.width, portraitCanvas.height);
         
-        // FIXED: Use custom portrait if available, otherwise use sprite portrait
+       // PRIORITY FIX: Custom portrait takes absolute priority over sprite portrait
         const portraitData = character.customPortrait || character.portrait;
         
         if (portraitData) {
@@ -129,6 +129,14 @@ export class UIUpdater {
                 ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
             };
             img.src = portraitData;
+        } else if (character.spriteSheet) {
+            // Fallback to sprite sheet if no portraits available
+            const img = new Image();
+            img.onload = () => {
+                // Draw first frame of sprite as portrait
+                ctx.drawImage(img, 0, 0, 48, 96, 0, 0, portraitCanvas.width, portraitCanvas.height);
+            };
+            img.src = character.spriteSheet;
         } else {
             // Draw a simple placeholder with character's first initial
             ctx.fillStyle = '#4f46e5';
@@ -397,3 +405,4 @@ export class UIUpdater {
         }
     }
 }
+
