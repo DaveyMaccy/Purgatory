@@ -39,19 +39,45 @@ class EventHandlers {
                             }
                         }
                     });
-                    characters[index].isPlayer = true;
+               // BULLETPROOF: Player character checkbox - enforce single player
+        const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
+        if (isPlayerCheckbox) {
+            isPlayerCheckbox.addEventListener('change', function() {
+                // BULLETPROOF FIX: Always get fresh characters array
+                const charactersArray = window.characters || [];
+                
+                // SAFETY CHECK: Ensure character exists
+                if (!charactersArray[index]) {
+                    console.warn(`⚠️ Character ${index} not found for player checkbox`);
+                    this.checked = false;
+                    return;
+                }
+                
+                if (this.checked) {
+                    // Uncheck all other player checkboxes UI and data
+                    charactersArray.forEach((char, otherIndex) => {
+                        if (otherIndex !== index) {
+                            char.isPlayer = false;
+                            const otherCheckbox = document.getElementById(`isPlayer-${otherIndex}`);
+                            if (otherCheckbox) {
+                                otherCheckbox.checked = false;
+                            }
+                        }
+                    });
+                    charactersArray[index].isPlayer = true;
                 } else {
                     // Don't allow unchecking if this is the only player
-                    const otherPlayers = characters.filter((char, i) => i !== index && char.isPlayer);
+                    const otherPlayers = charactersArray.filter((char, i) => i !== index && char.isPlayer);
                     if (otherPlayers.length === 0) {
                         // Force this checkbox to stay checked
                         this.checked = true;
                         console.log('⚠️ At least one character must be the player');
                         return;
                     }
-                    characters[index].isPlayer = false;
+                    charactersArray[index].isPlayer = false;
                 }
             });
+        }
         }
 
         // Name generation button (EXACT from Phase-3)
@@ -283,13 +309,13 @@ class EventHandlers {
                     ctx.drawImage(img, x, y, drawWidth, drawHeight);
                     
                     // Store custom portrait
-                    characters[index].customPortrait = canvas.toDataURL();
-                }
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
+                    // BULLETPROOF FIX: Always get fresh characters array
+                    const charactersArray = window.characters || [];
+                    if (charactersArray[index]) {
+                        charactersArray[index].customPortrait = canvas.toDataURL();
+                    } else {
+                        console.warn(`⚠️ Character ${index} not found for custom portrait`);
+                    }
 
     /**
      * Clear custom portrait (EXACT from Phase-3)
@@ -356,11 +382,26 @@ class EventHandlers {
      * Update character tags with limit enforcement (BULLETPROOF FIX)
      */
     static updateCharacterTags(index, tagType, maxLimit, characters) {
+        // BULLETPROOF FIX: Always get fresh characters array
+        const charactersArray = characters || window.characters || [];
+        
+        // SAFETY CHECK: Ensure character exists
+        if (!charactersArray[index]) {
+            console.warn(`⚠️ Character ${index} not found, cannot update ${tagType}`);
+            return;
+        }
+        
         const checkboxes = document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]:checked`);
         let selectedTags = Array.from(checkboxes).map(cb => cb.value);
         
-        // Don't automatically uncheck - let the greying system handle it
-        characters[index][tagType] = selectedTags;
+        // Update character safely
+        charactersArray[index][tagType] = selectedTags;
+        
+        // Update checkbox states to grey out/enable as needed
+        requestAnimationFrame(() => {
+            EventHandlers.updateCheckboxStates(index, tagType, maxLimit, charactersArray);
+        });
+    }
         
         // BULLETPROOF FIX: Use requestAnimationFrame instead of setTimeout for UI updates
         requestAnimationFrame(() => {
@@ -371,7 +412,16 @@ class EventHandlers {
     /**
      * Update character items with limit enforcement (EXACT from Phase-3)
      */
-    static updateCharacterItems(index, itemType, maxLimit, characters) {
+   static updateCharacterItems(index, itemType, maxLimit, characters) {
+        // BULLETPROOF FIX: Always get fresh characters array
+        const charactersArray = characters || window.characters || [];
+        
+        // SAFETY CHECK: Ensure character exists
+        if (!charactersArray[index]) {
+            console.warn(`⚠️ Character ${index} not found, cannot update ${itemType}`);
+            return;
+        }
+        
         const prefix = itemType === 'inventory' ? 'inventory-item' : 'desk-item';
         const checkboxes = document.querySelectorAll(`input[id^="${prefix}-${index}-"]:checked`);
         let selectedItems = Array.from(checkboxes).map(cb => cb.value);
@@ -387,7 +437,12 @@ class EventHandlers {
             }
         }
         
-        characters[index][itemType] = selectedItems;
+        charactersArray[index][itemType] = selectedItems;
+        
+        // Update checkbox states
+        requestAnimationFrame(() => {
+            EventHandlers.updateCheckboxStates(index, itemType, maxLimit, charactersArray);
+        });
     }
 }
 
