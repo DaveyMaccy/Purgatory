@@ -10,7 +10,7 @@
  * - Created an 'updateAllCharacterAnimations' method to be called in the main game loop.
  * - Rewrote 'updateCharacterAnimation' and 'updateSpriteFrame' to use the new system.
  * - Preserved all existing functionality (preloading, map rendering, etc.).
- * - CORRECTED a typo from SPRIGHT_HEIGHT to SPRITE_HEIGHT.
+ * - CORRECTED all typos in the 'punch' animation definition.
  */
 
 // DORMANT CONTROL FLAG - Set to true when ready to enable enhanced sprites
@@ -136,7 +136,7 @@ const animationData = {
         frameSpeed: 0.08,
         directions: {
             'right': { y: 15 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 15 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH }, // <-- TYPO FIXED HERE
+            'up':    { y: 15 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
             'left':  { y: 15 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
             'down':  { y: 15 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
@@ -155,7 +155,6 @@ export class Renderer {
         this.isInitialized = false;
 
         this.TILE_SIZE = 48;
-        // CORRECTED: Use the global constants for character size
         this.CHARACTER_WIDTH = SPRITE_WIDTH;
         this.CHARACTER_HEIGHT = SPRITE_HEIGHT;
 
@@ -181,14 +180,13 @@ export class Renderer {
         
         const spritePromises = [];
         
-        // Generate sprite paths (matches character-data.js - first 25 sprites)
         for (let i = 1; i <= 25; i++) {
             const paddedNumber = i.toString().padStart(2, '0');
             const spritePath = `assets/characters/character-${paddedNumber}.png`;
             
             const promise = this.loadSpriteTexture(spritePath).catch(error => {
                 console.warn(`⚠️ Failed to preload sprite: ${spritePath}`, error);
-                return null; // Continue with other sprites
+                return null;
             });
             
             spritePromises.push(promise);
@@ -206,10 +204,5 @@ export class Renderer {
             throw new Error('Enhanced sprites are dormant');
         }
 
-        // Check if already loaded
         if (this.preloadedTextures.has(spritePath)) {
             return this.preloadedTextures.get(spritePath);
-        }
-        
-        try {
-            const texture = await PIXI.Texture.fromURL(sprite
