@@ -2,15 +2,15 @@
  * REPAIRED: Complete Rendering System with a Functional Animation Engine
  *
  * FINAL AUDIT COMPLETE:
- * - Corrected the Y-coordinate for the 'walking' animation.
- * - Verified all other animations against original notes and sprite sheet.
- * - Confirmed all directional mappings follow the Right, Up, Left, Down order.
+ * - Rebuilt the animationData map from scratch based on corrected row numbers.
+ * - All animations are now correctly mapped to the sprite sheet.
  */
 
 const USE_ENHANCED_SPRITES = true;
 const SPRITE_WIDTH = 48;
 const SPRITE_HEIGHT = 96;
 
+// animationData map rebuilt based on the final, corrected user notes.
 const animationData = {
     'idle': {
         frames: 6,
@@ -28,11 +28,10 @@ const animationData = {
         loop: true,
         frameSpeed: 0.1,
         directions: {
-            // FINAL FIX: Corrected y-coordinate to point to the proper walk cycle row.
-            'right': { y: 3 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 3 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
-            'left':  { y: 3 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
-            'down':  { y: 3 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
+            'right': { y: 2 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'up':    { y: 2 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
+            'left':  { y: 2 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
+            'down':  { y: 2 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
     },
     'sit': {
@@ -50,7 +49,7 @@ const animationData = {
         loopSection: { start: 3, end: 8 },
         frameSpeed: 0.12,
         directions: {
-            'down': { y: 7 * SPRITE_HEIGHT, x: 0 }
+            'down': { y: 6 * SPRITE_HEIGHT, x: 0 }
         }
     },
     'book': {
@@ -58,7 +57,7 @@ const animationData = {
         loop: true,
         frameSpeed: 0.15,
         directions: {
-            'down': { y: 8 * SPRITE_HEIGHT, x: 0 }
+            'down': { y: 7 * SPRITE_HEIGHT, x: 0 }
         }
     },
     'pickup': {
@@ -66,10 +65,10 @@ const animationData = {
         loop: false,
         frameSpeed: 0.08,
         directions: {
-            'right': { y: 10 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 10 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
-            'left':  { y: 10 * SPRITE_HEIGHT, x: 24 * SPRITE_WIDTH },
-            'down':  { y: 10 * SPRITE_HEIGHT, x: 36 * SPRITE_WIDTH }
+            'right': { y: 9 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'up':    { y: 9 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
+            'left':  { y: 9 * SPRITE_HEIGHT, x: 24 * SPRITE_WIDTH },
+            'down':  { y: 9 * SPRITE_HEIGHT, x: 36 * SPRITE_WIDTH }
         }
     },
     'give': {
@@ -77,10 +76,10 @@ const animationData = {
         loop: false,
         frameSpeed: 0.1,
         directions: {
-            'right': { y: 11 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 11 * SPRITE_HEIGHT, x: 9 * SPRITE_WIDTH },
-            'left':  { y: 11 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH },
-            'down':  { y: 11 * SPRITE_HEIGHT, x: 27 * SPRITE_WIDTH }
+            'right': { y: 10 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'up':    { y: 10 * SPRITE_HEIGHT, x: 9 * SPRITE_WIDTH },
+            'left':  { y: 10 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH },
+            'down':  { y: 10 * SPRITE_HEIGHT, x: 27 * SPRITE_WIDTH }
         }
     },
     'lift': {
@@ -88,10 +87,10 @@ const animationData = {
         loop: false,
         frameSpeed: 0.1,
         directions: {
-            'right': { y: 12 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 12 * SPRITE_HEIGHT, x: 14 * SPRITE_WIDTH },
-            'left':  { y: 12 * SPRITE_HEIGHT, x: 28 * SPRITE_WIDTH },
-            'down':  { y: 12 * SPRITE_HEIGHT, x: 42 * SPRITE_WIDTH }
+            'right': { y: 11 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'up':    { y: 11 * SPRITE_HEIGHT, x: 14 * SPRITE_WIDTH },
+            'left':  { y: 11 * SPRITE_HEIGHT, x: 28 * SPRITE_WIDTH },
+            'down':  { y: 11 * SPRITE_HEIGHT, x: 42 * SPRITE_WIDTH }
         }
     },
     'throw': {
@@ -99,10 +98,10 @@ const animationData = {
         loop: false,
         frameSpeed: 0.07,
         directions: {
-            'right': { y: 13 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 13 * SPRITE_HEIGHT, x: 14 * SPRITE_WIDTH },
-            'left':  { y: 13 * SPRITE_HEIGHT, x: 28 * SPRITE_WIDTH },
-            'down':  { y: 13 * SPRITE_HEIGHT, x: 42 * SPRITE_WIDTH }
+            'right': { y: 12 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'up':    { y: 12 * SPRITE_HEIGHT, x: 14 * SPRITE_WIDTH },
+            'left':  { y: 12 * SPRITE_HEIGHT, x: 28 * SPRITE_WIDTH },
+            'down':  { y: 12 * SPRITE_HEIGHT, x: 42 * SPRITE_WIDTH }
         }
     },
     'hit': {
@@ -110,10 +109,10 @@ const animationData = {
         loop: false,
         frameSpeed: 0.1,
         directions: {
-            'right': { y: 14 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 14 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
-            'left':  { y: 14 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
-            'down':  { y: 14 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
+            'right': { y: 13 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'up':    { y: 13 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
+            'left':  { y: 13 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
+            'down':  { y: 13 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
     },
     'punch': {
@@ -121,10 +120,10 @@ const animationData = {
         loop: false,
         frameSpeed: 0.08,
         directions: {
-            'right': { y: 15 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 15 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
-            'left':  { y: 15 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
-            'down':  { y: 15 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
+            'right': { y: 14 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+            'up':    { y: 14 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
+            'left':  { y: 14 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
+            'down':  { y: 14 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
     }
 };
