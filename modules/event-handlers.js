@@ -69,12 +69,12 @@ class EventHandlers {
             });
         }
 
-        // Sprite navigation arrows (EXACT from Phase-3)
+       // Sprite navigation arrows (EXACT from Phase-3)
         const prevBtn = document.getElementById(`sprite-prev-${index}`);
         const nextBtn = document.getElementById(`sprite-next-${index}`);
         if (prevBtn && nextBtn) {
-            prevBtn.addEventListener('click', () => this.navigateSprite(index, -1, characters));
-            nextBtn.addEventListener('click', () => this.navigateSprite(index, 1, characters));
+            prevBtn.addEventListener('click', () => this.navigateSprite(index, -1, window.characters || characters));
+            nextBtn.addEventListener('click', () => this.navigateSprite(index, 1, window.characters || characters));
         }
 
         // Custom portrait upload (EXACT from Phase-3)
