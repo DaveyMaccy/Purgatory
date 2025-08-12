@@ -142,6 +142,15 @@ export class GameEngine {
             }
         }
         
+        // =========================================================
+        // MINIMAL CHANGE: Added the animation update loop here
+        // =========================================================
+        if (this.renderer) {
+            // Convert deltaTime to seconds for the animation system
+            this.renderer.updateAllCharacterAnimations(deltaTime / 1000);
+        }
+        // =========================================================
+        
         // Future: Update AI system
         // if (this.aiSystem) {
         //     this.aiSystem.update(deltaTime);
