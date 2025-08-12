@@ -282,9 +282,19 @@ window.startGameSimulation = async function(charactersFromCreator) {
             console.log(`✅ Rendered character: ${character.name}`);
         });
         
-        // Initialize UI updater for real-time status updates
+       // Initialize UI updater for real-time status updates
         uiUpdater = new UIUpdater(characterManager);
         console.log('✅ UI updater initialized');
+        
+        // FIXED: Set up character switching and initial UI update
+        setupCharacterSwitching();
+        
+        // Perform initial UI update
+        const initialCharacter = characterManager.getPlayerCharacter() || characterManager.characters[0];
+        if (initialCharacter) {
+            console.log('🔄 Performing initial UI update for:', initialCharacter.name);
+            uiUpdater.updateUI(initialCharacter);
+        }
         
         // Set initial focus on player character
         const playerCharacter = characterManager.getPlayerCharacter();
@@ -304,8 +314,11 @@ window.startGameSimulation = async function(charactersFromCreator) {
         
         // Start the game loop
         gameEngine.start();
+        
+        // FIXED: Start UI update loop
+        startUIUpdateLoop();
 
- // Make game accessible globally for debugging
+        // Make game accessible globally for debugging
         window.game = {
             engine: gameEngine,
             characterManager: characterManager,
@@ -481,6 +494,57 @@ function setFocusTarget(characterId) {
     }
 }
 
+/**
+ * Start continuous UI updates
+ */
+function startUIUpdateLoop() {
+    console.log('🔄 Starting UI update loop...');
+    
+    function updateUILoop() {
+        if (uiUpdater && characterManager) {
+            // Get the focused character or default to player
+            const focusedCharacter = characterManager.getFocusedCharacter() || 
+                                   characterManager.getPlayerCharacter() ||
+                                   characterManager.characters[0];
+            
+            if (focusedCharacter) {
+                uiUpdater.updateUI(focusedCharacter);
+            }
+        }
+        
+        // Update every 100ms (10 times per second)
+        setTimeout(updateUILoop, 100);
+    }
+    
+    // Start the loop
+    updateUILoop();
+    console.log('✅ UI update loop started');
+}
+
+/**
+ * Set up character focus switching with number keys
+ */
+function setupCharacterSwitching() {
+    console.log('🔧 Setting up character focus switching...');
+    
+    document.addEventListener('keydown', (e) => {
+        if (!characterManager || !uiUpdater) return;
+        
+        // Number keys 1-5 for character switching
+        if (e.code >= 'Digit1' && e.code <= 'Digit5') {
+            const index = parseInt(e.code.slice(-1)) - 1;
+            const character = characterManager.characters[index];
+            
+            if (character) {
+                console.log(`🎯 Switching focus to character ${index + 1}: ${character.name}`);
+                setFocusTarget(character.id);
+            }
+        }
+    });
+    
+    console.log('✅ Character switching configured');
+}
+
 // UI Visibility Helper Functions - FIXED to use correct HTML element IDs
 
 function showStartScreen() {
@@ -588,4 +652,5 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
