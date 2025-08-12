@@ -353,7 +353,7 @@ class EventHandlers {
     }
 
     /**
-     * Update character tags with limit enforcement (EXACT from Phase-3)
+     * Update character tags with limit enforcement (BULLETPROOF FIX)
      */
     static updateCharacterTags(index, tagType, maxLimit, characters) {
         const checkboxes = document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]:checked`);
@@ -362,10 +362,10 @@ class EventHandlers {
         // Don't automatically uncheck - let the greying system handle it
         characters[index][tagType] = selectedTags;
         
-        // Update checkbox states to grey out/enable as needed
-        setTimeout(() => {
-            this.updateCheckboxStates(index, tagType, maxLimit, characters);
-        }, 10);
+        // BULLETPROOF FIX: Use requestAnimationFrame instead of setTimeout for UI updates
+        requestAnimationFrame(() => {
+            EventHandlers.updateCheckboxStates(index, tagType, maxLimit, characters);
+        });
     }
 
     /**
