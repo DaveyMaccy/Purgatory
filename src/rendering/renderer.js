@@ -37,7 +37,7 @@ const animationData = {
             'down':  { y: 1 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
     },
-    'walk': {
+    'walking': {
         frames: 6,
         loop: true,
         frameSpeed: 0.1,
