@@ -501,19 +501,36 @@ function startUIUpdateLoop() {
     console.log('🔄 Starting UI update loop...');
     
     function updateUILoop() {
-        if (uiUpdater && characterManager) {
-            // Get the focused character or default to player
-            const focusedCharacter = characterManager.getFocusedCharacter() || 
-                                   characterManager.getPlayerCharacter() ||
-                                   characterManager.characters[0];
+        if (uiUpdater && characterManager && characterManager.characters) {
+            // FIXED: Use focusTargetId to find character or default to player
+            let focusedCharacter = null;
+            
+            if (focusTargetId) {
+                focusedCharacter = characterManager.characters.find(char => char.id === focusTargetId);
+            }
+            
+            // Default to player character or first character
+            if (!focusedCharacter) {
+                focusedCharacter = characterManager.getPlayerCharacter() || characterManager.characters[0];
+            }
             
             if (focusedCharacter) {
+                // FIXED: Ensure character has needs object before updating UI
+                if (!focusedCharacter.needs) {
+                    focusedCharacter.needs = {
+                        energy: 8,
+                        hunger: 6,
+                        social: 7,
+                        stress: 3
+                    };
+                }
+                
                 uiUpdater.updateUI(focusedCharacter);
             }
         }
         
-        // Update every 100ms (10 times per second)
-        setTimeout(updateUILoop, 100);
+        // Update every 1000ms (1 second) - reduced frequency for stability
+        setTimeout(updateUILoop, 1000);
     }
     
     // Start the loop
@@ -652,5 +669,6 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
 
