@@ -678,9 +678,21 @@ function debugCharacterData() {
                 hasNeeds: !!char.needs,
                 needs: char.needs,
                 hasInventory: !!char.inventory,
-                inventory: char.inventory
+                inventory: char.inventory,
+                hasPhysicalAttributes: !!char.physicalAttributes,
+                physicalAttributes: char.physicalAttributes,
+                hasSkills: !!char.skills,
+                skills: char.skills
             });
         });
+        
+        // Test if UI elements exist
+        console.log('🔍 DEBUG: UI Elements check:');
+        console.log('character-name element:', !!document.getElementById('character-name'));
+        console.log('character-role element:', !!document.getElementById('character-role'));
+        console.log('energy-value element:', !!document.getElementById('energy-value'));
+        console.log('inventory-list element:', !!document.getElementById('inventory-list'));
+        console.log('character-stats element:', !!document.getElementById('character-stats'));
     }
 }
 
@@ -692,6 +704,7 @@ export {
 };
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
 
 
