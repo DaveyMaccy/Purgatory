@@ -29,16 +29,26 @@ class EventHandlers {
         if (isPlayerCheckbox) {
             isPlayerCheckbox.addEventListener('change', function() {
                 if (this.checked) {
-                    // Uncheck all other player checkboxes
+                    // Uncheck all other player checkboxes UI and data
                     characters.forEach((char, otherIndex) => {
                         if (otherIndex !== index) {
                             char.isPlayer = false;
                             const otherCheckbox = document.getElementById(`isPlayer-${otherIndex}`);
-                            if (otherCheckbox) otherCheckbox.checked = false;
+                            if (otherCheckbox) {
+                                otherCheckbox.checked = false;
+                            }
                         }
                     });
                     characters[index].isPlayer = true;
                 } else {
+                    // Don't allow unchecking if this is the only player
+                    const otherPlayers = characters.filter((char, i) => i !== index && char.isPlayer);
+                    if (otherPlayers.length === 0) {
+                        // Force this checkbox to stay checked
+                        this.checked = true;
+                        console.log('⚠️ At least one character must be the player');
+                        return;
+                    }
                     characters[index].isPlayer = false;
                 }
             });
@@ -304,7 +314,8 @@ class EventHandlers {
      * Update checkbox states - grey out when max reached (EXACT from Phase-3)
      */
     static updateCheckboxStates(index, itemType, maxLimit, characters) {
-        let prefix, selectedCount;
+        let selectedCount = 0;
+        let prefix = '';
         
         if (itemType === 'personalityTags') {
             prefix = 'tags';
@@ -327,14 +338,18 @@ class EventHandlers {
                 // Grey out unchecked boxes when max reached
                 checkbox.disabled = true;
                 checkbox.parentElement.style.color = '#9ca3af';
-                checkbox.parentElement.style.opacity = '0.6';
+                checkbox.parentElement.style.opacity = '0.5';
+                checkbox.parentElement.style.cursor = 'not-allowed';
             } else {
                 // Enable all boxes when under max
                 checkbox.disabled = false;
                 checkbox.parentElement.style.color = '';
                 checkbox.parentElement.style.opacity = '';
+                checkbox.parentElement.style.cursor = '';
             }
         });
+        
+        console.log(`Updated ${itemType} checkboxes for character ${index}: ${selectedCount}/${maxLimit}`);
     }
 
     /**
@@ -344,18 +359,13 @@ class EventHandlers {
         const checkboxes = document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]:checked`);
         let selectedTags = Array.from(checkboxes).map(cb => cb.value);
         
-        if (selectedTags.length > maxLimit) {
-            // Find the last checked box and uncheck it
-            const lastChecked = Array.from(document.querySelectorAll(`input[id^="${tagType === 'personalityTags' ? 'tags' : tagType}-${index}-"]`))
-                .reverse()
-                .find(cb => cb.checked);
-            if (lastChecked) {
-                lastChecked.checked = false;
-                selectedTags.pop();
-            }
-        }
-        
+        // Don't automatically uncheck - let the greying system handle it
         characters[index][tagType] = selectedTags;
+        
+        // Update checkbox states to grey out/enable as needed
+        setTimeout(() => {
+            this.updateCheckboxStates(index, tagType, maxLimit, characters);
+        }, 10);
     }
 
     /**
