@@ -219,10 +219,17 @@
 
         .tabs {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-evenly;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
             width: 100%;
+            flex-wrap: nowrap;
+        }
+        
+        .tabs .tab-link {
+            flex: 1;
+            max-width: 45px;
+            min-width: 40px;
         }
 
         .tab-widget-content {
@@ -261,12 +268,14 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(100, 116, 139, 0.3);
         }
-        /* Tab content visibility */
+        /* Tab content visibility - ENHANCED */
         .tab-content {
-            display: none;
+            display: none !important;
+            width: 100%;
+            height: 100%;
         }
         .tab-content.active {
-            display: block;
+            display: block !important;
         }
     </style>
 </head>
@@ -399,7 +408,6 @@
     </div>
     
     <script>
-        <script>
         // FIXED: This function handles switching between tabs in the status panel.
         function openTab(evt, tabName) {
             console.log('🔄 Switching to tab:', tabName);
@@ -436,6 +444,7 @@
     <script type="module" src="character-creator.js"></script>
 </body>
 </html>
+
 
 
 
