@@ -61,6 +61,12 @@ function initializeUIElements() {
     
     // ALWAYS show start screen last
     showStartScreen();
+
+    // Setup debug panel
+    setupDebugPanel();
+    
+    console.log('✅ UI elements initialized');
+}
     
     console.log('✅ UI elements initialized');
 }
@@ -694,5 +700,89 @@ export {
     showSuccessMessage
 };
 
+/**
+ * Setup debug panel functionality
+ */
+function setupDebugPanel() {
+    // Open debug panel button
+    const debugBtn = document.getElementById('debug-panel-btn');
+    if (debugBtn) {
+        debugBtn.addEventListener('click', () => {
+            const modal = document.getElementById('debug-modal-backdrop');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        });
+    }
+    
+    // Close debug modal
+    const closeBtn = document.getElementById('close-debug-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            const modal = document.getElementById('debug-modal-backdrop');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Run debug command
+    const runBtn = document.getElementById('run-debug-cmd');
+    if (runBtn) {
+        runBtn.addEventListener('click', () => {
+            const select = document.getElementById('debug-command-select');
+            const output = document.getElementById('debug-output');
+            const result = document.getElementById('debug-result');
+            
+            if (select && select.value) {
+                try {
+                    let commandResult;
+                    const command = select.value;
+                    
+                    // Execute the debug command
+                    switch(command) {
+                        case 'debugCharacterData':
+                            debugCharacterData();
+                            commandResult = 'Check console for character data';
+                            break;
+                        case 'debugCharacterStatus':
+                            if (window.debugCharacterStatus) {
+                                window.debugCharacterStatus();
+                                commandResult = 'Check console for character status';
+                            } else {
+                                commandResult = 'debugCharacterStatus function not found';
+                            }
+                            break;
+                        case 'console.clear':
+                            console.clear();
+                            commandResult = 'Console cleared';
+                            break;
+                        default:
+                            // Try to evaluate as window property
+                            commandResult = eval(`window.${command}`);
+                            console.log(`Debug: ${command}`, commandResult);
+                    }
+                    
+                    // Show result
+                    if (output && result) {
+                        result.textContent = typeof commandResult === 'object' 
+                            ? JSON.stringify(commandResult, null, 2) 
+                            : String(commandResult);
+                        output.classList.remove('hidden');
+                    }
+                    
+                } catch (error) {
+                    console.error('Debug command failed:', error);
+                    if (result) {
+                        result.textContent = `Error: ${error.message}`;
+                        output.classList.remove('hidden');
+                    }
+                }
+            }
+        });
+    }
+}
+
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
