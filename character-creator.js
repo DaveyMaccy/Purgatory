@@ -492,8 +492,8 @@ function updateCharactersFromForms() {
             if (slider) {
                 char.skills[skill] = parseInt(slider.value);
             }
-        });
-    });
+        );
+    );
 }
 
 /**
