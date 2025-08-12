@@ -53,17 +53,35 @@ export class UIUpdater {
      * @param {Character} character - The focus character to display
      */
    updateUI(character) {
-        if (!character) return;
+        if (!character) {
+            console.warn('⚠️ No character provided to updateUI');
+            return;
+        }
         
-        this.updateCharacterBasics(character);
-        this.updateStatusBars(character);
-        this.updatePortrait(character);
-        this.updateCharacterTab(character);
-        this.updateInventoryTab(character);
-        this.updateTasksTab(character);
-        this.updateRelationshipsTab(character);
-        
-        this.lastFocusCharacter = character;
+        // BULLETPROOF: Update UI components in dependency order
+        try {
+            this.updateCharacterBasics(character);
+            this.updateStatusBars(character);
+            this.updatePortrait(character);
+            
+            // BULLETPROOF: Always update character tab if it exists
+            if (this.updateCharacterTab) {
+                this.updateCharacterTab(character);
+            } else {
+                console.warn('⚠️ updateCharacterTab method not found');
+            }
+            
+            this.updateInventoryTab(character);
+            this.updateTasksTab(character);
+            this.updateRelationshipsTab(character);
+            
+            this.lastFocusCharacter = character;
+            console.log(`✅ UI updated successfully for ${character.name}`);
+            
+        } catch (error) {
+            console.error('❌ Error updating UI:', error);
+            console.error('Character data:', character);
+        }
     }
 
     /**
@@ -109,8 +127,8 @@ export class UIUpdater {
         }
     }
 
-    /**
-     * FIXED: Update character portrait using custom or sprite portrait
+   /**
+     * BULLETPROOF: Update character portrait with absolute priority system
      */
     updatePortrait(character) {
         const portraitCanvas = document.getElementById('player-portrait-canvas');
@@ -121,27 +139,38 @@ export class UIUpdater {
         // Clear the canvas
         ctx.clearRect(0, 0, portraitCanvas.width, portraitCanvas.height);
         
-      // PRIORITY FIX: Custom portrait takes absolute priority over sprite portrait
-        if (character.customPortrait) {
-            // Custom portrait always wins
+        // BULLETPROOF PRIORITY SYSTEM: Check each source in absolute priority order
+        if (character.customPortrait && character.customPortrait.trim() !== '') {
+            // #1 PRIORITY: Custom portrait - ALWAYS WINS
             const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
+                console.log('✅ Custom portrait loaded successfully');
             };
             img.onerror = () => {
-                console.warn('Failed to load custom portrait, falling back to sprite');
+                console.warn('⚠️ Custom portrait failed to load, falling back');
                 this.drawSpritePortrait(ctx, portraitCanvas, character);
             };
             img.src = character.customPortrait;
-            return; // Exit early, custom portrait found
-        } else if (character.portrait) {
-            // Generated portrait second priority
+            return; // ABSOLUTE EXIT - nothing else runs
+        }
+        
+        if (character.portrait && character.portrait.trim() !== '') {
+            // #2 PRIORITY: Generated portrait
             const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
+                console.log('✅ Generated portrait loaded successfully');
+            };
+            img.onerror = () => {
+                console.warn('⚠️ Generated portrait failed to load, falling back');
+                this.drawSpritePortrait(ctx, portraitCanvas, character);
             };
             img.src = character.portrait;
-        } else if (character.spriteSheet) {
+            return; // ABSOLUTE EXIT - sprite won't override
+        }
+        
+        if (character.spriteSheet) {
             // Fallback to sprite sheet if no portraits available
             const img = new Image();
             img.onload = () => {
@@ -540,6 +569,7 @@ export class UIUpdater {
         }
     }
 }
+
 
 
 
