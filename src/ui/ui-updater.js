@@ -117,64 +117,18 @@ export class UIUpdater {
      * BULLETPROOF: Only update portrait when it actually changes
      */
     updatePortrait(character) {
-    const portraitCanvas = document.getElementById('player-portrait-canvas');
-    if (!portraitCanvas || !character) return;
-    
-    // FIXED PRIORITY: custom always wins, then sprite with proper rendering
-    let newPortraitSrc;
-    if (character.customPortrait) {
-        newPortraitSrc = character.customPortrait;
-    } else {
-        newPortraitSrc = character.spriteSheet || character.portrait;
-    }
-    
-    if (this.lastPortraitSrc === newPortraitSrc) return;
-    
-    this.lastPortraitSrc = newPortraitSrc;
-    
-    const ctx = portraitCanvas.getContext('2d');
-    ctx.clearRect(0, 0, portraitCanvas.width, portraitCanvas.height);
-    
-    if (newPortraitSrc) {
-        const img = new Image();
-        img.onload = () => {
-            // FIXED SPRITE RENDERING: Full fit with no compression
-            ctx.imageSmoothingEnabled = false; // Remove compression
-            
-            if (character.customPortrait) {
-                // Custom portrait - maintain aspect ratio
-                const aspectRatio = img.width / img.height;
-                let drawWidth = portraitCanvas.width;
-                let drawHeight = portraitCanvas.height;
-                
-                if (aspectRatio > 1) {
-                    drawHeight = portraitCanvas.width / aspectRatio;
-                } else {
-                    drawWidth = portraitCanvas.height * aspectRatio;
-                }
-                
-                const x = (portraitCanvas.width - drawWidth) / 2;
-                const y = (portraitCanvas.height - drawHeight) / 2;
-                ctx.drawImage(img, x, y, drawWidth, drawHeight);
-            } else {
-                // Sprite sheet - render full 48x96 sprite properly
-                drawWidth = portraitCanvas.width;
-                drawHeight = portraitCanvas.height;
-                ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
-            }
-            
-            console.log('✅ Portrait updated successfully');
-        };
-        img.onerror = () => {
-            console.warn('⚠️ Portrait failed to load, drawing placeholder');
-            this.drawPortraitPlaceholder(ctx, portraitCanvas, character);
-        };
-        img.src = newPortraitSrc;
-    } else {
-        this.drawPortraitPlaceholder(ctx, portraitCanvas, character);
-    }
-}
-        if (this.lastPortraitSrc === newPortraitSrc) return; // NO CHANGE, DON'T REDRAW
+        const portraitCanvas = document.getElementById('player-portrait-canvas');
+        if (!portraitCanvas || !character) return;
+        
+        // FIXED PRIORITY: custom always wins, then sprite with proper rendering
+        let newPortraitSrc;
+        if (character.customPortrait) {
+            newPortraitSrc = character.customPortrait;
+        } else {
+            newPortraitSrc = character.spriteSheet || character.portrait;
+        }
+        
+        if (this.lastPortraitSrc === newPortraitSrc) return;
         
         this.lastPortraitSrc = newPortraitSrc;
         
@@ -184,7 +138,31 @@ export class UIUpdater {
         if (newPortraitSrc) {
             const img = new Image();
             img.onload = () => {
-                ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
+                // FIXED SPRITE RENDERING: Full fit with no compression
+                ctx.imageSmoothingEnabled = false; // Remove compression
+                
+                if (character.customPortrait) {
+                    // Custom portrait - maintain aspect ratio
+                    const aspectRatio = img.width / img.height;
+                    let drawWidth = portraitCanvas.width;
+                    let drawHeight = portraitCanvas.height;
+                    
+                    if (aspectRatio > 1) {
+                        drawHeight = portraitCanvas.width / aspectRatio;
+                    } else {
+                        drawWidth = portraitCanvas.height * aspectRatio;
+                    }
+                    
+                    const x = (portraitCanvas.width - drawWidth) / 2;
+                    const y = (portraitCanvas.height - drawHeight) / 2;
+                    ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                } else {
+                    // Sprite sheet - render full 48x96 sprite properly
+                    let drawWidth = portraitCanvas.width;
+                    let drawHeight = portraitCanvas.height;
+                    ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
+                }
+                
                 console.log('✅ Portrait updated successfully');
             };
             img.onerror = () => {
@@ -543,4 +521,3 @@ export class UIUpdater {
         }
     }
 }
-
