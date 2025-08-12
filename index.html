@@ -83,6 +83,60 @@
             padding: 0.5rem;
             border-radius: 0.25rem;
         }
+        
+        /* Office supplies background animation */
+        .modal-backdrop::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            background-image: 
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23cbd5e1' fill-opacity='0.1'%3E%3Cpath d='M20 20c0-11 9-20 20-20v20h-20z'/%3E%3C/g%3E%3C/svg%3E"),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='%23a1a1aa' fill-opacity='0.05'%3E%3Cpath d='M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h16v2H4v-2zm0 4h16v2H4v-2z'/%3E%3C/svg%3E");
+            background-position: 0 0, 30px 15px;
+            background-size: 80px 80px, 60px 60px;
+            animation: floatOfficeSupplies 20s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes floatOfficeSupplies {
+            0%, 100% { 
+                background-position: 0 0, 30px 15px; 
+                opacity: 0.8;
+            }
+            50% { 
+                background-position: 20px 10px, 50px 25px; 
+                opacity: 0.6;
+           }
+        
+        /* Tab button icon styling */
+        .tab-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .tab-inventory { background-color: #fef3c7; }
+        .tab-inventory:hover { background-color: #fde68a; }
+        .tab-inventory.active { background-color: #f59e0b; color: white; }
+
+        .tab-tasks { background-color: #dbeafe; }
+        .tab-tasks:hover { background-color: #bfdbfe; }
+        .tab-tasks.active { background-color: #3b82f6; color: white; }
+
+        .tab-relationships { background-color: #dcfce7; }
+        .tab-relationships:hover { background-color: #bbf7d0; }
+        .tab-relationships.active { background-color: #10b981; color: white; }
     </style>
 </head>
 <body>
@@ -168,11 +222,17 @@
                     <div class="flex items-center gap-3"><i class="ph-fill ph-fire text-red-500 text-xl"></i><div class="w-full"><div class="flex justify-between mb-1 text-xs font-semibold"><span>Stress</span><span id="stress-value">0%</span></div><div class="stat-bar-container bg-gray-200 rounded-full h-2"><div id="stress-bar" class="stat-bar-fill bg-red-500 h-2 rounded-full" style="width: 0%;"></div></div></div></div>
                 </div>
             </div>
-            <div class="widget flex-grow flex flex-col">
-                <div class="tabs flex items-center gap-2 mb-2">
-                    <button class="tab-link active" onclick="openTab(event, 'inventory')">Inventory</button>
-                    <button class="tab-link" onclick="openTab(event, 'tasks')">Tasks</button>
-                    <button class="tab-link" onclick="openTab(event, 'relationships')">Relationships</button>
+           <div class="tabs flex items-center gap-2 mb-2">
+                    <button class="tab-link active tab-inventory" onclick="openTab(event, 'inventory')" title="Inventory">
+                        <i class="ph ph-bag text-lg"></i>
+                    </button>
+                    <button class="tab-link tab-tasks" onclick="openTab(event, 'tasks')" title="Tasks">
+                        <i class="ph ph-list-checks text-lg"></i>
+                    </button>
+                    <button class="tab-link tab-relationships" onclick="openTab(event, 'relationships')" title="Relationships">
+                        <i class="ph ph-users text-lg"></i>
+                    </button>
+                </div>
                 </div>
                 <div class="flex-grow overflow-y-auto">
                     <div id="inventory" class="tab-content active"><ul id="inventory-list" class="space-y-2 text-sm"></ul></div>
@@ -204,3 +264,4 @@
     <script type="module" src="character-creator.js"></script>
 </body>
 </html>
+
