@@ -212,7 +212,9 @@ class EventHandlers {
             character.spriteSheet = SPRITE_OPTIONS[newSpriteIndex];
             
             // Update portrait and info
-            SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+            import('../modules/sprite-manager.js').then(({ SpriteManager }) => {
+                SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+            });
             EventHandlers.updateSpriteInfo(index, characters);
         });
     }
