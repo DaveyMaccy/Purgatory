@@ -120,15 +120,26 @@ export class UIUpdater {
         // Clear the canvas
         ctx.clearRect(0, 0, portraitCanvas.width, portraitCanvas.height);
         
-       // PRIORITY FIX: Custom portrait takes absolute priority over sprite portrait
-        const portraitData = character.customPortrait || character.portrait;
-        
-        if (portraitData) {
+      // PRIORITY FIX: Custom portrait takes absolute priority over sprite portrait
+        if (character.customPortrait) {
+            // Custom portrait always wins
             const img = new Image();
             img.onload = () => {
                 ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
             };
-            img.src = portraitData;
+            img.onerror = () => {
+                console.warn('Failed to load custom portrait, falling back to sprite');
+                this.drawSpritePortrait(ctx, portraitCanvas, character);
+            };
+            img.src = character.customPortrait;
+            return; // Exit early, custom portrait found
+        } else if (character.portrait) {
+            // Generated portrait second priority
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
+            };
+            img.src = character.portrait;
         } else if (character.spriteSheet) {
             // Fallback to sprite sheet if no portraits available
             const img = new Image();
@@ -147,6 +158,30 @@ export class UIUpdater {
             ctx.textAlign = 'center';
             ctx.fillText(character.name.charAt(0).toUpperCase(), 
                 portraitCanvas.width / 2, portraitCanvas.height / 2 + 6);
+        }
+    }
+
+    /**
+     * Draw sprite as portrait fallback
+     */
+    drawSpritePortrait(ctx, canvas, character) {
+        if (character.spriteSheet) {
+            const img = new Image();
+            img.onload = () => {
+                // Draw first frame of sprite as portrait
+                ctx.drawImage(img, 0, 0, 48, 96, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = character.spriteSheet;
+        } else {
+            // Final fallback - draw placeholder
+            ctx.fillStyle = '#4f46e5';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'white';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const initial = character.name ? character.name.charAt(0).toUpperCase() : '?';
+            ctx.fillText(initial, canvas.width / 2, canvas.height / 2);
         }
     }
 
@@ -405,4 +440,5 @@ export class UIUpdater {
         }
     }
 }
+
 
