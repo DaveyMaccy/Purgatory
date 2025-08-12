@@ -60,8 +60,8 @@ class UIGenerator {
             container.appendChild(panel);
         }
         
-        // Setup event listeners for this panel
-        EventHandlers.setupPanelEventListeners(index);
+        // Setup event listeners for this panel with characters
+        EventHandlers.setupPanelEventListeners(index, window.characters);
         
         // Initialize sprite and portrait - pass characters array
         SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
