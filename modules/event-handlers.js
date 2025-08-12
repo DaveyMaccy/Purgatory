@@ -199,7 +199,14 @@ class EventHandlers {
      * Navigate through sprites with arrows (EXACT from Phase-3)
      */
     static navigateSprite(index, direction, characters) {
-        const character = characters[index];
+        // Safety check - get characters from global scope if not provided
+        const charactersArray = characters || window.characters || [];
+        if (!charactersArray[index]) {
+            console.warn(`⚠️ Character at index ${index} not found`);
+            return;
+        }
+        
+        const character = charactersArray[index];
         let newSpriteIndex = (character.spriteIndex || 0) + direction;
         
         // Import SPRITE_OPTIONS dynamically if needed
@@ -208,14 +215,14 @@ class EventHandlers {
             if (newSpriteIndex < 0) newSpriteIndex = SPRITE_OPTIONS.length - 1;
             if (newSpriteIndex >= SPRITE_OPTIONS.length) newSpriteIndex = 0;
             
-            character.spriteIndex = newSpriteIndex;
+          character.spriteIndex = newSpriteIndex;
             character.spriteSheet = SPRITE_OPTIONS[newSpriteIndex];
             
             // Update portrait and info
             import('../modules/sprite-manager.js').then(({ SpriteManager }) => {
                 SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
             });
-            EventHandlers.updateSpriteInfo(index, characters);
+            EventHandlers.updateSpriteInfo(index, charactersArray);
         });
     }
 
