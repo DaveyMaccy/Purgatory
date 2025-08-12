@@ -159,17 +159,34 @@ export class UIUpdater {
                } else {
                     // Extract 4th sprite from sprite sheet if needed
                     if (character.spriteSheet && !character.portrait) {
-                        // Extract 4th sprite from first row
+                        // Extract 4th sprite from first row with proper aspect ratio
                         const spriteWidth = 48;
                         const spriteHeight = 96;
                         const spriteIndex = 3; // Fourth sprite (0-based)
                         const sourceX = spriteIndex * spriteWidth;
                         const sourceY = 0; // First row
                         
+                        // Calculate proper scaling to maintain 48:96 aspect ratio
+                        const aspectRatio = spriteWidth / spriteHeight; // 0.5 (width is half of height)
+                        let drawWidth = portraitCanvas.width;
+                        let drawHeight = portraitCanvas.height;
+                        
+                        if (aspectRatio < 1) {
+                            // Sprite is taller than wide (48x96) - fit to width
+                            drawHeight = drawWidth / aspectRatio;
+                        } else {
+                            // Sprite is wider than tall - fit to height  
+                            drawWidth = drawHeight * aspectRatio;
+                        }
+                        
+                        // Center the sprite in the canvas
+                        const x = (portraitCanvas.width - drawWidth) / 2;
+                        const y = (portraitCanvas.height - drawHeight) / 2;
+                        
                         ctx.drawImage(
                             img,
                             sourceX, sourceY, spriteWidth, spriteHeight, // Source
-                            0, 0, portraitCanvas.width, portraitCanvas.height // Dest
+                            x, y, drawWidth, drawHeight // Dest with proper scaling
                         );
                     } else {
                         // Portrait already extracted - just draw it
@@ -535,4 +552,5 @@ export class UIUpdater {
         }
     }
 }
+
 
