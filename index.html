@@ -104,7 +104,7 @@
             right: 0;
             bottom: 0;
             font-size: 72px;
-            color: rgba(180, 83, 9, 0.15);
+            color: rgba(180, 83, 9, 0.7);
             pointer-events: none;
             display: block;
             word-spacing: 120px;
@@ -277,6 +277,27 @@
         .tab-content.active {
             display: block !important;
         }
+
+        /* Character Creator Centering Fix */
+    #creator-modal-backdrop {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        z-index: 9999 !important;
+    }
+
+    .creator-modal {
+        max-width: 90vw !important;
+        max-height: 90vh !important;
+        margin: 0 !important;
+        position: relative !important;
+    }
     </style>
 </head>
 <body>
@@ -444,6 +465,7 @@
     <script type="module" src="character-creator.js"></script>
 </body>
 </html>
+
 
 
 
