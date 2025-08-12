@@ -10,6 +10,7 @@
  * - Created an 'updateAllCharacterAnimations' method to be called in the main game loop.
  * - Rewrote 'updateCharacterAnimation' and 'updateSpriteFrame' to use the new system.
  * - Preserved all existing functionality (preloading, map rendering, etc.).
+ * - CORRECTED a typo from SPRIGHT_HEIGHT to SPRITE_HEIGHT.
  */
 
 // DORMANT CONTROL FLAG - Set to true when ready to enable enhanced sprites
@@ -135,7 +136,7 @@ const animationData = {
         frameSpeed: 0.08,
         directions: {
             'right': { y: 15 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
-            'up':    { y: 15 * SPRIGHT_HEIGHT, x: 6 * SPRITE_WIDTH },
+            'up':    { y: 15 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH }, // <-- TYPO FIXED HERE
             'left':  { y: 15 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
             'down':  { y: 15 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
@@ -170,186 +171,45 @@ export class Renderer {
         }
     }
 
-    // ... (preloadCharacterSprites, loadSpriteTexture, initialize, calculateCanvasSize, etc. remain the same) ...
-    
-    // =========================================================================
-    // The code from your provided `renderer.js` file from line 125 to 528
-    // (from `initialize` to the end of `renderMap`) goes here.
-    // It is unchanged.
-    // =========================================================================
-
-
-    /**
-     * ENHANCED: Render character sprite and initialize its animation state
-     */
-    async renderCharacter(character) {
-        if (!this.isInitialized) {
-            console.warn('❌ Cannot render character: renderer not initialized');
-            return;
+    async preloadCharacterSprites() {
+        if (!USE_ENHANCED_SPRITES) {
+            console.log('💤 Sprite preloading DORMANT - skipping');
+            return 0;
         }
 
-        if (this.characterSprites.has(character.id)) {
-            this.removeCharacter(character.id);
+        console.log('🔄 Preloading character sprite textures...');
+        
+        const spritePromises = [];
+        
+        // Generate sprite paths (matches character-data.js - first 25 sprites)
+        for (let i = 1; i <= 25; i++) {
+            const paddedNumber = i.toString().padStart(2, '0');
+            const spritePath = `assets/characters/character-${paddedNumber}.png`;
+            
+            const promise = this.loadSpriteTexture(spritePath).catch(error => {
+                console.warn(`⚠️ Failed to preload sprite: ${spritePath}`, error);
+                return null; // Continue with other sprites
+            });
+            
+            spritePromises.push(promise);
+        }
+        
+        const results = await Promise.allSettled(spritePromises);
+        const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
+        
+        console.log(`✅ Preloaded ${successCount}/25 character sprites`);
+        return successCount;
+    }
+
+    async loadSpriteTexture(spritePath) {
+        if (!USE_ENHANCED_SPRITES) {
+            throw new Error('Enhanced sprites are dormant');
         }
 
+        // Check if already loaded
+        if (this.preloadedTextures.has(spritePath)) {
+            return this.preloadedTextures.get(spritePath);
+        }
+        
         try {
-            let sprite;
-            const texture = await PIXI.Texture.fromURL(character.spriteSheet);
-            
-            if (!texture || !texture.valid) {
-                 throw new Error('Texture failed to load or is invalid');
-            }
-            
-            // The base texture is the entire sprite sheet image
-            const baseTexture = texture.baseTexture;
-
-            // Create a texture for the very first frame (idle, facing down)
-            const initialFrameRect = new PIXI.Rectangle(
-                animationData.idle.directions.down.x,
-                animationData.idle.directions.down.y,
-                SPRITE_WIDTH,
-                SPRITE_HEIGHT
-            );
-            
-            const frameTexture = new PIXI.Texture(baseTexture, initialFrameRect);
-            sprite = new PIXI.Sprite(frameTexture);
-
-            sprite.width = this.CHARACTER_WIDTH;
-            sprite.height = this.CHARACTER_HEIGHT;
-            sprite.anchor.set(0.5, 1.0);
-            sprite.x = character.position?.x || 100;
-            sprite.y = character.position?.y || 100;
-
-            // NEW: Attach animation state to the sprite itself
-            sprite.animationState = {
-                name: 'idle',
-                direction: 'down',
-                frame: 0,
-                timer: 0,
-            };
-            
-            sprite.characterId = character.id;
-            this.characterLayer.addChild(sprite);
-            this.characterSprites.set(character.id, sprite);
-
-            console.log(`✅ Character rendered: ${character.name}`);
-
-        } catch (error) {
-            console.error(`❌ Failed to render character ${character.name}:`, error);
-            // Implement fallback if needed
-        }
-    }
-    
-    // ... (createSimpleCharacterSprite and updateCharacterPosition remain the same) ...
-
-    /**
-     * REWRITTEN: Called by external systems (like MovementSystem) to CHANGE the animation.
-     * This function now only sets the desired state. The actual frame-by-frame
-     * animation is handled by `updateAllCharacterAnimations`.
-     */
-    updateCharacterAnimation(characterId, actionState, facingDirection) {
-        const sprite = this.characterSprites.get(characterId);
-        if (!sprite) return;
-
-        // Check if the requested animation exists
-        if (!animationData[actionState]) {
-            console.warn(`Animation '${actionState}' not found. Defaulting to 'idle'.`);
-            actionState = 'idle';
-        }
-
-        // Check if the direction is valid for this animation
-        let newDirection = facingDirection;
-        if (!animationData[actionState].directions[newDirection]) {
-            // If the direction isn't supported (e.g., 'up' for 'sit'), keep the old one or default.
-            newDirection = sprite.animationState.direction || 'down';
-            // If still not valid, pick the first available direction
-            if (!animationData[actionState].directions[newDirection]) {
-                 newDirection = Object.keys(animationData[actionState].directions)[0];
-            }
-        }
-        
-        const state = sprite.animationState;
-        // Reset animation only if the action or direction has changed
-        if (state.name !== actionState || state.direction !== newDirection) {
-            state.name = actionState;
-            state.direction = newDirection;
-            state.frame = 0;
-            state.timer = 0;
-            // Immediately update to the first frame of the new animation
-            this.updateSpriteVisualFrame(sprite); 
-        }
-    }
-
-    /**
-     * NEW: Main animation loop driver.
-     * This method should be called once per frame from your main game loop.
-     * @param {number} deltaTime - Time in seconds since the last frame.
-     */
-    updateAllCharacterAnimations(deltaTime) {
-        if (!USE_ENHANCED_SPRITES) return;
-
-        for (const sprite of this.characterSprites.values()) {
-            const state = sprite.animationState;
-            const anim = animationData[state.name];
-            if (!anim) continue;
-
-            state.timer += deltaTime;
-
-            // Time to advance to the next frame?
-            if (state.timer >= anim.frameSpeed) {
-                state.timer -= anim.frameSpeed;
-                
-                let nextFrame = state.frame + 1;
-
-                // Handle looping
-                if (nextFrame >= anim.frames) {
-                    if (anim.loop) {
-                        // Standard loop
-                        nextFrame = 0;
-                    } else if (anim.loopSection) {
-                        // Special loop (like phone use)
-                        nextFrame = anim.loopSection.start;
-                    } else {
-                        // Non-looping animation, stay on last frame
-                        nextFrame = anim.frames - 1;
-                    }
-                }
-                
-                if (state.frame !== nextFrame) {
-                    state.frame = nextFrame;
-                    this.updateSpriteVisualFrame(sprite);
-                }
-            }
-        }
-    }
-    
-    /**
-     * REWRITTEN: Updates the sprite's texture to show the correct frame.
-     * This is now a purely visual update based on the sprite's current animation state.
-     */
-    updateSpriteVisualFrame(sprite) {
-        const state = sprite.animationState;
-        const anim = animationData[state.name];
-        if (!anim || !sprite.texture) return;
-
-        let directionData = anim.directions[state.direction];
-        
-        // Fallback if direction doesn't exist for this animation (e.g., trying to 'sit' facing 'up')
-        if (!directionData) {
-            directionData = anim.directions[Object.keys(anim.directions)[0]]; // Use first available direction
-        }
-
-        if (!directionData) {
-             console.warn(`Animation '${state.name}' has no direction data.`);
-             return;
-        }
-
-        const sourceX = directionData.x + (state.frame * SPRITE_WIDTH);
-        const sourceY = directionData.y;
-        
-        sprite.texture.frame = new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT);
-        sprite.texture.updateUvs();
-    }
-    
-    // ... (removeCharacter, update, destroy, and other methods remain the same) ...
-}
+            const texture = await PIXI.Texture.fromURL(sprite
