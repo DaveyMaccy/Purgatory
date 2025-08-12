@@ -125,7 +125,7 @@ export class UIUpdater {
         if (character.customPortrait) {
             newPortraitSrc = character.customPortrait;
         } else {
-            newPortraitSrc = character.spriteSheet || character.portrait;
+            newPortraitSrc = character.portrait || character.spriteSheet;
         }
         
         if (this.lastPortraitSrc === newPortraitSrc) return;
@@ -156,11 +156,25 @@ export class UIUpdater {
                     const x = (portraitCanvas.width - drawWidth) / 2;
                     const y = (portraitCanvas.height - drawHeight) / 2;
                     ctx.drawImage(img, x, y, drawWidth, drawHeight);
-                } else {
-                    // Sprite sheet - render full 48x96 sprite properly
-                    let drawWidth = portraitCanvas.width;
-                    let drawHeight = portraitCanvas.height;
-                    ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
+               } else {
+                    // Extract 4th sprite from sprite sheet if needed
+                    if (character.spriteSheet && !character.portrait) {
+                        // Extract 4th sprite from first row
+                        const spriteWidth = 48;
+                        const spriteHeight = 96;
+                        const spriteIndex = 3; // Fourth sprite (0-based)
+                        const sourceX = spriteIndex * spriteWidth;
+                        const sourceY = 0; // First row
+                        
+                        ctx.drawImage(
+                            img,
+                            sourceX, sourceY, spriteWidth, spriteHeight, // Source
+                            0, 0, portraitCanvas.width, portraitCanvas.height // Dest
+                        );
+                    } else {
+                        // Portrait already extracted - just draw it
+                        ctx.drawImage(img, 0, 0, portraitCanvas.width, portraitCanvas.height);
+                    }
                 }
                 
                 console.log('✅ Portrait updated successfully');
@@ -521,3 +535,4 @@ export class UIUpdater {
         }
     }
 }
+
