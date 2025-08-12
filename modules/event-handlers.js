@@ -24,7 +24,7 @@ class EventHandlers {
             characters = window.characters || [];
         }
         
-        // FIXED: Player character checkbox - enforce single player (EXACT from Phase-3)
+       // FIXED: Player character checkbox - enforce single player (EXACT from Phase-3)
         const isPlayerCheckbox = document.getElementById(`isPlayer-${index}`);
         if (isPlayerCheckbox) {
             isPlayerCheckbox.addEventListener('change', function() {
@@ -231,6 +231,8 @@ class EventHandlers {
             // Update portrait and info
             import('../modules/sprite-manager.js').then(({ SpriteManager }) => {
                 SpriteManager.updateCharacterPortrait(index, character.spriteSheet);
+            });
+            EventHandlers.updateSpriteInfo(index, charactersArray);
             });
             EventHandlers.updateSpriteInfo(index, charactersArray);
         });
