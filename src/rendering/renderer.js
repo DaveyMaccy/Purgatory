@@ -464,13 +464,15 @@ removeChunk(chunkKey) {
 }
 
 createTileSprite(gid) {
-    // This logic is extracted from your old renderTileLayer function and is mostly correct.
-    // It finds the right tileset and creates a sprite.
     const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
     const FLIPPED_VERTICALLY_FLAG = 0x40000000;
-    const FLIPPED_DIAGONALLY_FLAG = 0x20000000; // THIS FLAG WAS MISSING
+    const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
 
-    // CORRECTED: Include all three flags in the bitmask to get the clean GID
+    // Store flip states
+    const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
+    const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
+    const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
+
     const cleanGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
 
     let tilesetData = null;
@@ -495,7 +497,26 @@ createTileSprite(gid) {
     );
 
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
-    return new PIXI.Sprite(texture);
+    const sprite = new PIXI.Sprite(texture);
+
+    // --- ADDED TRANSFORMATION LOGIC ---
+    // Set anchor points for proper rotation and flipping
+    sprite.anchor.set(0.5, 0.5);
+    sprite.x += sprite.width / 2;
+    sprite.y += sprite.height / 2;
+
+    // Apply transformations
+    if (flippedD) {
+        sprite.rotation = (Math.PI / 2);
+        sprite.scale.x = flippedH ? -1 : 1;
+    } else {
+        sprite.scale.x = flippedH ? -1 : 1;
+    }
+
+    sprite.scale.y = flippedV ? -1 : 1;
+    // --- END OF ADDED LOGIC ---
+
+    return sprite;
 }
 
     async loadTilesets(tilesets) {
