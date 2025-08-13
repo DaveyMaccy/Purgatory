@@ -509,7 +509,7 @@ createTileSprite(gid) {
     );
 
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
-    const sprite = new PIPI.Sprite(texture);
+    const sprite = new PIXI.Sprite(texture); // CORRECTED: PIXI instead of PIPI
 
     // --- Definitive Transformation Logic ---
     const originalTileWidth = tilesetData.tilewidth;
@@ -527,7 +527,7 @@ createTileSprite(gid) {
         flippedH = true;  // Turn ON the correct H flag.
     }
     
-    // --- SECTION 2: Universal Transformation Logic ---
+    // --- SECTION 2: Universal Tiled Transformation Logic ---
     // This logic correctly emulates Tiled's transformation order as per the forum posts.
     let rotation = 0;
     let scaleX = 1;
