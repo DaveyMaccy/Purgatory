@@ -499,34 +499,40 @@ createTileSprite(gid) {
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
     const sprite = new PIXI.Sprite(texture);
 
-    // --- DEFINITIVE TRANSFORMATION LOGIC ---
     // Set anchor to the center for rotation and flipping
     sprite.anchor.set(0.5, 0.5);
     // Adjust position to account for the new anchor point
     sprite.x += sprite.width / 2;
     sprite.y += sprite.height / 2;
 
-    // Handle all 8 Tiled flip combinations by mapping them to PixiJS's rotation and scale
+    // --- Mathematically Correct Transformation Logic ---
     if (flippedD) {
+        // Diagonal flip is on (swaps x and y)
         if (flippedH && flippedV) {
+            // Equivalent to: rotate 90 degrees, then flip Y
             sprite.rotation = Math.PI / 2;
-            sprite.scale.x = -1;
+            sprite.scale.y = -1;
         } else if (flippedH) {
+            // Equivalent to: rotate 90 degrees
             sprite.rotation = Math.PI / 2;
         } else if (flippedV) {
+            // Equivalent to: rotate -90 degrees
             sprite.rotation = -Math.PI / 2;
-            sprite.scale.x = -1;
         } else {
-            sprite.rotation = -Math.PI / 2;
+            // Equivalent to: rotate 90 degrees, then flip X
+            sprite.rotation = Math.PI / 2;
+            sprite.scale.x = -1;
         }
     } else {
+        // No diagonal flip, just scale
         sprite.scale.x = flippedH ? -1 : 1;
         sprite.scale.y = flippedV ? -1 : 1;
     }
-    // --- END OF DEFINITIVE LOGIC ---
+    // --- End of Correct Logic ---
 
     return sprite;
 }
+    
     async loadTilesets(tilesets) {
         console.log('🗂️ Loading map tilesets...');
 
