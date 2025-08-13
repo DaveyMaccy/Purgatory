@@ -249,7 +249,6 @@ generateNavGridForActiveArea() {
             }
         }
     }
-    console.log('✅ Dynamic NavGrid instance regenerated for active area.');
 }
 
     /**
@@ -357,31 +356,31 @@ generateNavGridForActiveArea() {
      * @param {Object} endPos - Ending position {x, y} in pixels
      * @returns {Array} Array of waypoints in pixel coordinates
      */
-    findPath(startPos, endPos) {
-        // Convert pixel positions to tile positions
-        const startTile = {
-            x: Math.floor(startPos.x / this.TILE_SIZE),
-            y: Math.floor(startPos.y / this.TILE_SIZE)
-        };
-        
-        const endTile = {
-            x: Math.floor(endPos.x / this.TILE_SIZE),
-            y: Math.floor(endPos.y / this.TILE_SIZE)
-        };
-        
-        // Use the NavGrid's findPath method
-        if (this.navGridInstance) {
-            const tilePath = this.navGridInstance.findPath(startTile, endTile);
-            
-            // Convert tile path back to pixel coordinates (center of each tile)
-            return tilePath.map(tile => ({
-                x: (tile.x * this.TILE_SIZE) + (this.TILE_SIZE / 2),
-                y: (tile.y * this.TILE_SIZE) + (this.TILE_SIZE / 2)
-            }));
-        }
-        
-        return [];
+   findPath(startPos, endPos) {
+    // Convert pixel positions to TILE positions, accounting for world offset
+    const startTile = {
+        x: Math.floor(startPos.x / this.TILE_SIZE) - this.worldBounds.minX,
+        y: Math.floor(startPos.y / this.TILE_SIZE) - this.worldBounds.minY
+    };
+
+    const endTile = {
+        x: Math.floor(endPos.x / this.TILE_SIZE) - this.worldBounds.minX,
+        y: Math.floor(endPos.y / this.TILE_SIZE) - this.worldBounds.minY
+    };
+
+    // Use the NavGrid's findPath method
+    if (this.navGridInstance) {
+        const tilePath = this.navGridInstance.findPath(startTile, endTile);
+
+        // Convert tile path back to PIXEL coordinates, re-adding the offset
+        return tilePath.map(tile => ({
+            x: ((tile.x + this.worldBounds.minX) * this.TILE_SIZE) + (this.TILE_SIZE / 2),
+            y: ((tile.y + this.worldBounds.minY) * this.TILE_SIZE) + (this.TILE_SIZE / 2)
+        }));
     }
+
+    return [];
+}
 
     /**
      * Create task dictionary for character assignments
@@ -546,5 +545,6 @@ generateNavGridForActiveArea() {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
 
 
