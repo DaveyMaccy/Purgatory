@@ -576,9 +576,17 @@ updateCamera() {
             tileData = layer.data;
         }
 
+        console.log(`🔍 Processing ${tileData.length} tiles from layer data`);
+        let processedTiles = 0;
+
         for (let i = 0; i < tileData.length; i++) {
             const gid = tileData[i];
             if (gid === 0) continue; // Empty tile
+    
+            processedTiles++;
+            if (processedTiles <= 5) {
+                console.log(`🎯 Processing tile ${processedTiles}: GID=${gid} at index ${i}`);
+            }
 
             // Handle tile flipping flags (Tiled format)
             const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
