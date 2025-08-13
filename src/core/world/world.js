@@ -105,8 +105,10 @@ export class World {
         this.TILE_SIZE = officeLayout?.tilewidth || 48; // Standard tile size from map data
         
         // World dimensions
-        this.width = officeLayout?.width || 30;
-        this.height = officeLayout?.height || 20;
+        // Use actual layer dimensions to match renderer
+        const firstLayer = officeLayout?.layers?.[0];
+        this.width = firstLayer?.width || officeLayout?.width || 30;
+        this.height = firstLayer?.height || officeLayout?.height || 20;
         this.worldWidth = this.width * this.TILE_SIZE;
         this.worldHeight = this.height * this.TILE_SIZE;
 
@@ -516,3 +518,4 @@ export class World {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
