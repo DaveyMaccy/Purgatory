@@ -561,68 +561,6 @@ createTileSprite(gid) {
     return sprite;
 }
     
-    if (!tilesetData) return null;
-
-    // Calculate the tile's position within the tileset texture
-    const tileX = tileIdInTileset % tilesetData.columns;
-    const tileY = Math.floor(tileIdInTileset / tilesetData.columns);
-
-    const rect = new PIXI.Rectangle(
-        tileX * tilesetData.tilewidth,
-        tileY * tilesetData.tileheight,
-        tilesetData.tilewidth,
-        tilesetData.tileheight
-    );
-
-    const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
-    const sprite = new PIXI.Sprite(texture);
-
-    // --- Definitive Setup and Transformation Logic ---
-    // Use the original tile dimensions from the tileset to prevent
-    // positioning errors when the sprite's bounding box changes on rotation.
-    const originalTileWidth = tilesetData.tilewidth;
-    const originalTileHeight = tilesetData.tileheight;
-
-    // Set a consistent center pivot point for all transformations.
-    sprite.anchor.set(0.5, 0.5);
-
-    // Adjust the sprite's position to keep it aligned to the grid.
-    sprite.x += originalTileWidth / 2;
-    sprite.y += originalTileHeight / 2;
-    
-    // This logic handles all 8 combinations based on this map's specific conventions.
-    if (flippedD) {
-        if (flippedH && flippedV) {
-            // Diagonal + Horizontal + Vertical (Rotated +90 & flipped vertically)
-            sprite.rotation = Math.PI / 2;
-            sprite.scale.y = -1;
-        } else if (flippedH) {
-            // Diagonal + Horizontal (Pure 90-degree rotation)
-            sprite.rotation = Math.PI / 2;
-        } else if (flippedV) {
-            // Diagonal + Vertical (Rotated -90 degrees)
-            sprite.rotation = -Math.PI / 2;
-        } else {
-            // Diagonal ONLY (For this map, this also means pure 90-degree rotation)
-            sprite.rotation = Math.PI / 2;
-        }
-    } else {
-        if (flippedH && flippedV) {
-            // Horizontal + Vertical (180-degree rotation)
-            sprite.rotation = Math.PI;
-        } else if (flippedH) {
-            // Horizontal only
-            sprite.scale.x = -1;
-        } else if (flippedV) {
-            // Vertical only
-            sprite.scale.y = -1;
-        }
-    }
-    // --- End of Definitive Logic ---
-
-    return sprite;
-}
-    
     async loadTilesets(tilesets) {
         console.log('🗂️ Loading map tilesets...');
 
