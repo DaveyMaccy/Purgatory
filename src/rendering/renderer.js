@@ -519,28 +519,28 @@ createTileSprite(gid) {
     sprite.x += originalTileWidth / 2;
     sprite.y += originalTileHeight / 2;
     
-    // SECTION 1: DATA NORMALIZATION FOR THE ANOMALOUS TILE
-    // The tile on Layer 4 (cleanGid 365) has D+V flags but needs a 90° clockwise rotation.
-    // The standard for 90° clockwise is D+H. We correct the flags in memory before processing.
+    // STEP 1: DATA CORRECTION FOR THE ANOMALOUS TILE
+    // We identify the anomalous Layer 4 tile by its cleanGid and correct its flags in memory.
     if (cleanGid === 365 && flippedD && flippedV && !flippedH) {
-        flippedV = false; // Correct the Vertical flag from ON to OFF.
-        flippedH = true;  // Correct the Horizontal flag from OFF to ON.
+        flippedV = false; // Turn OFF the incorrect Vertical flag.
+        flippedH = true;  // Turn ON the correct Horizontal flag.
+        // The tile's flags are now D+H and will be processed correctly by the logic below.
     }
     
-    // SECTION 2: EXPLICIT 8-CASE TRANSFORMATION LOGIC
-    // This block explicitly defines the outcome for every possible flag combination.
+    // STEP 2: EXPLICIT 8-CASE UNIVERSAL LOGIC
+    // This block correctly handles all tiles based on their (now corrected) flags.
     let rotation = 0;
     let scaleX = 1;
     let scaleY = 1;
 
     if (flippedD) {
         if (flippedH && flippedV) { // D+H+V
-            rotation = Math.PI / 2; // 90° CCW
-            scaleX = -1;
-        } else if (flippedH) { // D+H (Requires 90° Clockwise)
-            rotation = -Math.PI / 2;
-        } else if (flippedV) { // D+V (Requires 90° Counter-Clockwise)
             rotation = Math.PI / 2;
+            scaleX = -1;
+        } else if (flippedH) { // D+H -> Should be 90° Clockwise
+            rotation = Math.PI / 2;
+        } else if (flippedV) { // D+V -> Should be 270° Clockwise
+            rotation = -Math.PI / 2;
         } else { // D only
             rotation = Math.PI / 2;
             scaleY = -1;
@@ -555,7 +555,7 @@ createTileSprite(gid) {
         }
     }
 
-    // SECTION 3: APPLY FINAL TRANSFORMATIONS
+    // STEP 3: APPLY FINAL TRANSFORMATIONS
     sprite.rotation = rotation;
     sprite.scale.set(scaleX, scaleY);
 
