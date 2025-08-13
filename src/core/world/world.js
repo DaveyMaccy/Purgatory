@@ -164,30 +164,36 @@ updateActiveChunks(characters, renderer) {
 
     // 2. Determine which chunks are needed
     const neededChunks = new Set();
-    this.mapData.layers[0].chunks.forEach(chunk => {
-        const chunkBounds = {
-            minX: chunk.x * this.TILE_SIZE,
-            minY: chunk.y * this.TILE_SIZE,
-            maxX: (chunk.x + chunk.width) * this.TILE_SIZE,
-            maxY: (chunk.y + chunk.height) * this.TILE_SIZE,
-        };
+    // CORRECTED: Find the first tile layer to safely get chunks
+    const firstTileLayer = this.mapData.layers.find(l => l.type === 'tilelayer' && l.chunks);
+    if (firstTileLayer) {
+        firstTileLayer.chunks.forEach(chunk => {
+            const chunkBounds = {
+                minX: chunk.x * this.TILE_SIZE,
+                minY: chunk.y * this.TILE_SIZE,
+                maxX: (chunk.x + chunk.width) * this.TILE_SIZE,
+                maxY: (chunk.y + chunk.height) * this.TILE_SIZE,
+            };
 
-        // Check if chunk overlaps with the active area
-        if (activeArea.minX < chunkBounds.maxX && activeArea.maxX > chunkBounds.minX &&
-            activeArea.minY < chunkBounds.maxY && activeArea.maxY > chunkBounds.minY) {
-            neededChunks.add(`${chunk.x},${chunk.y}`);
-        }
-    });
+            // Check if chunk overlaps with the active area
+            if (activeArea.minX < chunkBounds.maxX && activeArea.maxX > chunkBounds.minX &&
+                activeArea.minY < chunkBounds.maxY && activeArea.maxY > chunkBounds.minY) {
+                neededChunks.add(`${chunk.x},${chunk.y}`);
+            }
+        });
+    }
 
     // 3. Load new chunks
     for (const key of neededChunks) {
         if (!this.activeChunks.has(key)) {
-            // This chunk is new, so we need to load and render it
             const [x, y] = key.split(',').map(Number);
             this.mapData.layers.forEach(layer => {
-                const chunkData = layer.chunks.find(c => c.x === x && c.y === y);
-                if (chunkData) {
-                    renderer.renderChunk(chunkData, layer.name);
+                // CORRECTED: Only process layers that have chunks
+                if (layer.chunks) {
+                    const chunkData = layer.chunks.find(c => c.x === x && c.y === y);
+                    if (chunkData) {
+                        renderer.renderChunk(chunkData, layer.name);
+                    }
                 }
             });
             this.activeChunks.add(key);
@@ -207,7 +213,7 @@ updateActiveChunks(characters, renderer) {
     // 5. Regenerate collision grid for the active area
     this.generateNavGridForActiveArea();
 }
-
+    
 generateNavGridForActiveArea() {
     // Create a new NavGrid instance covering the entire world space
     const gridWidth = this.worldBounds.maxX - this.worldBounds.minX;
@@ -540,4 +546,5 @@ generateNavGridForActiveArea() {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
 
