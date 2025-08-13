@@ -360,39 +360,41 @@ window.startGameSimulation = async function(charactersFromCreator) {
 function handleWorldClick(event) {
     // PHASE 4: Implement click-to-move for player character
     if (!gameEngine || !characterManager || !renderer) {
-        console.warn('⚠️ Game not fully initialized');
+        console.warn('⚠️ Game not fully initialized for click handling.');
         return;
     }
     
     const player = characterManager.getPlayerCharacter();
     if (!player) {
-        console.warn('⚠️ No player character found');
+        console.warn('⚠️ No player character found to move.');
         return;
     }
     
-    // Get click position relative to canvas
+    // Get click position relative to the canvas
     const rect = event.target.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
     
-    // Convert to world coordinates (accounting for any camera offset)
-    const worldX = clickX;
-    const worldY = clickY;
+    // CRITICAL FIX: Convert screen coordinates to world coordinates.
+    // We must subtract the worldContainer's position, which represents the camera's offset.
+    const worldContainer = renderer.worldContainer;
+    const worldX = clickX - worldContainer.x;
+    const worldY = clickY - worldContainer.y;
     
-    console.log(`🖱️ Click at world position: (${worldX}, ${worldY})`);
+    console.log(`🖱️ Click at world position: (${worldX.toFixed(1)}, ${worldY.toFixed(1)})`);
     
-    // Find path from player position to click position
+    // Find a path from the player's current position to the clicked destination
     const path = gameEngine.world.findPath(
         player.position,
         { x: worldX, y: worldY }
     );
     
     if (path && path.length > 0) {
-        // Set the path on the player character
+        // Assign the calculated path to the player character for the movement system to handle
         player.path = path;
-        console.log(`🚶 Player path set with ${path.length} waypoints`);
+        console.log(`🚶 Player path set with ${path.length} waypoints.`);
     } else {
-        console.log('❌ No valid path to destination');
+        console.log('❌ No valid path to destination could be found.');
     }
 }
 
@@ -805,4 +807,5 @@ function setupDebugPanel() {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
