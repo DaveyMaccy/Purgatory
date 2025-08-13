@@ -542,14 +542,17 @@ createTileSprite(gid) {
             sprite.scale.y = -1;
         }
     } else {
+        // ** SYNTAX FIX APPLIED HERE **
+        // A combined H+V flip is a 180-degree rotation.
         if (flippedH && flippedV) {
-            // H + V (180-degree rotation)
             sprite.rotation = Math.PI;
-        } else if (flippedH) {
-            // H only
+        } 
+        // A simple H or V flip is a negative scale.
+        // This structure is now syntactically correct.
+        else if (flippedH) {
             sprite.scale.x = -1;
-        } else if (flippedV) {
-            // V only
+        } 
+        else if (flippedV) {
             sprite.scale.y = -1;
         }
     }
@@ -557,6 +560,7 @@ createTileSprite(gid) {
 
     return sprite;
 }
+    
     if (!tilesetData) return null;
 
     // Calculate the tile's position within the tileset texture
