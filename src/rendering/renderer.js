@@ -527,7 +527,6 @@ createTileSprite(gid) {
 
     return sprite;
 }
-
     async loadTilesets(tilesets) {
         console.log('🗂️ Loading map tilesets...');
 
