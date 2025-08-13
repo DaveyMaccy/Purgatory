@@ -2366,7 +2366,7 @@
         {
          "columns":16,
          "firstgid":1,
-         "image":"..\/Assets\/Modern_Office_Revamped_v1.2\/1_Room_Builder_Office\/Room_Builder_Office_48x48.png",
+         "image":"Room_Builder_Office_48x48.png",
          "imageheight":672,
          "imagewidth":768,
          "margin":0,
@@ -2379,7 +2379,7 @@
         {
          "columns":16,
          "firstgid":225,
-         "image":"..\/Assets\/Modern_Office_Revamped_v1.2\/Modern_Office_48x48.png",
+         "image":"Modern_Office_48x48.png",
          "imageheight":2544,
          "imagewidth":768,
          "margin":0,
@@ -2392,7 +2392,7 @@
         {
          "columns":16,
          "firstgid":1073,
-         "image":"Theme_Sorter_48x48\/3_Bathroom_48x48.png",
+         "image":"3_Bathroom_48x48.png",
          "imageheight":2688,
          "imagewidth":768,
          "margin":0,
@@ -2405,7 +2405,7 @@
         {
          "columns":16,
          "firstgid":1969,
-         "image":"Theme_Sorter_48x48\/14_Basement_48x48.png",
+         "image":"14_Basement_48x48.png",
          "imageheight":2400,
          "imagewidth":768,
          "margin":0,
@@ -2418,7 +2418,7 @@
         {
          "columns":16,
          "firstgid":2769,
-         "image":"Theme_Sorter_48x48\/12_Kitchen_48x48.png",
+         "image":"12_Kitchen_48x48.png",
          "imageheight":2352,
          "imagewidth":768,
          "margin":0,
@@ -2431,7 +2431,7 @@
         {
          "columns":16,
          "firstgid":3553,
-         "image":"Theme_Sorter_48x48\/19_Hospital_48x48.png",
+         "image":"19_Hospital_48x48.png",
          "imageheight":5280,
          "imagewidth":768,
          "margin":0,
@@ -2445,4 +2445,5 @@
  "type":"map",
  "version":"1.10",
  "width":30
+
 }
