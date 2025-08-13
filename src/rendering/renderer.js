@@ -468,7 +468,9 @@ createTileSprite(gid) {
     const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
     const FLIPPED_VERTICALLY_FLAG = 0x40000000;
     const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
-    const HEXAGONAL_ROTATION_FLAG = 0x10000000; // For defensive clearing
+    
+    // A stray flag that can corrupt GIDs if not cleared
+    const HEXAGONAL_ROTATION_FLAG = 0x10000000;
 
     // Isolate the flip flags from the GID
     const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
@@ -509,50 +511,48 @@ createTileSprite(gid) {
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
     const sprite = new PIXI.Sprite(texture);
 
-    // --- Final Definitive Transformation Logic ---
+    // --- Definitive Setup and Transformation Logic ---
+    // Use the original tile dimensions from the tileset to prevent
+    // positioning errors when the sprite's bounding box changes on rotation.
     const originalTileWidth = tilesetData.tilewidth;
     const originalTileHeight = tilesetData.tileheight;
 
+    // Set a consistent center pivot point for all transformations.
     sprite.anchor.set(0.5, 0.5);
+
+    // Adjust the sprite's position to keep it aligned to the grid.
     sprite.x += originalTileWidth / 2;
     sprite.y += originalTileHeight / 2;
     
-    // Explicitly handle all 8 flip combinations, tailored to this map's specific conventions
-    if (!flippedD && !flippedH && !flippedV) {
-        // Case 1: No change
+    // This logic handles all 8 combinations based on this map's specific conventions.
+    if (flippedD) {
+        if (flippedH && flippedV) {
+            // Diagonal + Horizontal + Vertical (Rotated +90 & flipped vertically)
+            sprite.rotation = Math.PI / 2;
+            sprite.scale.y = -1;
+        } else if (flippedH) {
+            // Diagonal + Horizontal (Pure 90-degree rotation)
+            sprite.rotation = Math.PI / 2;
+        } else if (flippedV) {
+            // Diagonal + Vertical (Rotated -90 degrees)
+            sprite.rotation = -Math.PI / 2;
+        } else {
+            // Diagonal ONLY (For this map, this also means pure 90-degree rotation)
+            sprite.rotation = Math.PI / 2;
+        }
+    } else {
+        if (flippedH && flippedV) {
+            // Horizontal + Vertical (180-degree rotation)
+            sprite.rotation = Math.PI;
+        } else if (flippedH) {
+            // Horizontal only
+            sprite.scale.x = -1;
+        } else if (flippedV) {
+            // Vertical only
+            sprite.scale.y = -1;
+        }
     }
-    else if (!flippedD && flippedH && !flippedV) {
-        // Case 2: Horizontal flip
-        sprite.scale.x = -1;
-    }
-    else if (!flippedD && !flippedH && flippedV) {
-        // Case 3: Vertical flip
-        sprite.scale.y = -1;
-    }
-    else if (!flippedD && flippedH && flippedV) {
-        // Case 4: Horizontal & Vertical flip (180-degree rotation)
-        sprite.scale.x = -1;
-        sprite.scale.y = -1;
-    }
-    else if (flippedD && !flippedH && !flippedV) {
-        // ** THE FIX **
-        // Case 5: Diagonal flip ONLY. For THIS MAP, this means pure 90-degree rotation.
-        sprite.rotation = Math.PI / 2;
-    }
-    else if (flippedD && flippedH && !flippedV) {
-        // Case 6: Diagonal & Horizontal flip. Also means pure 90-degree rotation.
-        sprite.rotation = Math.PI / 2;
-    }
-    else if (flippedD && !flippedH && flippedV) {
-        // Case 7: Diagonal & Vertical flip (Rotated -90 degrees)
-        sprite.rotation = -Math.PI / 2;
-    }
-    else if (flippedD && flippedH && flippedV) {
-        // Case 8: Diagonal, Horizontal & Vertical flip (Rotated +90 & flipped vertically)
-        sprite.rotation = Math.PI / 2;
-        sprite.scale.y = -1;
-    }
-    // --- End of Final Definitive Logic ---
+    // --- End of Definitive Logic ---
 
     return sprite;
 }
