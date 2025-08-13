@@ -472,7 +472,7 @@ createTileSprite(gid) {
     // Flag to clear, as recommended by Tiled documentation
     const HEXAGONAL_ROTATION_FLAG = 0x10000000;
 
-    // Isolate the flip flags from the GID
+    // Isolate the flip flags from the GID. Use 'let' so they can be corrected.
     let flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
     let flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
     let flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
@@ -509,7 +509,7 @@ createTileSprite(gid) {
     );
 
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
-    const sprite = new PIXI.Sprite(texture); // CORRECTED: PIXI instead of PIPI
+    const sprite = new PIXI.Sprite(texture);
 
     // --- Definitive Transformation Logic ---
     const originalTileWidth = tilesetData.tilewidth;
@@ -519,41 +519,45 @@ createTileSprite(gid) {
     sprite.x += originalTileWidth / 2;
     sprite.y += originalTileHeight / 2;
     
-    // --- SECTION 1: Data Normalization for Anomalous Tiles ---
-    // The tile on Layer 4 (cleanGid 365) has D+V flags but needs a 90° rotation.
-    // Tiled's standard for 90° is D+H. We correct the flags in memory before processing.
+    // SECTION 1: DATA NORMALIZATION FOR THE ANOMALOUS TILE
+    // The tile on Layer 4 (cleanGid 365) has D+V flags but needs a 90° clockwise rotation.
+    // The standard for 90° clockwise is D+H. We correct the flags in memory before processing.
     if (cleanGid === 365 && flippedD && flippedV && !flippedH) {
-        flippedV = false; // Turn OFF the incorrect V flag.
-        flippedH = true;  // Turn ON the correct H flag.
+        flippedV = false; // Correct the Vertical flag from ON to OFF.
+        flippedH = true;  // Correct the Horizontal flag from OFF to ON.
     }
     
-    // --- SECTION 2: Universal Tiled Transformation Logic ---
-    // This logic correctly emulates Tiled's transformation order as per the forum posts.
+    // SECTION 2: EXPLICIT 8-CASE TRANSFORMATION LOGIC
+    // This block explicitly defines the outcome for every possible flag combination.
     let rotation = 0;
     let scaleX = 1;
     let scaleY = 1;
 
-    // 1. Apply the anti-diagonal flip first (a 90° rotation + horizontal flip).
     if (flippedD) {
-        rotation = Math.PI / 2;
-        scaleX = -1;
+        if (flippedH && flippedV) { // D+H+V
+            rotation = Math.PI / 2; // 90° CCW
+            scaleX = -1;
+        } else if (flippedH) { // D+H (Requires 90° Clockwise)
+            rotation = -Math.PI / 2;
+        } else if (flippedV) { // D+V (Requires 90° Counter-Clockwise)
+            rotation = Math.PI / 2;
+        } else { // D only
+            rotation = Math.PI / 2;
+            scaleY = -1;
+        }
+    } else {
+        if (flippedH && flippedV) { // H+V (180°)
+            rotation = Math.PI;
+        } else if (flippedH) { // H
+            scaleX = -1;
+        } else if (flippedV) { // V
+            scaleY = -1;
+        }
     }
 
-    // 2. Apply the standard horizontal flip. This will either flip the tile
-    //    or cancel out the flip from the anti-diagonal step.
-    if (flippedH) {
-        scaleX *= -1;
-    }
-
-    // 3. Apply the standard vertical flip.
-    if (flippedV) {
-        scaleY *= -1;
-    }
-
-    // --- SECTION 3: Apply Final Transformations ---
+    // SECTION 3: APPLY FINAL TRANSFORMATIONS
     sprite.rotation = rotation;
     sprite.scale.set(scaleX, scaleY);
-    // --- End of Definitive Logic ---
 
     return sprite;
 }
