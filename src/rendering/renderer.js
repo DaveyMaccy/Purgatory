@@ -556,14 +556,14 @@ console.log(`🔍 Trying tileset paths:`, possiblePaths);
         console.log(`✅ Rendered ${this.mapTileSprites.length} map tiles`);
     }
 
-    renderTileLayer(layer, mapData) {
-        const mapWidth = maxX - minX;
-        const mapHeight = maxY - minY;
-        const tileWidth = mapData.tilewidth || 48;
-        const tileHeight = mapData.tileheight || 48;
+   renderTileLayer(layer, mapData) {
+    const tileWidth = mapData.tilewidth || 48;
+    const tileHeight = mapData.tileheight || 48;
 
-       // Handle chunked data format from Tiled - COMPLETE REWRITE
+   // Handle chunked data format from Tiled - COMPLETE REWRITE
 let tileData = [];
+let mapWidth, mapHeight;
+
 if (layer.chunks) {
     console.log(`🔍 Layer has ${layer.chunks.length} chunks`);
     
@@ -575,6 +575,9 @@ if (layer.chunks) {
         maxX = Math.max(maxX, chunk.x + chunk.width);
         maxY = Math.max(maxY, chunk.y + chunk.height);
     });
+    
+    mapWidth = maxX - minX;
+    mapHeight = maxY - minY;
     
     console.log(`🌍 Chunk bounds: (${minX},${minY}) to (${maxX},${maxY})`);
     
@@ -622,6 +625,8 @@ if (layer.chunks) {
     
 } else {
     tileData = layer.data || [];
+    mapWidth = mapData.width;
+    mapHeight = mapData.height;
     console.log(`📊 Using direct layer data: ${tileData.length} tiles`);
 }
 
