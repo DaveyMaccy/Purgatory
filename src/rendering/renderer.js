@@ -152,7 +152,7 @@ export class Renderer {
         this.cameraY = 0;
         this.followTarget = null;
 
-if (USE_ENHANCED_SPRITES) {
+        if (USE_ENHANCED_SPRITES) {
             console.log('🎨 Enhanced Renderer with Animation Engine enabled');
         } else {
             console.log('🎨 Renderer constructor (enhanced sprites DORMANT)');
@@ -439,9 +439,9 @@ if (USE_ENHANCED_SPRITES) {
     }
 
     setPlayerCharacter(characterId) {
-    this.setFollowTarget(characterId);
-    console.log(`👤 Player character set: ${characterId}`);
-}
+        this.setFollowTarget(characterId);
+        console.log(`👤 Player character set: ${characterId}`);
+    }
 
     createSimpleCharacterSprite(character) {
         const graphics = new PIXI.Graphics();
@@ -470,34 +470,34 @@ if (USE_ENHANCED_SPRITES) {
     }
 
     setFollowTarget(characterId) {
-    this.followTarget = characterId;
-    console.log(`📹 Camera now following character: ${characterId}`);
-}
-
-updateCamera() {
-    if (!this.followTarget || !this.characterSprites.has(this.followTarget)) {
-        return;
+        this.followTarget = characterId;
+        console.log(`📹 Camera now following character: ${characterId}`);
     }
-    
-    const targetSprite = this.characterSprites.get(this.followTarget);
-    
-    // Center camera on target character
-    const targetCameraX = -(targetSprite.x - this.WORLD_WIDTH / 2);
-    const targetCameraY = -(targetSprite.y - this.WORLD_HEIGHT / 2);
-    
-    // Smooth camera movement (optional - remove for instant following)
-    const lerpFactor = 0.1;
-    this.cameraX += (targetCameraX - this.cameraX) * lerpFactor;
-    this.cameraY += (targetCameraY - this.cameraY) * lerpFactor;
-    
-    // Apply camera transform to world container
-    if (this.worldContainer) {
-        this.worldContainer.x = this.cameraX;
-        this.worldContainer.y = this.cameraY;
-    }
-}
 
-    
+    updateCamera() {
+        if (!this.followTarget || !this.characterSprites.has(this.followTarget)) {
+            return;
+        }
+
+        const targetSprite = this.characterSprites.get(this.followTarget);
+
+        // Center camera on target character
+        const targetCameraX = -(targetSprite.x - this.WORLD_WIDTH / 2);
+        const targetCameraY = -(targetSprite.y - this.WORLD_HEIGHT / 2);
+
+        // Smooth camera movement (optional - remove for instant following)
+        const lerpFactor = 0.1;
+        this.cameraX += (targetCameraX - this.cameraX) * lerpFactor;
+        this.cameraY += (targetCameraY - this.cameraY) * lerpFactor;
+
+        // Apply camera transform to world container
+        if (this.worldContainer) {
+            this.worldContainer.x = this.cameraX;
+            this.worldContainer.y = this.cameraY;
+        }
+    }
+
+
 
     async loadTilesets(tilesets) {
         console.log('🗂️ Loading map tilesets...');
@@ -506,13 +506,13 @@ updateCamera() {
             try {
                 // Try multiple possible paths for tilesets
                 const possiblePaths = [
-                `assets/maps/${tileset.image}`,
-                `assets/${tileset.image}`,
-                tileset.image
-];
+                    `assets/maps/${tileset.image}`,
+                    `assets/${tileset.image}`,
+                    tileset.image
+                ];
 
-let tilesetPath = possiblePaths[0];
-console.log(`🔍 Trying tileset paths:`, possiblePaths);
+                let tilesetPath = possiblePaths[0];
+                console.log(`🔍 Trying tileset paths:`, possiblePaths);
                 console.log(`📥 Loading tileset: ${tilesetPath}`);
 
                 const texture = await PIXI.Texture.fromURL(tilesetPath);
@@ -556,83 +556,86 @@ console.log(`🔍 Trying tileset paths:`, possiblePaths);
         console.log(`✅ Rendered ${this.mapTileSprites.length} map tiles`);
     }
 
-   renderTileLayer(layer, mapData) {
-    const tileWidth = mapData.tilewidth || 48;
-    const tileHeight = mapData.tileheight || 48;
-
-   // Handle chunked data format from Tiled - COMPLETE REWRITE
-let tileData = [];
-let mapWidth, mapHeight;
-
-if (layer.chunks) {
-    console.log(`🔍 Layer has ${layer.chunks.length} chunks`);
+    renderTileLayer(layer, mapData) {
+        let mapWidth, mapHeight;
+        const tileWidth = mapData.tilewidth || 48;
+        const tileHeight = mapData.tileheight || 48;
     
-    // Find the bounds of all chunks to understand the world space
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    layer.chunks.forEach(chunk => {
-        minX = Math.min(minX, chunk.x);
-        minY = Math.min(minY, chunk.y);
-        maxX = Math.max(maxX, chunk.x + chunk.width);
-        maxY = Math.max(maxY, chunk.y + chunk.height);
-    });
+        // Handle chunked data format from Tiled - COMPLETE REWRITE
+        let tileData = [];
+        let minX = 0, minY = 0;
     
-    mapWidth = maxX - minX;
-    mapHeight = maxY - minY;
-    
-    console.log(`🌍 Chunk bounds: (${minX},${minY}) to (${maxX},${maxY})`);
-    
-    // Create a sparse map first, then convert to grid
-    const sparseMap = new Map();
-    
-    layer.chunks.forEach((chunk, chunkIndex) => {
-        console.log(`📦 Processing chunk ${chunkIndex}: (${chunk.x},${chunk.y}) ${chunk.width}x${chunk.height}`);
-        
-        for (let i = 0; i < chunk.data.length; i++) {
-            if (chunk.data[i] === 0) continue;
+        if (layer.chunks) {
+            console.log(`🔍 Layer has ${layer.chunks.length} chunks`);
             
-            const localX = i % chunk.width;
-            const localY = Math.floor(i / chunk.width);
-            const worldX = chunk.x + localX;
-            const worldY = chunk.y + localY;
+            // Find the bounds of all chunks to understand the world space
+            let maxX = -Infinity, maxY = -Infinity;
+            minX = Infinity;
+            minY = Infinity;
             
-            // Store in sparse map with world coordinates as key
-            const key = `${worldX},${worldY}`;
-            sparseMap.set(key, chunk.data[i]);
+            layer.chunks.forEach(chunk => {
+                minX = Math.min(minX, chunk.x);
+                minY = Math.min(minY, chunk.y);
+                maxX = Math.max(maxX, chunk.x + chunk.width);
+                maxY = Math.max(maxY, chunk.y + chunk.height);
+            });
             
-            if (chunkIndex === 0 && sparseMap.size <= 5) {
-                console.log(`🎯 Tile at world (${worldX},${worldY}): GID=${chunk.data[i]}`);
+            console.log(`🌍 Chunk bounds: (${minX},${minY}) to (${maxX},${maxY})`);
+    
+            // Store the offset for later use
+            layer.worldOffsetX = minX;
+            layer.worldOffsetY = minY;
+            
+            // Create a sparse map first, then convert to grid
+            const sparseMap = new Map();
+            
+            layer.chunks.forEach((chunk, chunkIndex) => {
+                console.log(`📦 Processing chunk ${chunkIndex}: (${chunk.x},${chunk.y}) ${chunk.width}x${chunk.height}`);
+                
+                for (let i = 0; i < chunk.data.length; i++) {
+                    if (chunk.data[i] === 0) continue;
+                    
+                    const localX = i % chunk.width;
+                    const localY = Math.floor(i / chunk.width);
+                    const worldX = chunk.x + localX;
+                    const worldY = chunk.y + localY;
+                    
+                    // Store in sparse map with world coordinates as key
+                    const key = `${worldX},${worldY}`;
+                    sparseMap.set(key, chunk.data[i]);
+                    
+                    if (chunkIndex === 0 && sparseMap.size <= 5) {
+                        console.log(`🎯 Tile at world (${worldX},${worldY}): GID=${chunk.data[i]}`);
+                    }
+                }
+            });
+            
+            console.log(`📊 Sparse map has ${sparseMap.size} tiles`);
+            
+            // CRITICAL FIX: We need to iterate through the ENTIRE map space, not just the chunk bounds
+            for (let y = minY; y < maxY; y++) {
+                for (let x = minX; x < maxX; x++) {
+                    const key = `${x},${y}`;
+                    tileData.push(sparseMap.get(key) || 0);
+                }
             }
-        }
-    });
-    
-    console.log(`📊 Sparse map has ${sparseMap.size} tiles`);
-    
-    // Now convert sparse map to linear array for rendering
-    tileData = [];
-    for (let y = 0; y < mapHeight; y++) {
-        for (let x = 0; x < mapWidth; x++) {
-           // Convert grid position to world position - PROPERLY handle negative offset
-            const worldX = x + minX;
-            const worldY = y + minY;
-            const key = `${worldX},${worldY}`;
+            // Update mapWidth and mapHeight to match the actual data
+            mapWidth = maxX - minX;
+            mapHeight = maxY - minY;
             
-            tileData.push(sparseMap.get(key) || 0);
+            const nonZeroTiles = tileData.filter(tile => tile !== 0).length;
+            console.log(`📊 Final grid: ${nonZeroTiles} non-zero tiles from ${tileData.length} total`);
+            
+        } else {
+            tileData = layer.data || [];
+            mapWidth = mapData.width;
+            mapHeight = mapData.height;
+            console.log(`📊 Using direct layer data: ${tileData.length} tiles`);
         }
-    }
     
-    const nonZeroTiles = tileData.filter(tile => tile !== 0).length;
-    console.log(`📊 Final grid: ${nonZeroTiles} non-zero tiles from ${tileData.length} total`);
-    
-} else {
-    tileData = layer.data || [];
-    mapWidth = mapData.width;
-    mapHeight = mapData.height;
-    console.log(`📊 Using direct layer data: ${tileData.length} tiles`);
-}
-
         console.log(`🔍 Processing ${tileData.length} tiles from layer data`);
         let processedTiles = 0;
-
+    
         for (let i = 0; i < tileData.length; i++) {
             const gid = tileData[i];
             if (gid === 0) continue; // Empty tile
@@ -641,36 +644,36 @@ if (layer.chunks) {
             if (processedTiles <= 5) {
                 console.log(`🎯 Processing tile ${processedTiles}: GID=${gid} at index ${i}`);
             }
-
+    
             // Handle tile flipping flags (Tiled format)
             const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
             const FLIPPED_VERTICALLY_FLAG = 0x40000000;
             const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
-
+    
             const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
             const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
             const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
-
+    
             const cleanGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
-
+    
             // Find the correct tileset
             let tilesetData = null;
             let tileId = cleanGid;
-
+    
             for (const [firstgid, tileset] of this.tilesetTextures.entries()) {
                 if (cleanGid >= firstgid) {
                     tilesetData = tileset;
                     tileId = cleanGid - firstgid;
                 }
             }
-
+    
             if (!tilesetData) continue;
-
+    
             // Calculate tile position in tileset
             const tilesPerRow = tilesetData.columns;
             const tileX = tileId % tilesPerRow;
             const tileY = Math.floor(tileId / tilesPerRow);
-
+    
             // Create texture for this tile
             const tileTexture = new PIXI.Texture(
                 tilesetData.texture.baseTexture,
@@ -681,15 +684,18 @@ if (layer.chunks) {
                     tilesetData.tileheight
                 )
             );
-
+    
             const sprite = new PIXI.Sprite(tileTexture);
-
-            // Position tile in world
-            const worldX = (i % mapWidth) * tileWidth;
-            const worldY = Math.floor(i / mapWidth) * tileHeight;
+    
+            // Position tile in world - ACCOUNT FOR NEGATIVE OFFSET
+            const tileIndex = i;
+            const localX = tileIndex % mapWidth;
+            const localY = Math.floor(tileIndex / mapWidth);
+            const worldX = (localX + minX) * tileWidth;  // Add minX offset
+            const worldY = (localY + minY) * tileHeight; // Add minY offset
             sprite.x = worldX;
             sprite.y = worldY;
-
+    
             // Apply flipping
             if (flippedH) sprite.scale.x = -1;
             if (flippedV) sprite.scale.y = -1;
@@ -698,12 +704,12 @@ if (layer.chunks) {
                 sprite.rotation = Math.PI / 2;
                 sprite.scale.y = -sprite.scale.y;
             }
-
+    
             // Apply layer opacity
             if (layer.opacity !== undefined) {
                 sprite.alpha = layer.opacity;
             }
-
+    
             this.mapLayer.addChild(sprite);
             this.mapTileSprites.push(sprite);
         }
@@ -796,11 +802,11 @@ if (layer.chunks) {
     }
 
     update() {
-    if (this.app && this.isInitialized) {
-        this.updateCamera();
-        this.app.render();
+        if (this.app && this.isInitialized) {
+            this.updateCamera();
+            this.app.render();
+        }
     }
-}
 
     destroy() {
         if (this.resizeHandler) {
