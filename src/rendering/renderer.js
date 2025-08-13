@@ -467,7 +467,8 @@ createTileSprite(gid) {
     // Standard flip flags from the Tiled specification
     const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
     const FLIPPED_VERTICALLY_FLAG = 0x40000000;
-    const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
+    // The third flag is for an ANTI-DIAGONAL flip, not a diagonal one.
+    const FLIPPED_ANTI_DIAGONALLY_FLAG = 0x20000000;
     
     // A stray flag that can corrupt GIDs if not cleared
     const HEXAGONAL_ROTATION_FLAG = 0x10000000;
@@ -475,13 +476,13 @@ createTileSprite(gid) {
     // Isolate the flip flags from the GID
     const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
     const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
-    const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
+    const flippedAD = (gid & FLIPPED_ANTI_DIAGONALLY_FLAG) !== 0; // AD for Anti-Diagonal
 
     // Get the clean GID by clearing ALL potential flags.
     const cleanGid = gid & ~(
         FLIPPED_HORIZONTALLY_FLAG |
         FLIPPED_VERTICALLY_FLAG |
-        FLIPPED_DIAGONALLY_FLAG |
+        FLIPPED_ANTI_DIAGONALLY_FLAG |
         HEXAGONAL_ROTATION_FLAG
     );
 
@@ -512,8 +513,7 @@ createTileSprite(gid) {
     const sprite = new PIXI.Sprite(texture);
 
     // --- Definitive Setup and Transformation Logic ---
-    // Use the original tile dimensions from the tileset to prevent
-    // positioning errors when the sprite's bounding box changes on rotation.
+    // Use the original tile dimensions to prevent positioning errors.
     const originalTileWidth = tilesetData.tilewidth;
     const originalTileHeight = tilesetData.tileheight;
 
@@ -524,41 +524,34 @@ createTileSprite(gid) {
     sprite.x += originalTileWidth / 2;
     sprite.y += originalTileHeight / 2;
     
-    // This logic handles all 8 combinations correctly.
-    if (!flippedD && !flippedH && !flippedV) {
-        // Case 1: No change
-    }
-    else if (!flippedD && flippedH && !flippedV) {
-        // Case 2: Horizontal flip
-        sprite.scale.x = -1;
-    }
-    else if (!flippedD && !flippedH && flippedV) {
-        // Case 3: Vertical flip
-        sprite.scale.y = -1;
-    }
-    else if (!flippedD && flippedH && flippedV) {
-        // Case 4: Horizontal & Vertical flip (180-degree rotation)
-        sprite.rotation = Math.PI;
-    }
-    else if (flippedD && !flippedH && !flippedV) {
-        // ** THE FINAL FIX **
-        // Case 5: Diagonal flip ONLY. This performs an X/Y axis swap.
-        // It correctly turns the horizontal base tile into a vertical wall.
-        sprite.rotation = Math.PI / 2;
-        sprite.scale.x = -1;
-    }
-    else if (flippedD && flippedH && !flippedV) {
-        // Case 6: Diagonal & Horizontal flip (Pure 90-degree rotation)
-        sprite.rotation = Math.PI / 2;
-    }
-    else if (flippedD && !flippedH && flippedV) {
-        // Case 7: Diagonal & Vertical flip (Rotated -90 degrees & flipped horizontally)
-        sprite.rotation = -Math.PI / 2;
-        sprite.scale.x = -1;
-    }
-    else if (flippedD && flippedH && flippedV) {
-        // Case 8: Diagonal, Horizontal & Vertical flip (Rotated -90 degrees)
-        sprite.rotation = -Math.PI / 2;
+    // This logic is rebuilt based on the ANTI-DIAGONAL flip model.
+    if (flippedAD) {
+        if (flippedH && flippedV) {
+            // AD + H + V  -> (y, x)
+            sprite.rotation = -Math.PI / 2;
+            sprite.scale.y = -1;
+        } else if (flippedH) {
+            // AD + H      -> (y, -x)
+            sprite.rotation = -Math.PI / 2;
+        } else if (flippedV) {
+            // AD + V      -> (-y, x)
+            sprite.rotation = Math.PI / 2;
+        } else {
+            // AD only     -> (-y, -x)
+            sprite.rotation = Math.PI / 2;
+            sprite.scale.y = -1;
+        }
+    } else {
+        if (flippedH && flippedV) {
+            // H + V (180-degree rotation)
+            sprite.rotation = Math.PI;
+        } else if (flippedH) {
+            // H only
+            sprite.scale.x = -1;
+        } else if (flippedV) {
+            // V only
+            sprite.scale.y = -1;
+        }
     }
     // --- End of Definitive Logic ---
 
