@@ -94,9 +94,17 @@ export class World {
         this.officeLayout = officeLayout;
         this.objects = [];
         this.rooms = [];
-        this.navGrid = [];
-        this.navGridInstance = null; // PHASE 4: Store NavGrid instance for pathfinding
+        // this.navGrid = []; // REMOVED
+        this.navGridInstance = null; 
         this.gameTime = 0; // Game time in milliseconds
+
+        // NEW PROPERTIES FOR INFINITE MAP
+        this.mapData = officeLayout; // Store the raw map data
+        this.TILE_SIZE = this.mapData.tilewidth || 48;
+        this.worldBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 }; // To store the true map size in tiles
+        this.chunks = new Map(); // To store data for loaded chunks, keyed by "x,y"
+        this.activeChunks = new Set(); // To track the keys of currently visible chunks
+        // this.navGrid is now managed by this.navGridInstance
         this.officeType = 'corporate';
         this.taskDictionary = this.createTaskDictionary();
         
@@ -115,114 +123,128 @@ export class World {
         console.log(`🌍 World created: ${this.width}x${this.height} tiles (${this.worldWidth}x${this.worldHeight} pixels)`);
     }
 
-    /**
-     * STAGE 2-3 CRITICAL: Generate navigation grid for character movement and positioning
-     * This creates a 2D array representing walkable (0) and non-walkable (1) tiles
-     * PHASE 4 FIXED: Proper NavGrid instance creation and initialization
-     */
-    generateNavGrid() {
-        console.log('🗺️ Generating navigation grid...');
-        
-        try {
-            // Initialize grid with all walkable tiles
-            this.navGrid = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
-            
-            // CRITICAL FIX: Use correct NavGrid constructor signature
-            this.navGridInstance = new NavGrid();
-            this.navGridInstance.initialize(this.width, this.height);
-            
-            console.log('✅ NavGrid A* instance created and initialized');
-            
-            // Mark obstacles based on map data or default office layout
-            this.markObstacles();
-            
-            console.log(`✅ Navigation grid generated: ${this.width}x${this.height} tiles`);
-            console.log('📊 Grid sample (first 5 rows):', this.navGrid.slice(0, 5));
-            
-        } catch (error) {
-            console.error('❌ Failed to generate navigation grid:', error);
-            // Create a simple fallback grid
-            this.navGrid = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
-            console.log('🔧 Using fallback navigation grid');
+    processMapData() {
+    console.log('Processing infinite map data...');
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    this.mapData.layers.forEach(layer => {
+        if (layer.chunks) {
+            layer.chunks.forEach(chunk => {
+                minX = Math.min(minX, chunk.x);
+                minY = Math.min(minY, chunk.y);
+                maxX = Math.max(maxX, chunk.x + chunk.width);
+                maxY = Math.max(maxY, chunk.y + chunk.height);
+            });
+        }
+    });
+
+    this.worldBounds = { minX, minY, maxX, maxY };
+    console.log('✅ World bounds calculated:', this.worldBounds);
+}
+
+updateActiveChunks(characters, renderer) {
+    if (!characters || characters.length === 0) return;
+
+    // 1. Calculate the "Active Area" bounding box
+    let minCharX = Infinity, minCharY = Infinity, maxCharX = -Infinity, maxCharY = -Infinity;
+    characters.forEach(char => {
+        minCharX = Math.min(minCharX, char.position.x);
+        minCharY = Math.min(minCharY, char.position.y);
+        maxCharX = Math.max(maxCharX, char.position.x);
+        maxCharY = Math.max(maxCharY, char.position.y);
+    });
+
+    const buffer = 10 * this.TILE_SIZE; // 10-tile buffer
+    const activeArea = {
+        minX: minCharX - buffer,
+        minY: minCharY - buffer,
+        maxX: maxCharX + buffer,
+        maxY: maxCharY + buffer,
+    };
+
+    // 2. Determine which chunks are needed
+    const neededChunks = new Set();
+    this.mapData.layers[0].chunks.forEach(chunk => {
+        const chunkBounds = {
+            minX: chunk.x * this.TILE_SIZE,
+            minY: chunk.y * this.TILE_SIZE,
+            maxX: (chunk.x + chunk.width) * this.TILE_SIZE,
+            maxY: (chunk.y + chunk.height) * this.TILE_SIZE,
+        };
+
+        // Check if chunk overlaps with the active area
+        if (activeArea.minX < chunkBounds.maxX && activeArea.maxX > chunkBounds.minX &&
+            activeArea.minY < chunkBounds.maxY && activeArea.maxY > chunkBounds.minY) {
+            neededChunks.add(`${chunk.x},${chunk.y}`);
+        }
+    });
+
+    // 3. Load new chunks
+    for (const key of neededChunks) {
+        if (!this.activeChunks.has(key)) {
+            // This chunk is new, so we need to load and render it
+            const [x, y] = key.split(',').map(Number);
+            this.mapData.layers.forEach(layer => {
+                const chunkData = layer.chunks.find(c => c.x === x && c.y === y);
+                if (chunkData) {
+                    renderer.renderChunk(chunkData, layer.name);
+                }
+            });
+            this.activeChunks.add(key);
+            console.log(`Loaded chunk: ${key}`);
         }
     }
 
-    /**
-     * Mark obstacles in the navigation grid
-     * This creates walls and furniture as non-walkable areas
-     */
-  markObstacles() {
-        console.log('🚧 Marking obstacles in navigation grid...');
-        
-        // If we have map data with collision objects, use those
-        if (this.officeLayout && this.officeLayout.layers) {
-            const collisionObjects = this.extractCollisionLayer(this.officeLayout);
-            
-            collisionObjects.forEach(obj => {
-                // Convert world coordinates to grid coordinates
-                const startX = Math.floor(obj.x / this.TILE_SIZE);
-                const startY = Math.floor(obj.y / this.TILE_SIZE);
-                const endX = Math.min(this.width - 1, Math.floor((obj.x + obj.width) / this.TILE_SIZE));
-                const endY = Math.min(this.height - 1, Math.floor((obj.y + obj.height) / this.TILE_SIZE));
-                
-                // Mark all tiles covered by this object as non-walkable
-                for (let y = Math.max(0, startY); y <= endY; y++) {
-                    for (let x = Math.max(0, startX); x <= endX; x++) {
-                        if (y < this.height && x < this.width) {
-                            this.navGrid[y][x] = 1; // 1 = non-walkable
-                        }
-                    }
-                }
-                
-                console.log(`  🚫 Marked obstacle: ${obj.name} at grid (${startX},${startY}) to (${endX},${endY})`);
-            });
-        } else {
-            // PRESERVED: Fallback obstacle placement if no map data
-            console.log('📍 Using fallback obstacle placement...');
-            
-            // Create basic office layout with walls around the perimeter
-            for (let x = 0; x < this.width; x++) {
-                this.navGrid[0][x] = 1; // Top wall
-                this.navGrid[this.height - 1][x] = 1; // Bottom wall
-            }
-            for (let y = 0; y < this.height; y++) {
-                this.navGrid[y][0] = 1; // Left wall  
-                this.navGrid[y][this.width - 1] = 1; // Right wall
-            }
-            
-            // Add some furniture obstacles in the middle area
-            const furniturePositions = [
-                {x: 3, y: 3, width: 2, height: 1}, // Desk 1
-                {x: 6, y: 3, width: 2, height: 1}, // Desk 2
-                {x: 9, y: 3, width: 2, height: 1}, // Desk 3
-                {x: 3, y: 7, width: 2, height: 1}, // Desk 4
-                {x: 6, y: 7, width: 2, height: 1}, // Desk 5
-            ];
-            
-            furniturePositions.forEach((furniture, index) => {
-                for (let y = furniture.y; y < furniture.y + furniture.height; y++) {
-                    for (let x = furniture.x; x < furniture.x + furniture.width; x++) {
-                        if (y < this.height && x < this.width) {
-                            this.navGrid[y][x] = 1;
-                        }
-                    }
-                }
-                console.log(`  🪑 Added fallback furniture ${index + 1} at (${furniture.x},${furniture.y})`);
-            });
+    // 4. Unload old chunks
+    for (const key of this.activeChunks) {
+        if (!neededChunks.has(key)) {
+            renderer.removeChunk(key);
+            this.activeChunks.delete(key);
+            console.log(`Unloaded chunk: ${key}`);
         }
-        
-        // Count walkable vs non-walkable tiles
-        let walkableTiles = 0;
-        let blockedTiles = 0;
-        for (let y = 0; y < this.height; y++) {
-            for (let x = 0; x < this.width; x++) {
-                if (this.navGrid[y][x] === 0) walkableTiles++;
-                else blockedTiles++;
-            }
-        }
-        
-        console.log(`✅ Navigation grid complete: ${walkableTiles} walkable, ${blockedTiles} blocked tiles`);
     }
+
+    // 5. Regenerate collision grid for the active area
+    this.generateNavGridForActiveArea();
+}
+
+generateNavGridForActiveArea() {
+    // Create a new NavGrid instance covering the entire world space
+    const gridWidth = this.worldBounds.maxX - this.worldBounds.minX;
+    const gridHeight = this.worldBounds.maxY - this.worldBounds.minY;
+
+    this.navGridInstance = new NavGrid();
+    this.navGridInstance.initialize(gridWidth, gridHeight);
+
+    // Find the collision layer
+    const collisionLayer = this.mapData.layers.find(l => l.properties?.some(p => p.name === 'collides' && p.value === true));
+    if (!collisionLayer) {
+        console.warn("No collision layer found in map data.");
+        return;
+    }
+
+    // Populate the grid with collision data ONLY from active chunks
+    for (const chunkKey of this.activeChunks) {
+        const [chunkX, chunkY] = chunkKey.split(',').map(Number);
+        const chunk = collisionLayer.chunks.find(c => c.x === chunkX && c.y === chunkY);
+
+        if (chunk) {
+            for (let i = 0; i < chunk.data.length; i++) {
+                if (chunk.data[i] > 0) { // If there's a tile here, it's a wall
+                    const localX = i % chunk.width;
+                    const localY = Math.floor(i / chunk.width);
+
+                    // Convert to overall grid coordinates
+                    const gridX = chunk.x - this.worldBounds.minX + localX;
+                    const gridY = chunk.y - this.worldBounds.minY + localY;
+
+                    this.navGridInstance.markObstacle(gridX, gridY);
+                }
+            }
+        }
+    }
+    console.log('✅ Dynamic NavGrid instance regenerated for active area.');
+}
 
     /**
      * NEW: Extract collision data from Tiled map layers
@@ -518,3 +540,4 @@ export class World {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
