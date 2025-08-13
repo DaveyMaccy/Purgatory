@@ -563,26 +563,49 @@ console.log(`🔍 Trying tileset paths:`, possiblePaths);
         const tileHeight = mapData.tileheight || 48;
 
         // Handle chunked data format from Tiled
-        let tileData = [];
-        if (layer.chunks) {
-            // Reconstruct tile data from chunks
-            tileData = new Array(mapWidth * mapHeight).fill(0);
-            layer.chunks.forEach(chunk => {
-                for (let i = 0; i < chunk.data.length; i++) {
-                    const localX = i % chunk.width;
-                    const localY = Math.floor(i / chunk.width);
-                    const worldX = chunk.x + localX;
-                    const worldY = chunk.y + localY;
-
-                    if (worldX >= 0 && worldX < mapWidth && worldY >= 0 && worldY < mapHeight) {
-                        const index = worldY * mapWidth + worldX;
-                        tileData[index] = chunk.data[i];
+let tileData = [];
+if (layer.chunks) {
+    console.log(`🔍 Layer has ${layer.chunks.length} chunks`);
+    // Reconstruct tile data from chunks
+    tileData = new Array(mapWidth * mapHeight).fill(0);
+    layer.chunks.forEach((chunk, chunkIndex) => {
+        console.log(`📦 Processing chunk ${chunkIndex}:`, {
+            x: chunk.x, y: chunk.y, 
+            width: chunk.width, height: chunk.height,
+            dataLength: chunk.data.length
+        });
+        
+        for (let i = 0; i < chunk.data.length; i++) {
+            const localX = i % chunk.width;
+            const localY = Math.floor(i / chunk.width);
+            const worldX = chunk.x + localX;
+            const worldY = chunk.y + localY;
+            
+            // Convert to positive coordinates (Tiled uses negative coords)
+            const adjustedX = worldX + Math.abs(Math.min(0, chunk.x));
+            const adjustedY = worldY + Math.abs(Math.min(0, chunk.y));
+            
+            if (adjustedX >= 0 && adjustedX < mapWidth && adjustedY >= 0 && adjustedY < mapHeight) {
+                const index = adjustedY * mapWidth + adjustedX;
+                if (chunk.data[i] !== 0) {
+                    tileData[index] = chunk.data[i];
+                    if (chunkIndex === 0 && i < 5) {
+                        console.log(`🎯 Chunk ${chunkIndex} tile ${i}: GID=${chunk.data[i]} at (${adjustedX},${adjustedY})`);
                     }
                 }
-            });
-        } else {
-            tileData = layer.data;
+            }
         }
+    });
+    
+    const nonZeroTiles = tileData.filter(tile => tile !== 0).length;
+    console.log(`📊 Reconstructed ${nonZeroTiles} non-zero tiles from chunks`);
+} else {
+    tileData = layer.data || [];
+    console.log(`📊 Using direct layer data: ${tileData.length} tiles`);
+}
+
+console.log(`🔍 Processing ${tileData.length} tiles from layer data`);
+let processedTiles = 0;
 
         console.log(`🔍 Processing ${tileData.length} tiles from layer data`);
         let processedTiles = 0;
