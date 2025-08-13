@@ -581,9 +581,9 @@ console.log(`🔍 Trying tileset paths:`, possiblePaths);
                     const worldX = chunk.x + localX;
                     const worldY = chunk.y + localY;
                     
-                    // Convert to positive coordinates (Tiled uses negative coords)
-                    const adjustedX = worldX + Math.abs(Math.min(0, chunk.x));
-                    const adjustedY = worldY + Math.abs(Math.min(0, chunk.y));
+                    // Use world coordinates directly - no adjustment needed
+                    const adjustedX = worldX;
+                    const adjustedY = worldY;
                     
                     if (adjustedX >= 0 && adjustedX < mapWidth && adjustedY >= 0 && adjustedY < mapHeight) {
                         const index = adjustedY * mapWidth + adjustedX;
