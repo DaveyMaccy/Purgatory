@@ -273,6 +273,28 @@ export class World {
                 // Note: For now, we'll rely on object layers for collision.
                 // If needed, we can add tile-based collision detection here.
             }
+
+            getMapSpawnPoints() {
+                const spawnPoints = [];
+    
+                this.officeLayout.layers.forEach(layer => {
+                    if (layer.type === 'objectgroup' && layer.objects) {
+                        layer.objects.forEach(obj => {
+                            if (obj.name && obj.name.includes('spawn_point')) {
+                                 spawnPoints.push({
+                                    x: obj.x + (obj.width || 0) / 2,
+                                    y: obj.y + (obj.height || 0) / 2,
+                                    name: obj.name
+                                 });
+                                 console.log(`🎯 Found spawn point: ${obj.name} at (${obj.x}, ${obj.y})`);
+                            }
+                      });
+                }
+          });
+    
+    return spawnPoints;
+}
+            
         });
         
         console.log(`✅ Extracted ${collisionObjects.length} collision objects`);
@@ -408,8 +430,23 @@ export class World {
      * @returns {Object} Position object with x and y coordinates in pixels
      */
     getSpawnPosition() {
-        const maxAttempts = 50;
-        let attempts = 0;
+    // First try to use designated spawn points from map
+    if (this.officeLayout && this.officeLayout.layers) {
+        const spawnPoints = this.getMapSpawnPoints();
+        if (spawnPoints.length > 0) {
+            // Use spawn points in order, cycling if needed
+            const spawnIndex = this.usedSpawnPoints || 0;
+            const spawn = spawnPoints[spawnIndex % spawnPoints.length];
+            this.usedSpawnPoints = (this.usedSpawnPoints || 0) + 1;
+            console.log(`🎯 Using map spawn point ${spawnIndex}: (${spawn.x}, ${spawn.y})`);
+            return spawn;
+        }
+    }
+    
+    // Fallback to random walkable position
+    console.log('📍 No spawn points found, using random walkable position');
+    const maxAttempts = 50;
+    let attempts = 0;
         
         while (attempts < maxAttempts) {
             const x = Math.random() * (this.width - 2) + 1; // Keep away from walls
@@ -481,4 +518,5 @@ export class World {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
 
