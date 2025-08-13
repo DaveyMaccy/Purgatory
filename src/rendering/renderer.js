@@ -608,9 +608,9 @@ if (layer.chunks) {
     tileData = [];
     for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
-            // Convert grid position to world position
-            const worldX = x + minX;
-            const worldY = y + minY;
+           // Convert grid position to world position - PROPERLY handle negative offset
+            const worldX = x - Math.abs(minX);
+            const worldY = y - Math.abs(minY);
             const key = `${worldX},${worldY}`;
             
             tileData.push(sparseMap.get(key) || 0);
