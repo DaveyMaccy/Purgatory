@@ -504,7 +504,15 @@ updateCamera() {
 
         for (const tileset of tilesets) {
             try {
-                const tilesetPath = `assets/maps/${tileset.image}`;
+                // Try multiple possible paths for tilesets
+                const possiblePaths = [
+                `assets/maps/${tileset.image}`,
+                `assets/${tileset.image}`,
+                tileset.image
+];
+
+let tilesetPath = possiblePaths[0];
+console.log(`🔍 Trying tileset paths:`, possiblePaths);
                 console.log(`📥 Loading tileset: ${tilesetPath}`);
 
                 const texture = await PIXI.Texture.fromURL(tilesetPath);
