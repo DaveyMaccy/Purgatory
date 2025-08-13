@@ -264,6 +264,12 @@ window.startGameSimulation = async function(charactersFromCreator) {
         // Initialize game engine with all systems
         gameEngine = new GameEngine(characterManager, renderer, mapData);
         console.log('✅ Game engine initialized');
+
+        // Process the map data to understand its structure
+        gameEngine.world.processMapData();
+
+        // Perform the first chunk update immediately
+        gameEngine.world.updateActiveChunks(characterManager.characters, renderer);
         
         // Initialize character positions using world navigation grid
         characterManager.initializeCharacterPositions(gameEngine.world);
@@ -338,7 +344,7 @@ window.startGameSimulation = async function(charactersFromCreator) {
             renderer: renderer,
             uiUpdater: uiUpdater
         };
-        
+        startChunkUpdateLoop();
         console.log('🎮 GAME STARTED SUCCESSFULLY!');
         showSuccessMessage('Game started! Click to move your character.');
         
@@ -695,6 +701,19 @@ function debugCharacterData() {
     }
 }
 
+/**
+* Starts the loop to periodically update active map chunks.
+*/
+function startChunkUpdateLoop() {
+    console.log('🔄 Starting chunk update loop...');
+
+    setInterval(() => {
+        if (gameEngine && characterManager && renderer) {
+            gameEngine.world.updateActiveChunks(characterManager.characters, renderer);
+        }
+    }, 250); // Runs 4 times per second
+}
+
 // Export for use in other modules
 export {
     setFocusTarget,
@@ -786,3 +805,4 @@ function setupDebugPanel() {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
