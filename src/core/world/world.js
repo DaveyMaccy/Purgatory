@@ -1,14 +1,12 @@
 /**
  * STAGE 3 COMPLETE: World Management System
- * 
- * This file handles:
+ * * This file handles:
  * - Map data loading from JSON files
  * - Navigation grid generation for character positioning
  * - World object management
  * - Task assignment system
  * - Position validation and pathfinding preparation
- * 
- * PHASE 4 ADDITIONS:
+ * * PHASE 4 ADDITIONS:
  * - isPositionWalkable() method for obstacle checking
  * - findPath() method for pathfinding integration
  * - FIXED: Proper NavGrid instance creation and initialization
@@ -139,7 +137,7 @@ export class World {
             console.log(`✅ Navigation grid generated: ${this.width}x${this.height} tiles`);
             console.log('📊 Grid sample (first 5 rows):', this.navGrid.slice(0, 5));
             
-        } catch (error) {
+        } catch (error).js {
             console.error('❌ Failed to generate navigation grid:', error);
             // Create a simple fallback grid
             this.navGrid = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
@@ -273,32 +271,31 @@ export class World {
                 // Note: For now, we'll rely on object layers for collision.
                 // If needed, we can add tile-based collision detection here.
             }
-
-            getMapSpawnPoints() {
-                const spawnPoints = [];
-    
-                this.officeLayout.layers.forEach(layer => {
-                    if (layer.type === 'objectgroup' && layer.objects) {
-                        layer.objects.forEach(obj => {
-                            if (obj.name && obj.name.includes('spawn_point')) {
-                                 spawnPoints.push({
-                                    x: obj.x + (obj.width || 0) / 2,
-                                    y: obj.y + (obj.height || 0) / 2,
-                                    name: obj.name
-                                 });
-                                 console.log(`🎯 Found spawn point: ${obj.name} at (${obj.x}, ${obj.y})`);
-                            }
-                      });
-                }
-          });
-    
-    return spawnPoints;
-}
-            
         });
         
         console.log(`✅ Extracted ${collisionObjects.length} collision objects`);
         return collisionObjects;
+    }
+
+    getMapSpawnPoints() {
+        const spawnPoints = [];
+
+        this.officeLayout.layers.forEach(layer => {
+            if (layer.type === 'objectgroup' && layer.objects) {
+                layer.objects.forEach(obj => {
+                    if (obj.name && obj.name.includes('spawn_point')) {
+                            spawnPoints.push({
+                            x: obj.x + (obj.width || 0) / 2,
+                            y: obj.y + (obj.height || 0) / 2,
+                            name: obj.name
+                            });
+                            console.log(`🎯 Found spawn point: ${obj.name} at (${obj.x}, ${obj.y})`);
+                    }
+                });
+            }
+        });
+
+        return spawnPoints;
     }
     
     /**
@@ -518,5 +515,3 @@ export class World {
         // Future: Update world objects, environmental effects, etc.
     }
 }
-
-
