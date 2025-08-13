@@ -137,7 +137,7 @@ export class World {
             console.log(`✅ Navigation grid generated: ${this.width}x${this.height} tiles`);
             console.log('📊 Grid sample (first 5 rows):', this.navGrid.slice(0, 5));
             
-        } catch (error).js {
+        } catch (error) {
             console.error('❌ Failed to generate navigation grid:', error);
             // Create a simple fallback grid
             this.navGrid = Array(this.height).fill(null).map(() => Array(this.width).fill(0));
@@ -271,6 +271,7 @@ export class World {
                 // Note: For now, we'll rely on object layers for collision.
                 // If needed, we can add tile-based collision detection here.
             }
+            
         });
         
         console.log(`✅ Extracted ${collisionObjects.length} collision objects`);
@@ -295,9 +296,9 @@ export class World {
             }
         });
 
-        return spawnPoints;
+    return spawnPoints;
     }
-    
+            
     /**
      * PHASE 4 ADD: Check if a pixel position is walkable
      * Converts pixel coordinates to tile coordinates and checks navGrid
