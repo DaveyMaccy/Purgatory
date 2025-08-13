@@ -557,8 +557,8 @@ console.log(`🔍 Trying tileset paths:`, possiblePaths);
     }
 
     renderTileLayer(layer, mapData) {
-        const mapWidth = mapData.width;
-        const mapHeight = mapData.height;
+        const mapWidth = maxX - minX;
+        const mapHeight = maxY - minY;
         const tileWidth = mapData.tilewidth || 48;
         const tileHeight = mapData.tileheight || 48;
 
@@ -609,8 +609,8 @@ if (layer.chunks) {
     for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
            // Convert grid position to world position - PROPERLY handle negative offset
-            const worldX = x - Math.abs(minX);
-            const worldY = y - Math.abs(minY);
+            const worldX = x + minX;
+            const worldY = y + minY;
             const key = `${worldX},${worldY}`;
             
             tileData.push(sparseMap.get(key) || 0);
