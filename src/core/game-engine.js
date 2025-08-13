@@ -24,9 +24,9 @@ export class GameEngine {
         this.mapData = mapData;
         
         this.world = new World(characterManager, mapData);
-// this.world.generateNavGrid(); // DELETED - This is now handled dynamically by updateActiveChunks
-
-this.movementSystem = new MovementSystem();
+        this.world.generateNavGrid();
+        
+        this.movementSystem = new MovementSystem();
         
         this.isRunning = false;
         this.isPaused = false;
@@ -216,4 +216,3 @@ this.movementSystem = new MovementSystem();
         console.log('🧹 Game engine destroyed');
     }
 }
-
