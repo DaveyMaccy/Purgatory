@@ -300,7 +300,6 @@ window.startGameSimulation = async function(charactersFromCreator) {
         }
         
         // Set initial focus on player character
-        const playerCharacter = characterManager.getPlayerCharacter();
         if (playerCharacter) {
             setFocusTarget(playerCharacter.id);
         }
@@ -787,4 +786,3 @@ function setupDebugPanel() {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
-
