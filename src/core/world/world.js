@@ -146,7 +146,6 @@ updateActiveChunks(characters, renderer) {
     if (!renderer || !renderer.isInitialized || !characters || characters.length === 0) return;
 
     // --- Definitive Hybrid Loading Logic ---
-    // This logic creates two zones to determine which chunks should be active.
 
     // ZONE 1: The Visual Area - Based on what the camera can see.
     const view = renderer.app.view;
@@ -159,7 +158,7 @@ updateActiveChunks(characters, renderer) {
         maxY: -camera.y + view.height + visualBuffer,
     };
 
-    // ZONE 2: The Functional Area - A large radius around the player for NPC pathfinding and collision.
+    // ZONE 2: The Functional Area - A large radius around the player for NPC pathfinding.
     const player = this.characterManager.getPlayerCharacter();
     if (!player) return; // Can't define a functional area without a player.
 
@@ -171,7 +170,7 @@ updateActiveChunks(characters, renderer) {
         maxY: player.position.y + functionalBuffer,
     };
 
-    // COMBINED AREA: The union of both zones. A chunk will be loaded if it's needed for visuals OR for functionality.
+    // COMBINED AREA: The union of both zones.
     const combinedArea = {
         minX: Math.min(visualArea.minX, functionalArea.minX),
         minY: Math.min(visualArea.minY, functionalArea.minY),
@@ -179,26 +178,70 @@ updateActiveChunks(characters, renderer) {
         maxY: Math.max(visualArea.maxY, functionalArea.maxY),
     };
 
-    // Determine which chunks are needed based on the combined super-zone.
-    const neededChunks = new Set();
-    const firstTileLayer = this.mapData.layers.find(l => l.type === 'tilelayer' && l.chunks);
-    if (firstTileLayer) {
-        firstTileLayer.chunks.forEach(chunk => {
-            const chunkBounds = {
-                minX: chunk.x * this.TILE_SIZE,
-                minY: chunk.y * this.TILE_SIZE,
-                maxX: (chunk.x + chunk.width) * this.TILE_SIZE,
-                maxY: (chunk.y + chunk.height) * this.TILE_SIZE,
-            };
+    // --- FIX: Gather all unique chunk coordinates from ALL layers ---
+    const allChunkCoords = new Map();
+    this.mapData.layers.forEach(layer => {
+        if (layer.chunks) {
+            layer.chunks.forEach(chunk => {
+                const key = `${chunk.x},${chunk.y}`;
+                if (!allChunkCoords.has(key)) {
+                    // Store the chunk itself so we can get its bounds without searching later.
+                    allChunkCoords.set(key, chunk);
+                }
+            });
+        }
+    });
 
-            // Check if chunk overlaps with the combined active area
-            if (combinedArea.minX < chunkBounds.maxX && combinedArea.maxX > chunkBounds.minX &&
-                combinedArea.minY < chunkBounds.maxY && combinedArea.maxY > chunkBounds.minY) {
-                neededChunks.add(`${chunk.x},${chunk.y}`);
-            }
-        });
+    // Determine which chunks are needed by checking the master list against the combined area.
+    const neededChunks = new Set();
+    for (const [key, chunk] of allChunkCoords.entries()) {
+        const chunkBounds = {
+            minX: chunk.x * this.TILE_SIZE,
+            minY: chunk.y * this.TILE_SIZE,
+            maxX: (chunk.x + chunk.width) * this.TILE_SIZE,
+            maxY: (chunk.y + chunk.height) * this.TILE_SIZE,
+        };
+
+        if (combinedArea.minX < chunkBounds.maxX && combinedArea.maxX > chunkBounds.minX &&
+            combinedArea.minY < chunkBounds.maxY && combinedArea.maxY > chunkBounds.minY) {
+            neededChunks.add(key);
+        }
     }
 
+    let chunksChanged = false;
+
+    // Load new chunks that are needed.
+    for (const key of neededChunks) {
+        if (!this.activeChunks.has(key)) {
+            chunksChanged = true;
+            const [x, y] = key.split(',').map(Number);
+            this.mapData.layers.forEach(layer => {
+                if (layer.chunks) {
+                    const chunkData = layer.chunks.find(c => c.x === x && c.y === y);
+                    if (chunkData) {
+                        renderer.renderChunk(chunkData, layer.name);
+                    }
+                }
+            });
+            this.activeChunks.add(key);
+        }
+    }
+
+    // Unload old chunks that are no longer needed.
+    for (const key of this.activeChunks) {
+        if (!neededChunks.has(key)) {
+            chunksChanged = true;
+            renderer.removeChunk(key); // Properly call the renderer to remove the chunk visuals.
+            this.activeChunks.delete(key);
+            console.log(`Unloaded chunk: ${key}`);
+        }
+    }
+
+    // Regenerate collision grid ONLY if the set of active chunks has changed.
+    if (chunksChanged) {
+        this.generateNavGridForActiveArea();
+    }
+}
     let chunksChanged = false;
 
     // Load new chunks that are needed.
@@ -573,6 +616,7 @@ generateNavGridForActiveArea() {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
 
 
 
