@@ -468,22 +468,21 @@ createTileSprite(gid) {
     const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
     const FLIPPED_VERTICALLY_FLAG = 0x40000000;
     const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
+    
+    // A stray flag that can corrupt GIDs if not cleared
+    const HEXAGONAL_ROTATION_FLAG = 0x10000000;
 
-    // **THE FIX:** Acknowledge the fourth, non-standard flag used for a different rotation
-    const ROTATED_90_FLAG = 0x10000000; 
-
-    // Isolate all four potential transformation flags
+    // Isolate the flip flags from the GID
     const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
     const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
     const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
-    const rotated90 = (gid & ROTATED_90_FLAG) !== 0;
 
     // Get the clean GID by clearing ALL potential flags.
     const cleanGid = gid & ~(
         FLIPPED_HORIZONTALLY_FLAG |
         FLIPPED_VERTICALLY_FLAG |
         FLIPPED_DIAGONALLY_FLAG |
-        ROTATED_90_FLAG
+        HEXAGONAL_ROTATION_FLAG
     );
 
     // Find the correct tileset and tile ID for the clean GID
@@ -520,34 +519,35 @@ createTileSprite(gid) {
     sprite.x += originalTileWidth / 2;
     sprite.y += originalTileHeight / 2;
     
-    // This logic now correctly handles the two different rotation flags
-    let rotation = 0;
-    let scaleX = 1;
-    let scaleY = 1;
-
-    // Apply the 90-degree rotation first if that flag is present
-    if (rotated90) {
-        rotation = Math.PI / 2; // 90 degrees clockwise
-    }
-    
-    // The three standard flags compound on top of the base rotation
+    // This is the hybrid logic that combines the working parts of previous versions.
     if (flippedD) {
-        // Apply the diagonal flip (axis swap)
-        rotation -= Math.PI / 2;
-        scaleX = -1;
-        scaleY = -1;
+        if (flippedH && flippedV) {
+            // This logic worked for the Reception corners
+            sprite.rotation = Math.PI / 2;
+            sprite.scale.y = -1;
+        } else if (flippedH) {
+            // This logic worked for the Reception south wall
+            sprite.rotation = Math.PI / 2;
+        } else if (flippedV) {
+            // This logic worked for other rotated tiles
+            sprite.rotation = -Math.PI / 2;
+        } else {
+            // This logic worked for the Main Office west wall
+            sprite.rotation = Math.PI / 2;
+            sprite.scale.y = -1;
+        }
+    } else {
+        if (flippedH && flippedV) {
+            // H + V (180-degree rotation)
+            sprite.rotation = Math.PI;
+        } else if (flippedH) {
+            // H only
+            sprite.scale.x = -1;
+        } else if (flippedV) {
+            // V only
+            sprite.scale.y = -1;
+        }
     }
-    
-    if (flippedH) {
-        scaleX *= -1;
-    }
-
-    if (flippedV) {
-        scaleY *= -1;
-    }
-    
-    sprite.rotation = rotation;
-    sprite.scale.set(scaleX, scaleY);
     // --- End of Definitive Logic ---
 
     return sprite;
