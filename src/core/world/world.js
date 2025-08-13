@@ -145,8 +145,6 @@ export class World {
 updateActiveChunks(characters, renderer) {
     if (!renderer || !renderer.isInitialized || !characters || characters.length === 0) return;
 
-    // --- Definitive Hybrid Loading Logic ---
-
     // ZONE 1: The Visual Area - Based on what the camera can see.
     const view = renderer.app.view;
     const camera = renderer.worldContainer;
@@ -170,7 +168,7 @@ updateActiveChunks(characters, renderer) {
         maxY: player.position.y + functionalBuffer,
     };
 
-    // COMBINED AREA: The union of both zones.
+    // COMBINED AREA: The union of both zones for loading.
     const combinedArea = {
         minX: Math.min(visualArea.minX, functionalArea.minX),
         minY: Math.min(visualArea.minY, functionalArea.minY),
@@ -178,14 +176,13 @@ updateActiveChunks(characters, renderer) {
         maxY: Math.max(visualArea.maxY, functionalArea.maxY),
     };
 
-    // --- FIX: Gather all unique chunk coordinates from ALL layers ---
+    // Gather all unique chunk coordinates from ALL layers to create a master list.
     const allChunkCoords = new Map();
     this.mapData.layers.forEach(layer => {
         if (layer.chunks) {
             layer.chunks.forEach(chunk => {
                 const key = `${chunk.x},${chunk.y}`;
                 if (!allChunkCoords.has(key)) {
-                    // Store the chunk itself so we can get its bounds without searching later.
                     allChunkCoords.set(key, chunk);
                 }
             });
@@ -231,7 +228,7 @@ updateActiveChunks(characters, renderer) {
     for (const key of this.activeChunks) {
         if (!neededChunks.has(key)) {
             chunksChanged = true;
-            renderer.removeChunk(key); // Properly call the renderer to remove the chunk visuals.
+            renderer.removeChunk(key);
             this.activeChunks.delete(key);
             console.log(`Unloaded chunk: ${key}`);
         }
@@ -616,6 +613,7 @@ generateNavGridForActiveArea() {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
 
 
 
