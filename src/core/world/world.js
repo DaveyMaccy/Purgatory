@@ -336,18 +336,15 @@ generateNavGridForActiveArea() {
      * @returns {boolean} True if position is walkable
      */
     isPositionWalkable(x, y) {
-        // Convert pixel coordinates to tile coordinates
-        const tileX = Math.floor(x / this.TILE_SIZE);
-        const tileY = Math.floor(y / this.TILE_SIZE);
-        
-        // Check bounds
-        if (tileX < 0 || tileX >= this.width || tileY < 0 || tileY >= this.height) {
-            return false;
-        }
-        
-        // Check navigation grid (0 = walkable, 1 = obstacle)
-        return this.navGrid[tileY][tileX] === 0;
-    }
+    if (!this.navGridInstance) return false; // Grid not ready
+
+    // Convert pixel coordinates to TILE coordinates, accounting for world offset
+    const tileX = Math.floor(x / this.TILE_SIZE) - this.worldBounds.minX;
+    const tileY = Math.floor(y / this.TILE_SIZE) - this.worldBounds.minY;
+
+    // Use the NavGrid instance's own isWalkable method
+    return this.navGridInstance.isWalkable(tileX, tileY);
+}
 
     /**
      * PHASE 4 ADD: Find path between two pixel positions
@@ -503,31 +500,39 @@ generateNavGridForActiveArea() {
      * @returns {Object} Position object with x and y coordinates in pixels
      */
     getRandomWalkablePosition() {
-        const maxAttempts = 100;
-        let attempts = 0;
-        
-        while (attempts < maxAttempts) {
-            const tileX = Math.floor(Math.random() * this.width);
-            const tileY = Math.floor(Math.random() * this.height);
-            
-            if (this.navGrid[tileY][tileX] === 0) {
-                // Convert tile position to pixel position (center of tile)
-                return {
-                    x: (tileX * this.TILE_SIZE) + (this.TILE_SIZE / 2),
-                    y: (tileY * this.TILE_SIZE) + (this.TILE_SIZE / 2)
-                };
-            }
-            
-            attempts++;
-        }
-        
-        // Fallback to a safe position if no walkable position found
-        console.warn('⚠️ Could not find random walkable position, using fallback');
-        return {
-            x: this.worldWidth / 2,
-            y: this.worldHeight / 2
-        };
+    if (!this.navGridInstance) {
+        console.warn('⚠️ NavGrid not ready for getRandomWalkablePosition, using fallback.');
+        return { x: 100, y: 100 };
     }
+
+    const maxAttempts = 100;
+    let attempts = 0;
+
+    const gridWidth = this.worldBounds.maxX - this.worldBounds.minX;
+    const gridHeight = this.worldBounds.maxY - this.worldBounds.minY;
+
+    while (attempts < maxAttempts) {
+        const tileX = Math.floor(Math.random() * gridWidth);
+        const tileY = Math.floor(Math.random() * gridHeight);
+
+        if (this.navGridInstance.isWalkable(tileX, tileY)) {
+            // Convert tile position back to PIXEL coordinates, re-adding the offset
+            return {
+                x: ((tileX + this.worldBounds.minX) * this.TILE_SIZE) + (this.TILE_SIZE / 2),
+                y: ((tileY + this.worldBounds.minY) * this.TILE_SIZE) + (this.TILE_SIZE / 2)
+            };
+        }
+
+        attempts++;
+    }
+
+    // Fallback to a safe position if no walkable position found
+    console.warn('⚠️ Could not find random walkable position, using fallback');
+    return {
+        x: (this.worldBounds.minX * this.TILE_SIZE) + 100,
+        y: (this.worldBounds.minY * this.TILE_SIZE) + 100
+    };
+}
 
     /**
      * PRESERVED: Get the task dictionary for UI display
@@ -545,6 +550,7 @@ generateNavGridForActiveArea() {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
 
 
 
