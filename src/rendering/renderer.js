@@ -468,7 +468,10 @@ createTileSprite(gid) {
     // It finds the right tileset and creates a sprite.
     const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
     const FLIPPED_VERTICALLY_FLAG = 0x40000000;
-    const cleanGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG);
+    const FLIPPED_DIAGONALLY_FLAG = 0x20000000; // THIS FLAG WAS MISSING
+
+    // CORRECTED: Include all three flags in the bitmask to get the clean GID
+    const cleanGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
 
     let tilesetData = null;
     let tileIdInTileset = 0;
@@ -494,7 +497,6 @@ createTileSprite(gid) {
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
     return new PIXI.Sprite(texture);
 }
-
 
     async loadTilesets(tilesets) {
         console.log('🗂️ Loading map tilesets...');
