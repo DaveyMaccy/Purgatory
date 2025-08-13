@@ -233,30 +233,7 @@ updateActiveChunks(characters, renderer) {
             console.log(`Unloaded chunk: ${key}`);
         }
     }
-
-    // Regenerate collision grid ONLY if the set of active chunks has changed.
-    if (chunksChanged) {
-        this.generateNavGridForActiveArea();
-    }
-}
-    let chunksChanged = false;
-
-    // Load new chunks that are needed.
-    for (const key of neededChunks) {
-        if (!this.activeChunks.has(key)) {
-            chunksChanged = true;
-            const [x, y] = key.split(',').map(Number);
-            this.mapData.layers.forEach(layer => {
-                if (layer.chunks) {
-                    const chunkData = layer.chunks.find(c => c.x === x && c.y === y);
-                    if (chunkData) {
-                        renderer.renderChunk(chunkData, layer.name);
-                    }
-                }
-            });
-            this.activeChunks.add(key);
-        }
-    }
+ }
 
     // Unload old chunks that are no longer needed.
     for (const key of this.activeChunks) {
@@ -613,6 +590,7 @@ generateNavGridForActiveArea() {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
 
 
 
