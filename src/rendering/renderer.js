@@ -137,9 +137,10 @@ export class Renderer {
         this.worldContainer = null;
         this.characterSprites = new Map();
         this.preloadedTextures = new Map();
-        this.mapSprites = [];
+        // this.mapSprites = []; // REMOVED
         this.tilesetTextures = new Map();
-        this.mapTileSprites = [];
+        // this.mapTileSprites = []; // REMOVED
+        this.chunkContainers = new Map(); // To store PIXI.Container for each chunk, keyed by "layerName,x,y"
         this.isInitialized = false;
         this.TILE_SIZE = 48;
         this.CHARACTER_WIDTH = SPRITE_WIDTH;
@@ -227,6 +228,7 @@ export class Renderer {
             this.container.appendChild(this.app.view);
 
             this.worldContainer = new PIXI.Container();
+            this.mapData = mapData; // ADD THIS LINE
             this.app.stage.addChild(this.worldContainer);
 
             this.mapLayer = new PIXI.Container();
@@ -318,78 +320,6 @@ export class Renderer {
         window.addEventListener('resize', this.resizeHandler);
     }
 
-    renderMap(mapData) {
-        console.log('🗺️ Rendering office map...');
-        this.mapSprites.forEach(sprite => {
-            this.mapLayer.removeChild(sprite);
-        });
-        this.mapSprites = [];
-
-        const background = new PIXI.Graphics();
-        background.beginFill(0x95a5a6);
-        background.drawRect(0, 0, this.WORLD_WIDTH, this.WORLD_HEIGHT);
-        background.endFill();
-        this.mapLayer.addChild(background);
-        this.mapSprites.push(background);
-
-        const walls = new PIXI.Graphics();
-        walls.beginFill(0x2c3e50);
-        const wallThickness = 20;
-        walls.drawRect(0, 0, this.WORLD_WIDTH, wallThickness);
-        walls.drawRect(0, this.WORLD_HEIGHT - wallThickness, this.WORLD_WIDTH, wallThickness);
-        walls.drawRect(0, 0, wallThickness, this.WORLD_HEIGHT);
-        walls.drawRect(this.WORLD_WIDTH - wallThickness, 0, wallThickness, this.WORLD_HEIGHT);
-        walls.endFill();
-        this.mapLayer.addChild(walls);
-        this.mapSprites.push(walls);
-
-        const deskPositions = [{
-            x: 100,
-            y: 150,
-            width: 120,
-            height: 60
-        }, {
-            x: 300,
-            y: 150,
-            width: 120,
-            height: 60
-        }, {
-            x: 500,
-            y: 150,
-            width: 120,
-            height: 60
-        }, {
-            x: 100,
-            y: 350,
-            width: 120,
-            height: 60
-        }, {
-            x: 300,
-            y: 350,
-            width: 120,
-            height: 60
-        }, ];
-
-        deskPositions.forEach((desk, index) => {
-            const deskSprite = new PIXI.Graphics();
-            deskSprite.beginFill(0x8b4513);
-            deskSprite.drawRect(desk.x, desk.y, desk.width, desk.height);
-            deskSprite.endFill();
-
-            const deskLabel = new PIXI.Text(`Desk ${index + 1}`, {
-                fontSize: 12,
-                fill: 0xffffff,
-                align: 'center'
-            });
-            deskLabel.x = desk.x + desk.width / 2 - deskLabel.width / 2;
-            deskLabel.y = desk.y + desk.height / 2 - deskLabel.height / 2;
-
-            this.mapLayer.addChild(deskSprite);
-            this.mapLayer.addChild(deskLabel);
-            this.mapSprites.push(deskSprite, deskLabel);
-        });
-        console.log('✅ Office map rendered with walls and desks');
-    }
 
     async renderCharacter(character) {
         if (!this.isInitialized) {
@@ -497,6 +427,75 @@ export class Renderer {
         }
     }
 
+    renderChunk(chunk, layerName) {
+    const key = `${layerName},${chunk.x},${chunk.y}`;
+    if (this.chunkContainers.has(key)) return; // Already rendered
+
+    const chunkContainer = new PIXI.Container();
+    chunkContainer.x = chunk.x * this.TILE_SIZE;
+    chunkContainer.y = chunk.y * this.TILE_SIZE;
+
+    for (let i = 0; i < chunk.data.length; i++) {
+        const gid = chunk.data[i];
+        if (gid === 0) continue;
+
+        const tileSprite = this.createTileSprite(gid);
+        if (tileSprite) {
+            const x = (i % chunk.width) * this.TILE_SIZE;
+            const y = Math.floor(i / chunk.width) * this.TILE_SIZE;
+            tileSprite.position.set(x, y);
+            chunkContainer.addChild(tileSprite);
+        }
+    }
+
+    this.mapLayer.addChild(chunkContainer);
+    this.chunkContainers.set(key, chunkContainer);
+}
+
+removeChunk(chunkKey) {
+    // We need to remove this chunk from all layers
+    this.mapData.layers.forEach(layer => {
+        const key = `${layer.name},${chunkKey}`;
+        const container = this.chunkContainers.get(key);
+        if (container) {
+            this.mapLayer.removeChild(container);
+            container.destroy({ children: true });
+            this.chunkContainers.delete(key);
+        }
+    });
+}
+
+createTileSprite(gid) {
+    // This logic is extracted from your old renderTileLayer function and is mostly correct.
+    // It finds the right tileset and creates a sprite.
+    const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
+    const FLIPPED_VERTICALLY_FLAG = 0x40000000;
+    const cleanGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG);
+
+    let tilesetData = null;
+    let tileIdInTileset = 0;
+    for (const [firstgid, tileset] of this.tilesetTextures.entries()) {
+        if (cleanGid >= firstgid) {
+            tilesetData = tileset;
+            tileIdInTileset = cleanGid - firstgid;
+        }
+    }
+
+    if (!tilesetData) return null;
+
+    const tileX = tileIdInTileset % tilesetData.columns;
+    const tileY = Math.floor(tileIdInTileset / tilesetData.columns);
+
+    const rect = new PIXI.Rectangle(
+        tileX * tilesetData.tilewidth,
+        tileY * tilesetData.tileheight,
+        tilesetData.tilewidth,
+        tilesetData.tileheight
+    );
+
+    const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
+    return new PIXI.Sprite(texture);
+}
 
 
     async loadTilesets(tilesets) {
@@ -531,188 +530,6 @@ export class Renderer {
             }
         }
         console.log(`🎨 Loaded ${this.tilesetTextures.size} tilesets`);
-    }
-
-    renderTilemap(mapData) {
-        console.log('🗺️ Rendering tilemap layers...');
-
-        // Clear existing tile sprites
-        this.mapTileSprites.forEach(sprite => {
-            this.mapLayer.removeChild(sprite);
-        });
-        this.mapTileSprites = [];
-
-        if (!mapData.layers || this.tilesetTextures.size === 0) {
-            console.warn('⚠️ No layers or tilesets available for tilemap rendering');
-            return;
-        }
-
-        mapData.layers.forEach((layer, layerIndex) => {
-            if (layer.type === 'tilelayer' && (layer.data || layer.chunks) && layer.visible !== false) {
-                console.log(`🎨 Rendering tile layer: ${layer.name || `Layer ${layerIndex}`}`);
-                this.renderTileLayer(layer, mapData);
-            }
-        });
-        console.log(`✅ Rendered ${this.mapTileSprites.length} map tiles`);
-    }
-
-    renderTileLayer(layer, mapData) {
-        let mapWidth, mapHeight;
-        const tileWidth = mapData.tilewidth || 48;
-        const tileHeight = mapData.tileheight || 48;
-    
-        // Handle chunked data format from Tiled - COMPLETE REWRITE
-        let tileData = [];
-        let minX = 0, minY = 0;
-    
-        if (layer.chunks) {
-            console.log(`🔍 Layer has ${layer.chunks.length} chunks`);
-            
-            // Find the bounds of all chunks to understand the world space
-            let maxX = -Infinity, maxY = -Infinity;
-            minX = Infinity;
-            minY = Infinity;
-            
-            layer.chunks.forEach(chunk => {
-                minX = Math.min(minX, chunk.x);
-                minY = Math.min(minY, chunk.y);
-                maxX = Math.max(maxX, chunk.x + chunk.width);
-                maxY = Math.max(maxY, chunk.y + chunk.height);
-            });
-            
-            console.log(`🌍 Chunk bounds: (${minX},${minY}) to (${maxX},${maxY})`);
-    
-            // Store the offset for later use
-            layer.worldOffsetX = minX;
-            layer.worldOffsetY = minY;
-            
-            // Create a sparse map first, then convert to grid
-            const sparseMap = new Map();
-            
-            layer.chunks.forEach((chunk, chunkIndex) => {
-                console.log(`📦 Processing chunk ${chunkIndex}: (${chunk.x},${chunk.y}) ${chunk.width}x${chunk.height}`);
-                
-                for (let i = 0; i < chunk.data.length; i++) {
-                    if (chunk.data[i] === 0) continue;
-                    
-                    const localX = i % chunk.width;
-                    const localY = Math.floor(i / chunk.width);
-                    const worldX = chunk.x + localX;
-                    const worldY = chunk.y + localY;
-                    
-                    // Store in sparse map with world coordinates as key
-                    const key = `${worldX},${worldY}`;
-                    sparseMap.set(key, chunk.data[i]);
-                    
-                    if (chunkIndex === 0 && sparseMap.size <= 5) {
-                        console.log(`🎯 Tile at world (${worldX},${worldY}): GID=${chunk.data[i]}`);
-                    }
-                }
-            });
-            
-            console.log(`📊 Sparse map has ${sparseMap.size} tiles`);
-            
-            // CRITICAL FIX: We need to iterate through the ENTIRE map space, not just the chunk bounds
-            for (let y = minY; y < maxY; y++) {
-                for (let x = minX; x < maxX; x++) {
-                    const key = `${x},${y}`;
-                    tileData.push(sparseMap.get(key) || 0);
-                }
-            }
-            // Update mapWidth and mapHeight to match the actual data
-            mapWidth = maxX - minX;
-            mapHeight = maxY - minY;
-            
-            const nonZeroTiles = tileData.filter(tile => tile !== 0).length;
-            console.log(`📊 Final grid: ${nonZeroTiles} non-zero tiles from ${tileData.length} total`);
-            
-        } else {
-            tileData = layer.data || [];
-            mapWidth = mapData.width;
-            mapHeight = mapData.height;
-            console.log(`📊 Using direct layer data: ${tileData.length} tiles`);
-        }
-    
-        console.log(`🔍 Processing ${tileData.length} tiles from layer data`);
-        let processedTiles = 0;
-    
-        for (let i = 0; i < tileData.length; i++) {
-            const gid = tileData[i];
-            if (gid === 0) continue; // Empty tile
-    
-            processedTiles++;
-            if (processedTiles <= 5) {
-                console.log(`🎯 Processing tile ${processedTiles}: GID=${gid} at index ${i}`);
-            }
-    
-            // Handle tile flipping flags (Tiled format)
-            const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
-            const FLIPPED_VERTICALLY_FLAG = 0x40000000;
-            const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
-    
-            const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
-            const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
-            const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
-    
-            const cleanGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
-    
-            // Find the correct tileset
-            let tilesetData = null;
-            let tileId = cleanGid;
-    
-            for (const [firstgid, tileset] of this.tilesetTextures.entries()) {
-                if (cleanGid >= firstgid) {
-                    tilesetData = tileset;
-                    tileId = cleanGid - firstgid;
-                }
-            }
-    
-            if (!tilesetData) continue;
-    
-            // Calculate tile position in tileset
-            const tilesPerRow = tilesetData.columns;
-            const tileX = tileId % tilesPerRow;
-            const tileY = Math.floor(tileId / tilesPerRow);
-    
-            // Create texture for this tile
-            const tileTexture = new PIXI.Texture(
-                tilesetData.texture.baseTexture,
-                new PIXI.Rectangle(
-                    tileX * tilesetData.tilewidth,
-                    tileY * tilesetData.tileheight,
-                    tilesetData.tilewidth,
-                    tilesetData.tileheight
-                )
-            );
-    
-            const sprite = new PIXI.Sprite(tileTexture);
-    
-            // Position tile in world - ACCOUNT FOR NEGATIVE OFFSET
-            const tileIndex = i;
-            const localX = tileIndex % mapWidth;
-            const localY = Math.floor(tileIndex / mapWidth);
-            const worldX = (localX + minX) * tileWidth;  // Add minX offset
-            const worldY = (localY + minY) * tileHeight; // Add minY offset
-            sprite.x = worldX;
-            sprite.y = worldY;
-    
-            // Apply flipping
-            if (flippedH) sprite.scale.x = -1;
-            if (flippedV) sprite.scale.y = -1;
-            if (flippedD) {
-                // Diagonal flip - rotate 90 degrees and flip
-                sprite.rotation = Math.PI / 2;
-                sprite.scale.y = -sprite.scale.y;
-            }
-    
-            // Apply layer opacity
-            if (layer.opacity !== undefined) {
-                sprite.alpha = layer.opacity;
-            }
-    
-            this.mapLayer.addChild(sprite);
-            this.mapTileSprites.push(sprite);
-        }
     }
 
     updateCharacterAnimation(characterId, actionState) {
