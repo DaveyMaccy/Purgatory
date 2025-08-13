@@ -464,19 +464,29 @@ removeChunk(chunkKey) {
 }
 
 createTileSprite(gid) {
+    // Standard flip flags from the Tiled specification
     const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
     const FLIPPED_VERTICALLY_FLAG = 0x40000000;
     const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
+
+    // **THE FIX:** Add the unused hexagonal rotation flag for defensive clearing.
+    // This prevents data corruption from breaking the tile ID.
+    const HEXAGONAL_ROTATION_FLAG = 0x10000000;
 
     // Isolate the flip flags from the GID
     const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
     const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
     const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
 
-    // Get the clean GID without the flip flags
-    const cleanGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
+    // Get the clean GID by clearing ALL potential flip and rotation flags.
+    const cleanGid = gid & ~(
+        FLIPPED_HORIZONTALLY_FLAG |
+        FLIPPED_VERTICALLY_FLAG |
+        FLIPPED_DIAGONALLY_FLAG |
+        HEXAGONAL_ROTATION_FLAG
+    );
 
-    // Find the correct tileset and tile ID for the GID
+    // Find the correct tileset and tile ID for the clean GID
     let tilesetData = null;
     let tileIdInTileset = 0;
     for (const [firstgid, tileset] of this.tilesetTextures.entries()) {
@@ -502,17 +512,20 @@ createTileSprite(gid) {
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
     const sprite = new PIXI.Sprite(texture);
 
-    // --- Definitive Transformation Logic ---
-    // Set the anchor to the center for all transformations.
-    // This provides a consistent pivot point for both scaling and rotation.
+    // --- Definitive Setup and Transformation Logic ---
+    // Use the original tile dimensions from the tileset, not the sprite's dynamic
+    // properties, which can change with rotation and cause positioning errors.
+    const originalTileWidth = tilesetData.tilewidth;
+    const originalTileHeight = tilesetData.tileheight;
+
+    // Set the anchor to the center for a consistent pivot point.
     sprite.anchor.set(0.5, 0.5);
 
-    // Adjust the sprite's position to compensate for the centered anchor.
-    // This ensures the tile renders in the correct top-left position in the grid.
-    sprite.x += sprite.width / 2;
-    sprite.y += sprite.height / 2;
+    // Adjust the sprite's position using the ORIGINAL tile dimensions.
+    sprite.x += originalTileWidth / 2;
+    sprite.y += originalTileHeight / 2;
     
-    // Explicitly handle all 8 flip combinations according to the Tiled specification
+    // Explicitly handle all 8 flip combinations
     if (!flippedD && !flippedH && !flippedV) {
         // Case 1: No change
     }
@@ -526,7 +539,8 @@ createTileSprite(gid) {
     }
     else if (!flippedD && flippedH && flippedV) {
         // Case 4: Horizontal & Vertical flip (180-degree rotation)
-        sprite.rotation = Math.PI;
+        sprite.scale.x = -1;
+        sprite.scale.y = -1;
     }
     else if (flippedD && !flippedH && !flippedV) {
         // Case 5: Diagonal flip (Rotated +90 degrees & flipped horizontally)
@@ -538,13 +552,13 @@ createTileSprite(gid) {
         sprite.rotation = Math.PI / 2;
     }
     else if (flippedD && !flippedH && flippedV) {
-        // Case 7: Diagonal & Vertical flip (Rotated -90 degrees & flipped horizontally)
+        // Case 7: Diagonal & Vertical flip (Rotated -90 degrees)
         sprite.rotation = -Math.PI / 2;
-        sprite.scale.x = -1;
     }
     else if (flippedD && flippedH && flippedV) {
-        // Case 8: Diagonal, Horizontal & Vertical flip (Rotated -90 degrees)
-        sprite.rotation = -Math.PI / 2;
+        // Case 8: Diagonal, Horizontal & Vertical flip (Rotated +90 & flipped vertically)
+        sprite.rotation = Math.PI / 2;
+        sprite.scale.y = -1;
     }
     // --- End of Definitive Logic ---
 
