@@ -43,12 +43,29 @@ export async function loadMapData() {
             console.warn('⚠️ Map data has no layers, using empty array');
         }
         
+        // NEW: Extract tilesets information for renderer
+        if (!mapData.tilesets) {
+            mapData.tilesets = [];
+            console.warn('⚠️ Map data has no tilesets');
+        }
+        
         console.log('✅ Map data loaded successfully:', {
             width: mapData.width,
             height: mapData.height,
             layers: mapData.layers.length,
+            tilesets: mapData.tilesets.length,
             tilewidth: mapData.tilewidth || 48,
             tileheight: mapData.tileheight || 48
+        });
+        
+        // NEW: Log layer information for debugging
+        mapData.layers.forEach((layer, index) => {
+            console.log(`📋 Layer ${index}:`, {
+                name: layer.name || `Layer ${index}`,
+                type: layer.type,
+                visible: layer.visible,
+                opacity: layer.opacity
+            });
         });
         
         return mapData;
@@ -56,14 +73,15 @@ export async function loadMapData() {
     } catch (error) {
         console.error('❌ Error loading map data:', error);
         
-        // Return a default map if loading fails
+        // Return a default map if loading fails - PRESERVED FALLBACK
         console.log('🔧 Using fallback map data...');
         return {
-            width: 16,
-            height: 12,
+            width: 30,  // Updated to match purgatorygamemap.json dimensions
+            height: 20,
             tilewidth: 48,
             tileheight: 48,
-            layers: []
+            layers: [],
+            tilesets: []
         };
     }
 }
@@ -89,8 +107,8 @@ export class World {
         this.TILE_SIZE = officeLayout?.tilewidth || 48; // Standard tile size from map data
         
         // World dimensions
-        this.width = officeLayout?.width || 16;
-        this.height = officeLayout?.height || 12;
+        this.width = officeLayout?.width || 30;
+        this.height = officeLayout?.height || 20;
         this.worldWidth = this.width * this.TILE_SIZE;
         this.worldHeight = this.height * this.TILE_SIZE;
 
@@ -133,57 +151,134 @@ export class World {
      * Mark obstacles in the navigation grid
      * This creates walls and furniture as non-walkable areas
      */
-    markObstacles() {
-        // Mark border walls as obstacles
-        for (let x = 0; x < this.width; x++) {
-            this.navGrid[0][x] = 1; // Top wall
-            this.navGrid[this.height - 1][x] = 1; // Bottom wall
+  markObstacles() {
+        console.log('🚧 Marking obstacles in navigation grid...');
+        
+        // If we have map data with collision objects, use those
+        if (this.officeLayout && this.officeLayout.layers) {
+            const collisionObjects = this.extractCollisionLayer(this.officeLayout);
             
-            // Also mark in NavGrid instance
-            if (this.navGridInstance) {
-                this.navGridInstance.markObstacle(x, 0);
-                this.navGridInstance.markObstacle(x, this.height - 1);
-            }
-        }
-        
-        for (let y = 0; y < this.height; y++) {
-            this.navGrid[y][0] = 1; // Left wall
-            this.navGrid[y][this.width - 1] = 1; // Right wall
-            
-            // Also mark in NavGrid instance
-            if (this.navGridInstance) {
-                this.navGridInstance.markObstacle(0, y);
-                this.navGridInstance.markObstacle(this.width - 1, y);
-            }
-        }
-        
-        // Mark desk areas as obstacles (matching renderer desk positions)
-        const deskPositions = [
-            { x: 2, y: 3, width: 3, height: 1 }, // Desk at (100, 150) in pixels
-            { x: 6, y: 3, width: 3, height: 1 }, // Desk at (300, 150) in pixels
-            { x: 10, y: 3, width: 3, height: 1 }, // Desk at (500, 150) in pixels
-            { x: 2, y: 7, width: 3, height: 1 }, // Desk at (100, 350) in pixels
-            { x: 6, y: 7, width: 3, height: 1 }  // Desk at (300, 350) in pixels
-        ];
-        
-        deskPositions.forEach(desk => {
-            for (let x = desk.x; x < desk.x + desk.width && x < this.width; x++) {
-                for (let y = desk.y; y < desk.y + desk.height && y < this.height; y++) {
-                    if (y >= 0 && y < this.height) {
-                        this.navGrid[y][x] = 1;
-                        
-                        // Also mark in NavGrid instance
-                        if (this.navGridInstance) {
-                            this.navGridInstance.markObstacle(x, y);
+            collisionObjects.forEach(obj => {
+                // Convert world coordinates to grid coordinates
+                const startX = Math.floor(obj.x / this.TILE_SIZE);
+                const startY = Math.floor(obj.y / this.TILE_SIZE);
+                const endX = Math.min(this.width - 1, Math.floor((obj.x + obj.width) / this.TILE_SIZE));
+                const endY = Math.min(this.height - 1, Math.floor((obj.y + obj.height) / this.TILE_SIZE));
+                
+                // Mark all tiles covered by this object as non-walkable
+                for (let y = Math.max(0, startY); y <= endY; y++) {
+                    for (let x = Math.max(0, startX); x <= endX; x++) {
+                        if (y < this.height && x < this.width) {
+                            this.navGrid[y][x] = 1; // 1 = non-walkable
                         }
                     }
                 }
+                
+                console.log(`  🚫 Marked obstacle: ${obj.name} at grid (${startX},${startY}) to (${endX},${endY})`);
+            });
+        } else {
+            // PRESERVED: Fallback obstacle placement if no map data
+            console.log('📍 Using fallback obstacle placement...');
+            
+            // Create basic office layout with walls around the perimeter
+            for (let x = 0; x < this.width; x++) {
+                this.navGrid[0][x] = 1; // Top wall
+                this.navGrid[this.height - 1][x] = 1; // Bottom wall
+            }
+            for (let y = 0; y < this.height; y++) {
+                this.navGrid[y][0] = 1; // Left wall  
+                this.navGrid[y][this.width - 1] = 1; // Right wall
+            }
+            
+            // Add some furniture obstacles in the middle area
+            const furniturePositions = [
+                {x: 3, y: 3, width: 2, height: 1}, // Desk 1
+                {x: 6, y: 3, width: 2, height: 1}, // Desk 2
+                {x: 9, y: 3, width: 2, height: 1}, // Desk 3
+                {x: 3, y: 7, width: 2, height: 1}, // Desk 4
+                {x: 6, y: 7, width: 2, height: 1}, // Desk 5
+            ];
+            
+            furniturePositions.forEach((furniture, index) => {
+                for (let y = furniture.y; y < furniture.y + furniture.height; y++) {
+                    for (let x = furniture.x; x < furniture.x + furniture.width; x++) {
+                        if (y < this.height && x < this.width) {
+                            this.navGrid[y][x] = 1;
+                        }
+                    }
+                }
+                console.log(`  🪑 Added fallback furniture ${index + 1} at (${furniture.x},${furniture.y})`);
+            });
+        }
+        
+        // Count walkable vs non-walkable tiles
+        let walkableTiles = 0;
+        let blockedTiles = 0;
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                if (this.navGrid[y][x] === 0) walkableTiles++;
+                else blockedTiles++;
+            }
+        }
+        
+        console.log(`✅ Navigation grid complete: ${walkableTiles} walkable, ${blockedTiles} blocked tiles`);
+    }
+
+    /**
+     * NEW: Extract collision data from Tiled map layers
+     * Looks for object layers with collision objects and tile layers that represent walls
+     */
+    extractCollisionLayer(mapData) {
+        console.log('🧱 Extracting collision data from map layers...');
+        
+        if (!mapData.layers || mapData.layers.length === 0) {
+            console.warn('⚠️ No layers found in map data');
+            return [];
+        }
+        
+        const collisionObjects = [];
+        
+        mapData.layers.forEach((layer, index) => {
+            console.log(`🔍 Processing layer ${index}: ${layer.name || 'Unnamed'} (${layer.type})`);
+            
+            // Handle object layers (desks, walls, furniture)
+            if (layer.type === 'objectgroup' && layer.objects) {
+                layer.objects.forEach(obj => {
+                    // Skip spawn points and action points
+                    if (obj.name && (obj.name.includes('spawn_point') || obj.name.includes('action_point'))) {
+                        return;
+                    }
+                    
+                    // Add solid objects as collision areas
+                    if (obj.type === 'desk' || obj.type === 'storage' || obj.type === 'misc' || 
+                        obj.name && obj.name.includes('wall')) {
+                        collisionObjects.push({
+                            x: obj.x,
+                            y: obj.y,
+                            width: obj.width,
+                            height: obj.height,
+                            type: obj.type || 'obstacle',
+                            name: obj.name || 'unnamed'
+                        });
+                        console.log(`  ➕ Added collision object: ${obj.name} (${obj.type})`);
+                    }
+                });
+            }
+            
+            // Handle tile layers (for wall tiles)
+            if (layer.type === 'tilelayer' && layer.data) {
+                // This will be used by the renderer, but we can also extract wall tiles
+                console.log(`  📦 Found tile layer with ${layer.data.length} tiles`);
+                
+                // Note: For now, we'll rely on object layers for collision.
+                // If needed, we can add tile-based collision detection here.
             }
         });
         
-        console.log('🚧 Obstacles marked in navigation grid');
+        console.log(`✅ Extracted ${collisionObjects.length} collision objects`);
+        return collisionObjects;
     }
-
+    
     /**
      * PHASE 4 ADD: Check if a pixel position is walkable
      * Converts pixel coordinates to tile coordinates and checks navGrid
@@ -386,3 +481,4 @@ export class World {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
