@@ -148,8 +148,11 @@ export class Renderer {
         this.BASE_HEIGHT = 720;
         this.WORLD_WIDTH = this.BASE_WIDTH;
         this.WORLD_HEIGHT = this.BASE_HEIGHT;
+        this.cameraX = 0;
+        this.cameraY = 0;
+        this.followTarget = null;
 
-        if (USE_ENHANCED_SPRITES) {
+if (USE_ENHANCED_SPRITES) {
             console.log('🎨 Enhanced Renderer with Animation Engine enabled');
         } else {
             console.log('🎨 Renderer constructor (enhanced sprites DORMANT)');
@@ -435,6 +438,11 @@ export class Renderer {
         }
     }
 
+    setPlayerCharacter(characterId) {
+    this.setFollowTarget(characterId);
+    console.log(`👤 Player character set: ${characterId}`);
+}
+
     createSimpleCharacterSprite(character) {
         const graphics = new PIXI.Graphics();
         graphics.beginFill(0x4a90e2);
@@ -460,6 +468,36 @@ export class Renderer {
             sprite.y = y;
         }
     }
+
+    setFollowTarget(characterId) {
+    this.followTarget = characterId;
+    console.log(`📹 Camera now following character: ${characterId}`);
+}
+
+updateCamera() {
+    if (!this.followTarget || !this.characterSprites.has(this.followTarget)) {
+        return;
+    }
+    
+    const targetSprite = this.characterSprites.get(this.followTarget);
+    
+    // Center camera on target character
+    const targetCameraX = -(targetSprite.x - this.WORLD_WIDTH / 2);
+    const targetCameraY = -(targetSprite.y - this.WORLD_HEIGHT / 2);
+    
+    // Smooth camera movement (optional - remove for instant following)
+    const lerpFactor = 0.1;
+    this.cameraX += (targetCameraX - this.cameraX) * lerpFactor;
+    this.cameraY += (targetCameraY - this.cameraY) * lerpFactor;
+    
+    // Apply camera transform to world container
+    if (this.worldContainer) {
+        this.worldContainer.x = this.cameraX;
+        this.worldContainer.y = this.cameraY;
+    }
+}
+
+    
 
     async loadTilesets(tilesets) {
         console.log('🗂️ Loading map tilesets...');
@@ -696,10 +734,11 @@ export class Renderer {
     }
 
     update() {
-        if (this.app && this.isInitialized) {
-            this.app.render();
-        }
+    if (this.app && this.isInitialized) {
+        this.updateCamera();
+        this.app.render();
     }
+}
 
     destroy() {
         if (this.resizeHandler) {
