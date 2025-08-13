@@ -464,26 +464,26 @@ removeChunk(chunkKey) {
 }
 
 createTileSprite(gid) {
-    // Standard flip flags from the Tiled specification
+    // Standard Tiled flip flags
     const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
     const FLIPPED_VERTICALLY_FLAG = 0x40000000;
-    // The third flag is for an ANTI-DIAGONAL flip, not a diagonal one.
-    const FLIPPED_ANTI_DIAGONALLY_FLAG = 0x20000000;
-    
-    // A stray flag that can corrupt GIDs if not cleared
-    const HEXAGONAL_ROTATION_FLAG = 0x10000000;
+    const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
 
-    // Isolate the flip flags from the GID
+    // **THE FIX:** Acknowledge the fourth, non-standard flag used for a different rotation
+    const ROTATED_90_FLAG = 0x10000000; 
+
+    // Isolate all four potential transformation flags
     const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
     const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
-    const flippedAD = (gid & FLIPPED_ANTI_DIAGONALLY_FLAG) !== 0; // AD for Anti-Diagonal
+    const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
+    const rotated90 = (gid & ROTATED_90_FLAG) !== 0;
 
     // Get the clean GID by clearing ALL potential flags.
     const cleanGid = gid & ~(
         FLIPPED_HORIZONTALLY_FLAG |
         FLIPPED_VERTICALLY_FLAG |
-        FLIPPED_ANTI_DIAGONALLY_FLAG |
-        HEXAGONAL_ROTATION_FLAG
+        FLIPPED_DIAGONALLY_FLAG |
+        ROTATED_90_FLAG
     );
 
     // Find the correct tileset and tile ID for the clean GID
@@ -513,49 +513,41 @@ createTileSprite(gid) {
     const sprite = new PIXI.Sprite(texture);
 
     // --- Definitive Setup and Transformation Logic ---
-    // Use the original tile dimensions to prevent positioning errors.
     const originalTileWidth = tilesetData.tilewidth;
     const originalTileHeight = tilesetData.tileheight;
 
-    // Set a consistent center pivot point for all transformations.
     sprite.anchor.set(0.5, 0.5);
-
-    // Adjust the sprite's position to keep it aligned to the grid.
     sprite.x += originalTileWidth / 2;
     sprite.y += originalTileHeight / 2;
     
-    // This logic is rebuilt based on the ANTI-DIAGONAL flip model.
-    if (flippedAD) {
-        if (flippedH && flippedV) {
-            // AD + H + V  -> (y, x)
-            sprite.rotation = -Math.PI / 2;
-            sprite.scale.y = -1;
-        } else if (flippedH) {
-            // AD + H      -> (y, -x)
-            sprite.rotation = -Math.PI / 2;
-        } else if (flippedV) {
-            // AD + V      -> (-y, x)
-            sprite.rotation = Math.PI / 2;
-        } else {
-            // AD only     -> (-y, -x)
-            sprite.rotation = Math.PI / 2;
-            sprite.scale.y = -1;
-        }
-    } else {
-        // ** SYNTAX FIX APPLIED HERE **
-        // A combined H+V flip is a 180-degree rotation.
-        if (flippedH && flippedV) {
-            sprite.rotation = Math.PI;
-        } 
-        // A simple H or V flip is a negative scale.
-        // This structure is now syntactically correct.
-        else if (flippedH) {
-            sprite.scale.x = -1;
-        } 
-        else if (flippedV) {
-            sprite.scale.y = -1;
-        }
+    // This logic now correctly handles the two different rotation flags
+    let rotation = 0;
+    let scaleX = 1;
+    let scaleY = 1;
+
+    // Apply the 90-degree rotation first if that flag is present
+    if (rotated90) {
+        rotation = Math.PI / 2; // 90 degrees clockwise
     }
+    
+    // The three standard flags compound on top of the base rotation
+    if (flippedD) {
+        // Apply the diagonal flip (axis swap)
+        rotation -= Math.PI / 2;
+        scaleX = -1;
+        scaleY = -1;
+    }
+    
+    if (flippedH) {
+        scaleX *= -1;
+    }
+
+    if (flippedV) {
+        scaleY *= -1;
+    }
+    
+    sprite.rotation = rotation;
+    sprite.scale.set(scaleX, scaleY);
     // --- End of Definitive Logic ---
 
     return sprite;
