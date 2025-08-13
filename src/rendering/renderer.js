@@ -499,22 +499,31 @@ createTileSprite(gid) {
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
     const sprite = new PIXI.Sprite(texture);
 
-    // --- ADDED TRANSFORMATION LOGIC ---
-    // Set anchor points for proper rotation and flipping
+    // --- CORRECTED TRANSFORMATION LOGIC ---
+    // Set anchor to the center for rotation and flipping
     sprite.anchor.set(0.5, 0.5);
+    // Adjust position to account for the new anchor point
     sprite.x += sprite.width / 2;
     sprite.y += sprite.height / 2;
 
-    // Apply transformations
+    // Handle all 8 Tiled flip combinations
     if (flippedD) {
-        sprite.rotation = (Math.PI / 2);
-        sprite.scale.x = flippedH ? -1 : 1;
+        if (flippedH && flippedV) {
+            sprite.rotation = Math.PI / 2;
+            sprite.scale.x = -1;
+        } else if (flippedH) {
+            sprite.rotation = -Math.PI / 2;
+        } else if (flippedV) {
+            sprite.rotation = Math.PI / 2;
+        } else {
+            sprite.rotation = -Math.PI / 2;
+            sprite.scale.x = -1;
+        }
     } else {
         sprite.scale.x = flippedH ? -1 : 1;
+        sprite.scale.y = flippedV ? -1 : 1;
     }
-
-    sprite.scale.y = flippedV ? -1 : 1;
-    // --- END OF ADDED LOGIC ---
+    // --- END OF CORRECTED LOGIC ---
 
     return sprite;
 }
