@@ -605,17 +605,17 @@ if (layer.chunks) {
     console.log(`📊 Sparse map has ${sparseMap.size} tiles`);
     
     // Now convert sparse map to linear array for rendering
-tileData = [];
-for (let y = 0; y < mapHeight; y++) {
-    for (let x = 0; x < mapWidth; x++) {
-       // Convert grid position to world position
-        const worldX = x + minX;
-        const worldY = y + minY;
-        const key = `${worldX},${worldY}`;
-        
-        tileData.push(sparseMap.get(key) || 0);
+    tileData = [];
+    for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+           // Convert grid position to world position - PROPERLY handle negative offset
+            const worldX = x - Math.abs(minX);
+            const worldY = y - Math.abs(minY);
+            const key = `${worldX},${worldY}`;
+            
+            tileData.push(sparseMap.get(key) || 0);
+        }
     }
-}
     
     const nonZeroTiles = tileData.filter(tile => tile !== 0).length;
     console.log(`📊 Final grid: ${nonZeroTiles} non-zero tiles from ${tileData.length} total`);
