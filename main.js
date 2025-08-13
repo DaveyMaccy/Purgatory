@@ -275,6 +275,12 @@ window.startGameSimulation = async function(charactersFromCreator) {
             renderer.renderCharacter(character);
             console.log(`✅ Rendered character: ${character.name}`);
         });
+
+        // Assuming the first character is the player (or however you identify the player)
+        const playerCharacter = characterManager.characters.find(char => char.isPlayer);
+        if (playerCharacter) {
+        renderer.setPlayerCharacter(playerCharacter.id);
+        }
         
        // Initialize UI updater for real-time status updates
         uiUpdater = new UIUpdater(characterManager);
@@ -781,3 +787,4 @@ function setupDebugPanel() {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
