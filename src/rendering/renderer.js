@@ -548,7 +548,7 @@ console.log(`🔍 Trying tileset paths:`, possiblePaths);
         }
 
         mapData.layers.forEach((layer, layerIndex) => {
-            if (layer.type === 'tilelayer' && layer.data && layer.visible !== false) {
+            if (layer.type === 'tilelayer' && (layer.data || layer.chunks) && layer.visible !== false) {
                 console.log(`🎨 Rendering tile layer: ${layer.name || `Layer ${layerIndex}`}`);
                 this.renderTileLayer(layer, mapData);
             }
