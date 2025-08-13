@@ -247,14 +247,12 @@ export class Renderer {
             }
 
             if (mapData) {
-                // Load tilesets first, then render
+                // Load tilesets. The new system will handle rendering chunks dynamically.
                 if (mapData.tilesets && mapData.tilesets.length > 0) {
                     await this.loadTilesets(mapData.tilesets);
-                    this.renderTilemap(mapData);
-                } else {
-                    console.log('📍 No tilesets found, using fallback map rendering');
-                    this.renderMap(mapData);
-                }
+               } else {
+                   console.warn('⚠️ No tilesets found in map data.');
+              }
             }
 
             this.isInitialized = true;
