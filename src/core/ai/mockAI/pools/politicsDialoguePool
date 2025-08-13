@@ -1,0 +1,357 @@
+/**
+ * Politics Dialogue Pool - Current Events and Governance Discussions
+ * Specialized dialogue pool for political topics, current events, and social issues
+ * 
+ * TOPICS COVERED:
+ * - Current events and news
+ * - Local and national politics
+ * - Policy discussions
+ * - Social issues and activism
+ * - Election cycles and candidates
+ * - Government and civic engagement
+ * 
+ * RESPONSE PATTERNS:
+ * - Balanced and respectful discourse
+ * - Fact-based discussions
+ * - Multiple perspective acknowledgment
+ * - Constructive debate approaches
+ * - Issue-focused rather than personal
+ * - Civic engagement encouragement
+ * 
+ * PERSONALITY ADAPTATIONS:
+ * - Passionate personalities show more engagement
+ * - Analytical types focus on data and facts
+ * - Diplomatic characters seek common ground
+ * - Activist types emphasize action and change
+ * 
+ * NOTE: This pool emphasizes respectful, balanced political discourse
+ */
+
+export class PoliticsDialoguePool {
+    constructor() {
+        // Political topic triggers (kept neutral and balanced)
+        this.topicTriggers = {
+            current_events: {
+                keywords: ['news', 'breaking', 'current', 'today', 'headline', 'story', 'report'],
+                responses: 'current_events_response',
+                urgency: 'high'
+            },
+            
+            policy: {
+                keywords: ['policy', 'law', 'legislation', 'bill', 'reform', 'proposal', 'regulation'],
+                responses: 'policy_response',
+                urgency: 'medium'
+            },
+            
+            election: {
+                keywords: ['election', 'vote', 'candidate', 'campaign', 'ballot', 'primary', 'poll'],
+                responses: 'election_response',
+                urgency: 'high'
+            },
+            
+            local: {
+                keywords: ['local', 'city', 'county', 'mayor', 'council', 'community', 'neighborhood'],
+                responses: 'local_response',
+                urgency: 'medium'
+            },
+            
+            social_issues: {
+                keywords: ['rights', 'justice', 'equality', 'freedom', 'liberty', 'fairness', 'democracy'],
+                responses: 'social_issues_response',
+                urgency: 'medium'
+            },
+            
+            civic: {
+                keywords: ['civic', 'citizen', 'duty', 'participate', 'engage', 'volunteer', 'serve'],
+                responses: 'civic_response',
+                urgency: 'low'
+            }
+        };
+        
+        // Politics-specific sentence components (balanced and respectful)
+        this.politicsComponents = {
+            // Political discussion openings
+            openings: {
+                analytical: ['Looking at the data', 'From what I understand', 'Based on the information', 'The research shows'],
+                diplomatic: ['I think we can all agree', 'It\'s worth considering', 'There are different views on', 'People have valid concerns about'],
+                engaged: ['This is really important', 'We need to pay attention to', 'It\'s crucial that we discuss', 'This affects all of us'],
+                cautious: ['It\'s complicated', 'There are many factors', 'I\'m still learning about', 'It\'s a complex issue']
+            },
+            
+            // Core political content (balanced perspectives)
+            coreContent: {
+                current_events_response: {
+                    awareness: ['staying informed is so important', 'trying to follow multiple sources', 'the full story is still developing', 'facts are still coming out'],
+                    impact: ['this will affect many people', 'real consequences for communities', 'important to understand the implications', 'thinking about long-term effects'],
+                    perspective: ['different outlets report differently', 'multiple angles to consider', 'hearing various viewpoints', 'trying to stay objective'],
+                    engagement: ['we should all be paying attention', 'civic engagement matters', 'our voices count', 'democracy requires participation']
+                },
+                
+                policy_response: {
+                    analysis: ['the details really matter here', 'implementation will be key', 'unintended consequences are possible', 'need to consider all stakeholders'],
+                    process: ['the legislative process is complex', 'compromise is often necessary', 'public input is valuable', 'transparency is important'],
+                    impact: ['how will this affect everyday people', 'economic implications to consider', 'social benefits and costs', 'long-term sustainability'],
+                    improvement: ['there\'s always room for improvement', 'policies can be refined over time', 'learning from other places', 'evidence-based approaches work']
+                },
+                
+                election_response: {
+                    participation: ['voting is our fundamental right', 'every voice matters', 'research the candidates', 'understand the issues'],
+                    process: ['the democratic process in action', 'campaigns can be enlightening', 'debates help inform voters', 'primary elections are important too'],
+                    responsibility: ['informed voting is crucial', 'beyond just the top races', 'local elections impact daily life', 'civic duty and privilege'],
+                    optimism: ['democracy works when we participate', 'peaceful transfer of power', 'system designed for change', 'hope for the future']
+                },
+                
+                local_response: {
+                    relevance: ['local politics affect us most directly', 'city council decisions matter', 'school board impacts families', 'zoning affects neighborhoods'],
+                    accessibility: ['easier to make your voice heard', 'local officials are more accessible', 'community meetings are important', 'grassroots change is possible'],
+                    engagement: ['attend city council meetings', 'get involved in community groups', 'volunteer for local causes', 'run for office yourself'],
+                    impact: ['small changes add up', 'building from the ground up', 'knowing your neighbors matters', 'local solutions to local problems']
+                },
+                
+                social_issues_response: {
+                    values: ['fundamental principles at stake', 'core values guide us', 'justice and fairness matter', 'human dignity is paramount'],
+                    progress: ['society evolves over time', 'progress isn\'t always linear', 'each generation builds on the last', 'change can be gradual'],
+                    dialogue: ['open conversation is healthy', 'listening to different experiences', 'finding common ground', 'respectful disagreement is okay'],
+                    action: ['awareness leads to action', 'small steps make a difference', 'advocacy and education matter', 'being the change we want to see']
+                },
+                
+                civic_response: {
+                    duty: ['citizenship comes with responsibilities', 'democracy requires active participation', 'informed engagement is crucial', 'voting is just the beginning'],
+                    opportunity: ['many ways to get involved', 'volunteer opportunities abound', 'serve on boards and committees', 'mentor young people'],
+                    community: ['stronger communities benefit everyone', 'working together achieves more', 'diverse perspectives strengthen us', 'collective action is powerful'],
+                    legacy: ['what we leave for future generations', 'stewardship of our institutions', 'teaching civic values', 'leading by example']
+                }
+            },
+            
+            // Political discussion transitions (diplomatic)
+            transitions: {
+                agreeable: ['That\'s a fair point', 'I can see that perspective', 'There\'s truth to that', 'Good observation'],
+                thoughtful: ['It makes you think', 'Worth considering', 'Interesting angle', 'Food for thought'],
+                balanced: ['On the other hand', 'Another perspective is', 'It\'s also worth noting', 'Different people see'],
+                constructive: ['Moving forward', 'What can we do', 'How do we improve', 'The next step might be']
+            },
+            
+            // Political discussion closings (encouraging civic engagement)
+            closings: {
+                encouraging: ['Democracy works when we all participate!', 'Every voice matters in this process!', 'Staying engaged is so important!', 'This is how positive change happens!'],
+                thoughtful: ['Complex issues deserve careful thought.', 'Important to stay informed and engaged.', 'These discussions matter for our future.', 'Democracy requires ongoing participation.'],
+                hopeful: ['Optimistic about our democratic process.', 'Believing in the power of civic engagement.', 'Change is possible when we work together.', 'Future generations are counting on us.'],
+                practical: ['Time to turn talk into action.', 'Local involvement makes a real difference.', 'Start with what you can influence.', 'Small steps lead to big changes.']
+            }
+        };
+        
+        // Track political discussion threads carefully
+        this.politicalThreads = new Map();
+        this.issueTracking = new Map();
+        
+        console.log('🏛️ Politics Dialogue Pool initialized with balanced discourse approach');
+    }
+
+    /**
+     * Generate politics-related response
+     * @param {string} incomingMessage - Message being responded to
+     * @param {Object} character - Character generating response
+     * @param {Object} context - Environmental and social context
+     * @returns {string} - Generated political dialogue
+     */
+    generateResponse(incomingMessage, character, context) {
+        try {
+            console.log(`🏛️ Generating political response for ${character.name}`);
+            
+            // Analyze message for political triggers
+            const triggerAnalysis = this.analyzePoliticalMessage(incomingMessage);
+            
+            // Determine response type (emphasizing balanced discourse)
+            const responseType = this.determinePoliticalResponseType(triggerAnalysis, character, context);
+            
+            // Build response using modular components (keeping it respectful)
+            const response = this.constructPoliticalResponse(responseType, triggerAnalysis, character, context);
+            
+            console.log(`🗳️ Political response: "${response}"`);
+            return response;
+            
+        } catch (error) {
+            console.error(`Error generating political response for ${character.name}:`, error);
+            return this.getFallbackPoliticalResponse(character, incomingMessage);
+        }
+    }
+
+    /**
+     * Analyze incoming message for political triggers
+     * @param {string} message - Incoming message
+     * @returns {Object} - Political trigger analysis
+     */
+    analyzePoliticalMessage(message) {
+        const analysis = {
+            originalMessage: message,
+            detectedTriggers: [],
+            politicalScope: 'general',
+            urgencyLevel: 'medium',
+            toneRequired: 'balanced'
+        };
+        
+        const messageLower = message.toLowerCase();
+        
+        // Detect political scope
+        const scopeIndicators = {
+            local: ['city', 'town', 'county', 'neighborhood', 'community', 'local'],
+            national: ['country', 'federal', 'congress', 'senate', 'national', 'america'],
+            international: ['world', 'global', 'international', 'foreign', 'trade', 'climate']
+        };
+        
+        Object.entries(scopeIndicators).forEach(([scope, keywords]) => {
+            if (keywords.some(keyword => messageLower.includes(keyword))) {
+                analysis.politicalScope = scope;
+            }
+        });
+        
+        // Detect tone requirements (always aim for respectful)
+        const emotionalWords = ['angry', 'frustrated', 'excited', 'worried', 'hopeful'];
+        if (emotionalWords.some(word => messageLower.includes(word))) {
+            analysis.toneRequired = 'diplomatic';
+        }
+        
+        // Detect trigger categories
+        Object.entries(this.topicTriggers).forEach(([category, data]) => {
+            const matches = data.keywords.filter(keyword => messageLower.includes(keyword));
+            if (matches.length > 0) {
+                analysis.detectedTriggers.push({
+                    category,
+                    matches,
+                    urgency: data.urgency,
+                    responseType: data.responses
+                });
+            }
+        });
+        
+        return analysis;
+    }
+
+    /**
+     * Determine appropriate political response type
+     * @param {Object} triggerAnalysis - Analysis of incoming message
+     * @param {Object} character - Character object
+     * @param {Object} context - Environmental context
+     * @returns {string} - Response type identifier
+     */
+    determinePoliticalResponseType(triggerAnalysis, character, context) {
+        const personality = character.personalityTags || [];
+        
+        // Primary trigger-based routing
+        if (triggerAnalysis.detectedTriggers.length > 0) {
+            return triggerAnalysis.detectedTriggers[0].responseType;
+        }
+        
+        // Personality-based defaults (keeping balanced)
+        if (personality.includes('Analytical')) {
+            return 'policy_response';
+        } else if (personality.includes('Social') || personality.includes('Community-minded')) {
+            return 'civic_response';
+        } else if (personality.includes('Passionate')) {
+            return 'social_issues_response';
+        } else if (personality.includes('Practical')) {
+            return 'local_response';
+        }
+        
+        // Default to current events
+        return 'current_events_response';
+    }
+
+    /**
+     * Construct political response using modular components
+     * @param {string} responseType - Type of response to generate
+     * @param {Object} triggerAnalysis - Trigger analysis
+     * @param {Object} character - Character object
+     * @param {Object} context - Environmental context
+     * @returns {string} - Constructed response
+     */
+    constructPoliticalResponse(responseType, triggerAnalysis, character, context) {
+        const personality = character.personalityTags || [];
+        const components = this.politicsComponents;
+        
+        // Select opening based on personality (emphasizing diplomacy)
+        let opening = '';
+        if (personality.includes('Diplomatic') || triggerAnalysis.toneRequired === 'diplomatic') {
+            opening = this.selectRandom(components.openings.diplomatic);
+        } else if (personality.includes('Analytical')) {
+            opening = this.selectRandom(components.openings.analytical);
+        } else if (personality.includes('Passionate')) {
+            opening = this.selectRandom(components.openings.engaged);
+        } else {
+            opening = this.selectRandom(components.openings.cautious);
+        }
+        
+        // Select core content based on response type
+        let coreContent = '';
+        if (components.coreContent[responseType]) {
+            const categoryOptions = components.coreContent[responseType];
+            const subcategory = Object.keys(categoryOptions)[0]; // Use first subcategory as default
+            coreContent = this.selectRandom(categoryOptions[subcategory]);
+        } else {
+            // Fallback content (always balanced)
+            coreContent = 'these are important issues that deserve thoughtful consideration';
+        }
+        
+        // Select appropriate transition (diplomatic)
+        const transition = this.selectRandom(components.transitions.thoughtful);
+        
+        // Select closing based on context (encouraging civic engagement)
+        let closing = '';
+        if (personality.includes('Optimistic')) {
+            closing = this.selectRandom(components.closings.hopeful);
+        } else if (personality.includes('Practical')) {
+            closing = this.selectRandom(components.closings.practical);
+        } else if (triggerAnalysis.politicalScope === 'local') {
+            closing = this.selectRandom(components.closings.encouraging);
+        } else {
+            closing = this.selectRandom(components.closings.thoughtful);
+        }
+        
+        // Combine components into natural, balanced response
+        return `${opening} ${coreContent}. ${transition} ${closing}`;
+    }
+
+    /**
+     * Generate fallback political response (always balanced)
+     * @param {Object} character - Character object
+     * @param {string} originalMessage - Original message
+     * @returns {string} - Fallback response
+     */
+    getFallbackPoliticalResponse(character, originalMessage) {
+        const fallbacks = [
+            "That's definitely something worth discussing thoughtfully.",
+            "Important issues like this deserve careful consideration.",
+            "It's good that people are engaging with these topics.",
+            "Complex issues require us to listen to different perspectives.",
+            "Civic engagement is so important in a democracy."
+        ];
+        
+        return this.selectRandom(fallbacks);
+    }
+
+    /**
+     * Utility method to select random element from array
+     * @param {Array} array - Array to select from
+     * @returns {*} - Random element
+     */
+    selectRandom(array) {
+        if (!array || array.length === 0) return '';
+        return array[Math.floor(Math.random() * array.length)];
+    }
+
+    /**
+     * Get pool statistics for debugging
+     * @returns {Object} - Pool statistics
+     */
+    getPoolStats() {
+        return {
+            name: 'Politics Dialogue Pool',
+            approach: 'Balanced and respectful discourse',
+            triggerCategories: Object.keys(this.topicTriggers).length,
+            componentCategories: Object.keys(this.politicsComponents).length,
+            totalResponses: Object.values(this.politicsComponents.coreContent)
+                .reduce((total, category) => total + Object.keys(category).length, 0),
+            activeThreads: this.politicalThreads.size
+        };
+    }
+}
