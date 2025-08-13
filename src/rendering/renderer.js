@@ -155,7 +155,16 @@ export class Renderer {
     
     async preloadCharacterSprites() { if (!USE_ENHANCED_SPRITES) { console.log('💤 Sprite preloading DORMANT - skipping'); return 0; } console.log('🔄 Preloading character sprite textures...'); const spritePromises = []; for (let i = 1; i <= 20; i++) { const paddedNumber = i.toString().padStart(2, '0'); const spritePath = `assets/characters/character-${paddedNumber}.png`; const promise = this.loadSpriteTexture(spritePath).catch(error => { console.warn(`⚠️ Failed to preload sprite: ${spritePath}`, error); return null; }); spritePromises.push(promise); } const results = await Promise.allSettled(spritePromises); const successCount = results.filter(r => r.status === 'fulfilled' && r.value).length; console.log(`✅ Preloaded ${successCount}/20 character sprites`); return successCount; }
     async loadSpriteTexture(spritePath) { if (!USE_ENHANCED_SPRITES) { throw new Error('Enhanced sprites are dormant'); } if (this.preloadedTextures.has(spritePath)) { return this.preloadedTextures.get(spritePath); } try { const texture = await PIXI.Texture.fromURL(spritePath); if (texture && texture.valid && texture.width > 0 && texture.height > 0) { this.preloadedTextures.set(spritePath, texture); console.log(`📦 Cached texture: ${spritePath} (${texture.width}x${texture.height})`); return texture; } else { throw new Error('Invalid texture dimensions or failed to load'); } } catch (error) { console.error(`❌ Failed to load texture: ${spritePath}`, error); throw error; } }
-    async initialize(mapData) { try { if (USE_ENHANCED_SPRITES) { console.log('🔧 Initializing enhanced PixiJS renderer with sprite preloading...'); } else { console.log('🔧 Initializing PixiJS renderer (enhanced sprites dormant)...'); } if (!this.container) { throw new Error('Container element is required for renderer initialization'); } this.calculateCanvasSize(); this.app = new PIXI.Application({ width: this.WORLD_WIDTH, height: this.WORLD_HEIGHT, backgroundColor: 0x2c3e50, antialias: true, resolution: window.devicePixelRatio || 1, autoDensity: true }); this.setupResponsiveCanvas(); this.container.appendChild(this.app.view); this.worldContainer = new PIXI.Container(); this.app.stage.addChild(this.worldContainer); this.mapLayer = new PIXI.Container(); this.characterLayer = new PIXI.Container(); this.worldContainer.addChild(this.mapLayer); this.worldContainer.addChild(this.characterLayer); this.setupResizeListener(); let preloadedCount = 0; if (USE_ENHANCED_SPRITES) { preloadedCount = await this.preloadCharacterSprites(); console.log(`🎮 Sprite preloading complete: ${preloadedCount} textures cached`); } else { console.log('💤 Sprite preloading skipped (dormant mode)'); } if (mapData) { this.renderMap(mapData); } this.isInitialized = true; if (USE_ENHANCED_SPRITES) { console.log(`✅ Enhanced PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`); } else { console.log(`✅ PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9) - Enhanced sprites DORMANT`); } } catch (error) { console.error('❌ Failed to initialize renderer:', error); throw error; } }
+    async initialize(mapData) { try { if (USE_ENHANCED_SPRITES) { console.log('🔧 Initializing enhanced PixiJS renderer with sprite preloading...'); } else { console.log('🔧 Initializing PixiJS renderer (enhanced sprites dormant)...'); } if (!this.container) { throw new Error('Container element is required for renderer initialization'); } this.calculateCanvasSize(); this.app = new PIXI.Application({ width: this.WORLD_WIDTH, height: this.WORLD_HEIGHT, backgroundColor: 0x2c3e50, antialias: true, resolution: window.devicePixelRatio || 1, autoDensity: true }); this.setupResponsiveCanvas(); this.container.appendChild(this.app.view); this.worldContainer = new PIXI.Container(); this.app.stage.addChild(this.worldContainer); this.mapLayer = new PIXI.Container(); this.characterLayer = new PIXI.Container(); this.worldContainer.addChild(this.mapLayer); this.worldContainer.addChild(this.characterLayer); this.setupResizeListener(); let preloadedCount = 0; if (USE_ENHANCED_SPRITES) { preloadedCount = await this.preloadCharacterSprites(); console.log(`🎮 Sprite preloading complete: ${preloadedCount} textures cached`); } else { console.log('💤 Sprite preloading skipped (dormant mode)'); } if (mapData) {
+    // Load tilesets first, then render
+    if (mapData.tilesets && mapData.tilesets.length > 0) {
+        await this.loadTilesets(mapData.tilesets);
+        this.renderTilemap(mapData);
+    } else {
+        console.log('📍 No tilesets found, using fallback map rendering');
+        this.renderMap(mapData);
+    }
+} } this.isInitialized = true; if (USE_ENHANCED_SPRITES) { console.log(`✅ Enhanced PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9)`); } else { console.log(`✅ PixiJS renderer initialized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9) - Enhanced sprites DORMANT`); } } catch (error) { console.error('❌ Failed to initialize renderer:', error); throw error; } }
     calculateCanvasSize() { if (!this.container) { console.warn('⚠️ No container provided, using fallback dimensions'); this.WORLD_WIDTH = this.BASE_WIDTH; this.WORLD_HEIGHT = this.BASE_HEIGHT; return; } const containerRect = this.container.getBoundingClientRect(); const containerWidth = containerRect.width || this.container.clientWidth || 800; const containerHeight = containerRect.height || this.container.clientHeight || 600; const targetAspectRatio = 16 / 9; const containerAspectRatio = containerWidth / containerHeight; if (containerAspectRatio > targetAspectRatio) { this.WORLD_HEIGHT = Math.min(containerHeight * 0.85, this.BASE_HEIGHT); this.WORLD_WIDTH = this.WORLD_HEIGHT * targetAspectRatio; } else { this.WORLD_WIDTH = Math.min(containerWidth * 0.85, this.BASE_WIDTH); this.WORLD_HEIGHT = this.WORLD_WIDTH / targetAspectRatio; } this.WORLD_WIDTH = Math.max(this.WORLD_WIDTH, 800); this.WORLD_HEIGHT = Math.max(this.WORLD_HEIGHT, 450); console.log(`📐 Canvas sized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9 aspect ratio)`); }
     setupResponsiveCanvas() { if (this.app && this.app.view) { const canvas = this.app.view; canvas.style.display = 'block'; canvas.style.margin = '0 auto'; canvas.style.maxWidth = '100%'; canvas.style.maxHeight = '100%'; canvas.style.border = '2px solid #34495e'; canvas.style.borderRadius = '8px'; } }
     setupResizeListener() { this.resizeHandler = () => { this.calculateCanvasSize(); if (this.app) { this.app.renderer.resize(this.WORLD_WIDTH, this.WORLD_HEIGHT); this.setupResponsiveCanvas(); } }; window.addEventListener('resize', this.resizeHandler); }
@@ -164,6 +173,156 @@ export class Renderer {
     createSimpleCharacterSprite(character) { const graphics = new PIXI.Graphics(); graphics.beginFill(0x4a90e2); graphics.drawRect(-this.CHARACTER_WIDTH/2, -this.CHARACTER_HEIGHT, this.CHARACTER_WIDTH, this.CHARACTER_HEIGHT); graphics.endFill(); graphics.beginFill(0xfdbcb4); graphics.drawCircle(0, -this.CHARACTER_HEIGHT + 15, 12); graphics.endFill(); graphics.beginFill(0x000000); graphics.drawCircle(-4, -this.CHARACTER_HEIGHT + 12, 1); graphics.drawCircle(4, -this.CHARACTER_HEIGHT + 12, 1); graphics.endFill(); return graphics; }
     updateCharacterPosition(characterId, x, y) { const sprite = this.characterSprites.get(characterId); if (sprite) { sprite.x = x; sprite.y = y; } }
 
+    async loadTilesets(tilesets) {
+    console.log('🗂️ Loading map tilesets...');
+    
+    for (const tileset of tilesets) {
+        try {
+            const tilesetPath = `assets/maps/${tileset.image}`;
+            console.log(`📥 Loading tileset: ${tilesetPath}`);
+            
+            const texture = await PIXI.Texture.fromURL(tilesetPath);
+            if (texture && texture.valid) {
+                this.tilesetTextures.set(tileset.firstgid, {
+                    texture: texture,
+                    tilewidth: tileset.tilewidth,
+                    tileheight: tileset.tileheight,
+                    columns: tileset.columns,
+                    name: tileset.name
+                });
+                console.log(`✅ Tileset loaded: ${tileset.name} (${tileset.tilecount} tiles)`);
+            }
+        } catch (error) {
+            console.warn(`⚠️ Failed to load tileset: ${tileset.image}`, error);
+        }
+    }
+    
+    console.log(`🎨 Loaded ${this.tilesetTextures.size} tilesets`);
+}
+
+    renderTilemap(mapData) {
+    console.log('🗺️ Rendering tilemap layers...');
+    
+    // Clear existing tile sprites
+    this.mapTileSprites.forEach(sprite => {
+        this.mapLayer.removeChild(sprite);
+    });
+    this.mapTileSprites = [];
+    
+    if (!mapData.layers || this.tilesetTextures.size === 0) {
+        console.warn('⚠️ No layers or tilesets available for tilemap rendering');
+        return;
+    }
+    
+    mapData.layers.forEach((layer, layerIndex) => {
+        if (layer.type === 'tilelayer' && layer.data && layer.visible !== false) {
+            console.log(`🎨 Rendering tile layer: ${layer.name || `Layer ${layerIndex}`}`);
+            this.renderTileLayer(layer, mapData);
+        }
+    });
+    
+    console.log(`✅ Rendered ${this.mapTileSprites.length} map tiles`);
+}
+
+renderTileLayer(layer, mapData) {
+    const mapWidth = mapData.width;
+    const mapHeight = mapData.height;
+    const tileWidth = mapData.tilewidth || 48;
+    const tileHeight = mapData.tileheight || 48;
+    
+    // Handle chunked data format from Tiled
+    let tileData = [];
+    if (layer.chunks) {
+        // Reconstruct tile data from chunks
+        tileData = new Array(mapWidth * mapHeight).fill(0);
+        layer.chunks.forEach(chunk => {
+            for (let i = 0; i < chunk.data.length; i++) {
+                const localX = i % chunk.width;
+                const localY = Math.floor(i / chunk.width);
+                const worldX = chunk.x + localX;
+                const worldY = chunk.y + localY;
+                
+                if (worldX >= 0 && worldX < mapWidth && worldY >= 0 && worldY < mapHeight) {
+                    const index = worldY * mapWidth + worldX;
+                    tileData[index] = chunk.data[i];
+                }
+            }
+        });
+    } else {
+        tileData = layer.data;
+    }
+    
+    for (let i = 0; i < tileData.length; i++) {
+        const gid = tileData[i];
+        if (gid === 0) continue; // Empty tile
+        
+        // Handle tile flipping flags (Tiled format)
+        const FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
+        const FLIPPED_VERTICALLY_FLAG = 0x40000000;
+        const FLIPPED_DIAGONALLY_FLAG = 0x20000000;
+        
+        const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
+        const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
+        const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
+        
+        const cleanGid = gid & ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
+        
+        // Find the correct tileset
+        let tilesetData = null;
+        let tileId = cleanGid;
+        
+        for (const [firstgid, tileset] of this.tilesetTextures.entries()) {
+            if (cleanGid >= firstgid) {
+                tilesetData = tileset;
+                tileId = cleanGid - firstgid;
+            }
+        }
+        
+        if (!tilesetData) continue;
+        
+        // Calculate tile position in tileset
+        const tilesPerRow = tilesetData.columns;
+        const tileX = tileId % tilesPerRow;
+        const tileY = Math.floor(tileId / tilesPerRow);
+        
+        // Create texture for this tile
+        const tileTexture = new PIXI.Texture(
+            tilesetData.texture.baseTexture,
+            new PIXI.Rectangle(
+                tileX * tilesetData.tilewidth,
+                tileY * tilesetData.tileheight,
+                tilesetData.tilewidth,
+                tilesetData.tileheight
+            )
+        );
+        
+        const sprite = new PIXI.Sprite(tileTexture);
+        
+        // Position tile in world
+        const worldX = (i % mapWidth) * tileWidth;
+        const worldY = Math.floor(i / mapWidth) * tileHeight;
+        sprite.x = worldX;
+        sprite.y = worldY;
+        
+        // Apply flipping
+        if (flippedH) sprite.scale.x = -1;
+        if (flippedV) sprite.scale.y = -1;
+        if (flippedD) {
+            // Diagonal flip - rotate 90 degrees and flip
+            sprite.rotation = Math.PI / 2;
+            sprite.scale.y = -sprite.scale.y;
+        }
+        
+        // Apply layer opacity
+        if (layer.opacity !== undefined) {
+            sprite.alpha = layer.opacity;
+        }
+        
+        this.mapLayer.addChild(sprite);
+        this.mapTileSprites.push(sprite);
+    }
+}
+    
     updateCharacterAnimation(characterId, actionState) {
         const sprite = this.characterSprites.get(characterId);
         if (!sprite) return;
@@ -234,7 +393,8 @@ export class Renderer {
     
     removeCharacter(characterId) { const sprite = this.characterSprites.get(characterId); if (sprite) { this.characterLayer.removeChild(sprite); this.characterSprites.delete(characterId); } }
     update() { if (this.app && this.isInitialized) { this.app.render(); } }
-    destroy() { if (this.resizeHandler) { window.removeEventListener('resize', this.resizeHandler); } if (this.app) { this.app.destroy(true); this.app = null; } this.characterSprites.clear(); this.preloadedTextures.clear(); this.isInitialized = false; if (USE_ENHANCED_SPRITES) { console.log('🧹 Enhanced renderer destroyed and cleaned up'); } else { console.log('🧹 Renderer destroyed and cleaned up'); } }
+    destroy() { if (this.resizeHandler) { window.removeEventListener('resize', this.resizeHandler); } if (this.app) { this.app.destroy(true); this.app = null; } this.characterSprites.clear(); this.preloadedTextures.clear(); this.tilesetTextures.clear();
+this.mapTileSprites = []; this.isInitialized = false; if (USE_ENHANCED_SPRITES) { console.log('🧹 Enhanced renderer destroyed and cleaned up'); } else { console.log('🧹 Renderer destroyed and cleaned up'); } }
     getWorldBounds() { return { width: this.WORLD_WIDTH, height: this.WORLD_HEIGHT, aspectRatio: 16/9 }; }
     getStatus() { return { isInitialized: this.isInitialized, hasApp: !!this.app, hasContainer: !!this.container, characterCount: this.characterSprites.size, enhancedSpritesEnabled: USE_ENHANCED_SPRITES, preloadedTextures: this.preloadedTextures.size, worldBounds: this.getWorldBounds(), canvasSize: `${this.WORLD_WIDTH}x${this.WORLD_HEIGHT}`, aspectRatio: '16:9', textureCache: USE_ENHANCED_SPRITES ? `${this.preloadedTextures.size} textures cached` : 'Texture caching dormant' }; }
 }
