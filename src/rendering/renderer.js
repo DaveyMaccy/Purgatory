@@ -562,47 +562,68 @@ console.log(`🔍 Trying tileset paths:`, possiblePaths);
         const tileWidth = mapData.tilewidth || 48;
         const tileHeight = mapData.tileheight || 48;
 
-        // Handle chunked data format from Tiled
-        let tileData = [];
-        if (layer.chunks) {
-            console.log(`🔍 Layer has ${layer.chunks.length} chunks`);
-            // Reconstruct tile data from chunks
-            tileData = new Array(mapWidth * mapHeight).fill(0);
-            layer.chunks.forEach((chunk, chunkIndex) => {
-                console.log(`📦 Processing chunk ${chunkIndex}:`, {
-                    x: chunk.x, y: chunk.y, 
-                    width: chunk.width, height: chunk.height,
-                    dataLength: chunk.data.length
-                });
-                
-                for (let i = 0; i < chunk.data.length; i++) {
-                    const localX = i % chunk.width;
-                    const localY = Math.floor(i / chunk.width);
-                    const worldX = chunk.x + localX;
-                    const worldY = chunk.y + localY;
-                    
-                    // Use world coordinates directly - no adjustment needed
-                    const adjustedX = worldX;
-                    const adjustedY = worldY;
-                    
-                    if (adjustedX >= 0 && adjustedX < mapWidth && adjustedY >= 0 && adjustedY < mapHeight) {
-                        const index = adjustedY * mapWidth + adjustedX;
-                        if (chunk.data[i] !== 0) {
-                            tileData[index] = chunk.data[i];
-                            if (chunkIndex === 0 && i < 5) {
-                                console.log(`🎯 Chunk ${chunkIndex} tile ${i}: GID=${chunk.data[i]} at (${adjustedX},${adjustedY})`);
-                            }
-                        }
-                    }
-                }
-            });
+       // Handle chunked data format from Tiled - COMPLETE REWRITE
+let tileData = [];
+if (layer.chunks) {
+    console.log(`🔍 Layer has ${layer.chunks.length} chunks`);
+    
+    // Find the bounds of all chunks to understand the world space
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    layer.chunks.forEach(chunk => {
+        minX = Math.min(minX, chunk.x);
+        minY = Math.min(minY, chunk.y);
+        maxX = Math.max(maxX, chunk.x + chunk.width);
+        maxY = Math.max(maxY, chunk.y + chunk.height);
+    });
+    
+    console.log(`🌍 Chunk bounds: (${minX},${minY}) to (${maxX},${maxY})`);
+    
+    // Create a sparse map first, then convert to grid
+    const sparseMap = new Map();
+    
+    layer.chunks.forEach((chunk, chunkIndex) => {
+        console.log(`📦 Processing chunk ${chunkIndex}: (${chunk.x},${chunk.y}) ${chunk.width}x${chunk.height}`);
+        
+        for (let i = 0; i < chunk.data.length; i++) {
+            if (chunk.data[i] === 0) continue;
             
-            const nonZeroTiles = tileData.filter(tile => tile !== 0).length;
-            console.log(`📊 Reconstructed ${nonZeroTiles} non-zero tiles from chunks`);
-        } else {
-            tileData = layer.data || [];
-            console.log(`📊 Using direct layer data: ${tileData.length} tiles`);
+            const localX = i % chunk.width;
+            const localY = Math.floor(i / chunk.width);
+            const worldX = chunk.x + localX;
+            const worldY = chunk.y + localY;
+            
+            // Store in sparse map with world coordinates as key
+            const key = `${worldX},${worldY}`;
+            sparseMap.set(key, chunk.data[i]);
+            
+            if (chunkIndex === 0 && sparseMap.size <= 5) {
+                console.log(`🎯 Tile at world (${worldX},${worldY}): GID=${chunk.data[i]}`);
+            }
         }
+    });
+    
+    console.log(`📊 Sparse map has ${sparseMap.size} tiles`);
+    
+    // Now convert sparse map to linear array for rendering
+    tileData = [];
+    for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) {
+            // Convert grid position to world position
+            const worldX = x + minX;
+            const worldY = y + minY;
+            const key = `${worldX},${worldY}`;
+            
+            tileData.push(sparseMap.get(key) || 0);
+        }
+    }
+    
+    const nonZeroTiles = tileData.filter(tile => tile !== 0).length;
+    console.log(`📊 Final grid: ${nonZeroTiles} non-zero tiles from ${tileData.length} total`);
+    
+} else {
+    tileData = layer.data || [];
+    console.log(`📊 Using direct layer data: ${tileData.length} tiles`);
+}
 
         console.log(`🔍 Processing ${tileData.length} tiles from layer data`);
         let processedTiles = 0;
