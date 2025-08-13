@@ -524,6 +524,75 @@ createTileSprite(gid) {
     sprite.x += originalTileWidth / 2;
     sprite.y += originalTileHeight / 2;
     
+    // This logic handles all 8 combinations correctly.
+    if (!flippedD && !flippedH && !flippedV) {
+        // Case 1: No change
+    }
+    else if (!flippedD && flippedH && !flippedV) {
+        // Case 2: Horizontal flip
+        sprite.scale.x = -1;
+    }
+    else if (!flippedD && !flippedH && flippedV) {
+        // Case 3: Vertical flip
+        sprite.scale.y = -1;
+    }
+    else if (!flippedD && flippedH && flippedV) {
+        // Case 4: Horizontal & Vertical flip (180-degree rotation)
+        sprite.rotation = Math.PI;
+    }
+    else if (flippedD && !flippedH && !flippedV) {
+        // ** THE FINAL FIX **
+        // Case 5: Diagonal flip ONLY. This performs an X/Y axis swap.
+        // It correctly turns the horizontal base tile into a vertical wall.
+        sprite.rotation = Math.PI / 2;
+        sprite.scale.x = -1;
+    }
+    else if (flippedD && flippedH && !flippedV) {
+        // Case 6: Diagonal & Horizontal flip (Pure 90-degree rotation)
+        sprite.rotation = Math.PI / 2;
+    }
+    else if (flippedD && !flippedH && flippedV) {
+        // Case 7: Diagonal & Vertical flip (Rotated -90 degrees & flipped horizontally)
+        sprite.rotation = -Math.PI / 2;
+        sprite.scale.x = -1;
+    }
+    else if (flippedD && flippedH && flippedV) {
+        // Case 8: Diagonal, Horizontal & Vertical flip (Rotated -90 degrees)
+        sprite.rotation = -Math.PI / 2;
+    }
+    // --- End of Definitive Logic ---
+
+    return sprite;
+}
+    if (!tilesetData) return null;
+
+    // Calculate the tile's position within the tileset texture
+    const tileX = tileIdInTileset % tilesetData.columns;
+    const tileY = Math.floor(tileIdInTileset / tilesetData.columns);
+
+    const rect = new PIXI.Rectangle(
+        tileX * tilesetData.tilewidth,
+        tileY * tilesetData.tileheight,
+        tilesetData.tilewidth,
+        tilesetData.tileheight
+    );
+
+    const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
+    const sprite = new PIXI.Sprite(texture);
+
+    // --- Definitive Setup and Transformation Logic ---
+    // Use the original tile dimensions from the tileset to prevent
+    // positioning errors when the sprite's bounding box changes on rotation.
+    const originalTileWidth = tilesetData.tilewidth;
+    const originalTileHeight = tilesetData.tileheight;
+
+    // Set a consistent center pivot point for all transformations.
+    sprite.anchor.set(0.5, 0.5);
+
+    // Adjust the sprite's position to keep it aligned to the grid.
+    sprite.x += originalTileWidth / 2;
+    sprite.y += originalTileHeight / 2;
+    
     // This logic handles all 8 combinations based on this map's specific conventions.
     if (flippedD) {
         if (flippedH && flippedV) {
