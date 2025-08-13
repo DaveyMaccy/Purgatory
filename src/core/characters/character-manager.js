@@ -89,42 +89,42 @@ export class CharacterManager {
      * @param {World} world - The game world instance, containing the navGrid.
      */
     initializeCharacterPositions(world) {
-        if (!world) {
-            console.error("❌ Cannot initialize character positions: world is not available.");
-            return;
+    if (!world) {
+        console.error("❌ Cannot initialize character positions: world is not available.");
+        return;
+    }
+
+    console.log('📍 Initializing character positions...');
+
+    this.characters.forEach((character, index) => {
+        let position;
+
+        // CORRECTED: Use the designated spawn position function
+        if (world.getSpawnPosition) {
+            try {
+                position = world.getSpawnPosition();
+                console.log(`🎯 Using designated spawn point for ${character.name}: (${position.x}, ${position.y})`);
+            } catch (error) {
+                console.warn(`⚠️ Failed to get spawn position for ${character.name}:`, error);
+                position = null;
+            }
         }
 
-        console.log('📍 Initializing character positions...');
+        // Fallback position calculation if world positioning fails
+        if (!position) {
+            const fallbackX = 100 + (index * 100) % 600; // Spread characters across width
+            const fallbackY = 200 + (index * 80) % 300;  // Spread characters across height
+            position = { x: fallbackX, y: fallbackY };
+            console.warn(`⚠️ Using fallback position for ${character.name}: (${position.x}, ${position.y})`);
+        }
 
-        this.characters.forEach((character, index) => {
-            let position;
+        // Set character position
+        character.setPosition(position);
+        console.log(`✅ Positioned ${character.name} at (${position.x}, ${position.y})`);
+    });
 
-            // Try to get a random walkable position from the world
-            if (world.getRandomWalkablePosition) {
-                try {
-                    position = world.getRandomWalkablePosition();
-                    console.log(`🎯 Found walkable position for ${character.name}: (${position.x}, ${position.y})`);
-                } catch (error) {
-                    console.warn(`⚠️ Failed to get walkable position for ${character.name}:`, error);
-                    position = null;
-                }
-            }
-
-            // Fallback position calculation if world positioning fails
-            if (!position) {
-                const fallbackX = 100 + (index * 100) % 600; // Spread characters across width
-                const fallbackY = 200 + (index * 80) % 300;  // Spread characters across height
-                position = { x: fallbackX, y: fallbackY };
-                console.warn(`⚠️ Using fallback position for ${character.name}: (${position.x}, ${position.y})`);
-            }
-
-            // Set character position
-            character.setPosition(position);
-            console.log(`✅ Positioned ${character.name} at (${position.x}, ${position.y})`);
-        });
-
-        console.log('📍 Character positioning complete');
-    }
+    console.log('📍 Character positioning complete');
+}
 
     /**
      * Get the player character
@@ -274,3 +274,4 @@ export class CharacterManager {
         console.log('🔄 Forced observer notifications for all characters');
     }
 }
+
