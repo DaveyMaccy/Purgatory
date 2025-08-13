@@ -94,17 +94,9 @@ export class World {
         this.officeLayout = officeLayout;
         this.objects = [];
         this.rooms = [];
-        // this.navGrid = []; // REMOVED
-        this.navGridInstance = null; 
+        this.navGrid = [];
+        this.navGridInstance = null; // PHASE 4: Store NavGrid instance for pathfinding
         this.gameTime = 0; // Game time in milliseconds
-
-        // NEW PROPERTIES FOR INFINITE MAP
-        this.mapData = officeLayout; // Store the raw map data
-        this.TILE_SIZE = this.mapData.tilewidth || 48;
-        this.worldBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 }; // To store the true map size in tiles
-        this.chunks = new Map(); // To store data for loaded chunks, keyed by "x,y"
-        this.activeChunks = new Set(); // To track the keys of currently visible chunks
-        this.navGrid = null; // The navGrid will now be created dynamically
         this.officeType = 'corporate';
         this.taskDictionary = this.createTaskDictionary();
         
@@ -526,5 +518,3 @@ export class World {
         // Future: Update world objects, environmental effects, etc.
     }
 }
-
-
