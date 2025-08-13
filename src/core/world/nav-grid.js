@@ -83,26 +83,39 @@ export class NavGrid {
 
     getNeighbors(point) {
         const neighbors = [];
-        const directions = [
-            {x: 0, y: -1},  // Up
-            {x: 1, y: 0},   // Right
-            {x: 0, y: 1},   // Down
-            {x: -1, y: 0},  // Left
-            {x: 1, y: -1},  // Up-Right
-            {x: 1, y: 1},   // Down-Right
-            {x: -1, y: 1},  // Down-Left
-            {x: -1, y: -1}  // Up-Left
+        const { x, y } = point;
+
+        // Cardinal directions (Up, Down, Left, Right)
+        const cardinalDirs = [
+            { dx: 0, dy: -1 }, { dx: 1, dy: 0 },
+            { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
         ];
-        
-        for (const dir of directions) {
-            const newX = point.x + dir.x;
-            const newY = point.y + dir.y;
-            
-            if (this.isWalkable(newX, newY)) {
-                neighbors.push({x: newX, y: newY});
+
+        for (const dir of cardinalDirs) {
+            if (this.isWalkable(x + dir.dx, y + dir.dy)) {
+                neighbors.push({ x: x + dir.dx, y: y + dir.dy });
             }
         }
-        
+
+        // Diagonal directions
+        const diagonalDirs = [
+            { dx: 1, dy: -1 }, { dx: 1, dy: 1 },
+            { dx: -1, dy: 1 }, { dx: -1, dy: -1 }
+        ];
+
+        for (const dir of diagonalDirs) {
+            const diagX = x + dir.dx;
+            const diagY = y + dir.dy;
+
+            // Check if the diagonal tile itself is walkable
+            if (this.isWalkable(diagX, diagY)) {
+                // CRITICAL FIX: Prevent cutting corners.
+                // To move diagonally, both adjacent cardinal tiles must also be walkable.
+                if (this.isWalkable(x + dir.dx, y) && this.isWalkable(x, y + dir.dy)) {
+                    neighbors.push({ x: diagX, y: diagY });
+                }
+            }
+        }
         return neighbors;
     }
 
@@ -127,3 +140,4 @@ export class NavGrid {
         return path;
     }
 }
+
