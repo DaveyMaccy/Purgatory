@@ -473,8 +473,8 @@ createTileSprite(gid) {
     const HEXAGONAL_ROTATION_FLAG = 0x10000000;
 
     // Isolate the flip flags from the GID
-    const flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
-    const flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
+    let flippedH = (gid & FLIPPED_HORIZONTALLY_FLAG) !== 0;
+    let flippedV = (gid & FLIPPED_VERTICALLY_FLAG) !== 0;
     const flippedD = (gid & FLIPPED_DIAGONALLY_FLAG) !== 0;
 
     // Get the clean GID by clearing ALL potential flags.
@@ -511,7 +511,7 @@ createTileSprite(gid) {
     const texture = new PIXI.Texture(tilesetData.texture.baseTexture, rect);
     const sprite = new PIXI.Sprite(texture);
 
-    // --- Definitive Hybrid Transformation Logic ---
+    // --- Definitive GID-Based Transformation Logic ---
     const originalTileWidth = tilesetData.tilewidth;
     const originalTileHeight = tilesetData.tileheight;
 
@@ -519,40 +519,49 @@ createTileSprite(gid) {
     sprite.x += originalTileWidth / 2;
     sprite.y += originalTileHeight / 2;
     
-    // This logic resolves the conflict by using the original code as a base,
-    // but adding a special case for the specific tile that needed a different rotation.
-    // The GID of the tile on Layer 4 at (11,7) is 1610613101, which has a cleanGid of 365.
-    const isSpecialLayer4Tile = (cleanGid === 365);
+    // --- SECTION 1: Data Normalization for Known Pre-Rotated Tiles ---
+    // The tile with cleanGid 56 is known to be pre-rotated 180° in its source image.
+    // When Tiled applies a 90° rotation (D+V), the visual result is 270°.
+    // To fix this, we normalize its flags to match the expected flags for a 270° rotation (D+H).
+    if (cleanGid === 56 && flippedD && flippedV && !flippedH) {
+        flippedV = false; // Correct the Vertical flag to OFF.
+        flippedH = true;  // Correct the Horizontal flag to ON.
+        // The tile's flags are now D+H in memory, which the universal logic below will correctly interpret.
+    }
+    
+    // --- SECTION 2: Universal Tiled Transformation Logic ---
+    // This block correctly interprets the normalized flags for all tiles according to Tiled's standard behavior.
+    let rotation = 0;
+    let scaleX = 1;
+    let scaleY = 1;
 
     if (flippedD) {
-        // Check for the special case: D+V flip on our specific tile from Layer 4
-        if (isSpecialLayer4Tile && flippedV && !flippedH) {
-            // Apply the 90° clockwise rotation ONLY for this tile
-            sprite.rotation = Math.PI / 2;
-        } else {
-            // For all other tiles, use the ORIGINAL logic that worked for the Layer 2 wall
-            if (flippedH && flippedV) {
-                sprite.rotation = Math.PI / 2;
-                sprite.scale.y = -1;
-            } else if (flippedH) {
-                sprite.rotation = Math.PI / 2;
-            } else if (flippedV) {
-                sprite.rotation = -Math.PI / 2; // This rotates the Layer 2 wall tiles correctly
-            } else {
-                sprite.rotation = Math.PI / 2;
-                sprite.scale.y = -1;
-            }
+        if (flippedH && flippedV) { // D+H+V -> Rotate 90°, Flip H
+            rotation = Math.PI / 2;
+            scaleX = -1;
+        } else if (flippedH) { // D+H -> Rotate 270° (Counter-Clockwise)
+            rotation = -Math.PI / 2;
+        } else if (flippedV) { // D+V -> Rotate 90° (Clockwise)
+            rotation = Math.PI / 2;
+        } else { // D only -> Rotate 90°, Flip V
+            rotation = Math.PI / 2;
+            scaleY = -1;
         }
     } else {
-        // This part of the original logic was not causing issues and remains the same.
-        if (flippedH && flippedV) {
-            sprite.rotation = Math.PI;
-        } else if (flippedH) {
-            sprite.scale.x = -1;
-        } else if (flippedV) {
-            sprite.scale.y = -1;
+        if (flippedH && flippedV) { // H+V -> Rotate 180°
+            rotation = Math.PI;
+        } else if (flippedH) { // H -> Flip Horizontal
+            scaleX = -1;
+        } else if (flippedV) { // V -> Flip Vertical
+            scaleY = -1;
         }
+        // If no flags are set, the tile uses default values (no rotation or scaling).
     }
+
+    // --- SECTION 3: Apply Final Transformations ---
+    sprite.rotation = rotation;
+    sprite.scale.x = scaleX;
+    sprite.scale.y = scaleY;
     // --- End of Definitive Logic ---
 
     return sprite;
