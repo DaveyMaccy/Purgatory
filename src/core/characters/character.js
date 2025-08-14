@@ -1,5 +1,5 @@
 /**
- * Character Class - Core character definition
+ * Character Class - Core character definition with Inventory Integration
  * Based on SSOT Chapter 2 specifications
  * 
  * PHASE 4 ADDITIONS:
@@ -7,7 +7,15 @@
  * - actionState property for movement states
  * - path property for pathfinding
  * - setActionState method with animation support
+ * 
+ * NEW INVENTORY INTEGRATION:
+ * - Enhanced inventory management with item objects
+ * - Starting inventory based on job role
+ * - Item interaction support
+ * - Inventory weight tracking
  */
+
+import { getStartingInventory, getStartingDeskItems, getInventoryWeight, hasRequiredItems } from '../systems/inventory-system.js';
 
 export class Character {
     /**
@@ -18,6 +26,10 @@ export class Character {
         // Essential properties from character creator
         this.id = characterData.id || `char_${Date.now()}`;
         this.name = characterData.name || 'Unknown';
+        
+        // Player status
+        this.isPlayer = characterData.isPlayer || false;
+        this.isEnabled = characterData.isEnabled !== false; // Default to true
         
         // Physical attributes - FIXED: Use nested object structure
         this.physicalAttributes = characterData.physicalAttributes || {};
@@ -53,10 +65,28 @@ export class Character {
         // Relationships (map of characterId -> relationship score)
         this.relationships = new Map();
         
-        // Inventory and items - FIXED: Use correct property names
-        this.inventory = characterData.inventory || [];
-        this.deskItems = characterData.deskItems || [];
-        this.heldItem = null;
+        // === NEW ENHANCED INVENTORY SYSTEM ===
+        
+        // Initialize inventory from character creator data or generate based on role
+        if (characterData.inventory && characterData.inventory.length > 0) {
+            // Convert character creator inventory (strings) to proper item objects
+            this.inventory = this.initializeInventoryItems(characterData.inventory);
+        } else {
+            // Generate starting inventory based on job role
+            const startingItems = getStartingInventory(this.jobRole);
+            this.inventory = this.initializeInventoryItems(startingItems);
+        }
+        
+        // Initialize desk items from character creator data or generate based on role
+        if (characterData.deskItems && characterData.deskItems.length > 0) {
+            this.deskItems = this.initializeInventoryItems(characterData.deskItems);
+        } else {
+            const startingDeskItems = getStartingDeskItems(this.jobRole);
+            this.deskItems = this.initializeInventoryItems(startingDeskItems);
+        }
+        
+        // Item currently being held (not in inventory)
+        this.heldItem = characterData.heldItem || null;
         
         // State and status
         this.mood = 'neutral'; // happy, neutral, sad, angry
@@ -84,6 +114,79 @@ export class Character {
         
         // Player flag
         this.isPlayer = characterData.isPlayer || false;
+
+}
+
+    /**
+     * NEW: Initialize inventory items from string array to proper item objects
+     */
+    initializeInventoryItems(itemArray) {
+        if (!Array.isArray(itemArray)) return [];
+        
+        return itemArray.map(item => {
+            if (typeof item === 'string') {
+                // Convert string to item object
+                return {
+                    id: item.toLowerCase().replace(/\s+/g, '_'),
+                    originalString: item,
+                    quantity: 1,
+                    acquiredAt: Date.now()
+                };
+            } else if (typeof item === 'object' && item.id) {
+                // Already an object, ensure it has required properties
+                return {
+                    quantity: 1,
+                    acquiredAt: Date.now(),
+                    ...item
+                };
+            } else {
+                // Fallback for unknown format
+                return {
+                    id: 'unknown_item',
+                    originalString: String(item),
+                    quantity: 1,
+                    acquiredAt: Date.now()
+                };
+            }
+        });
+    }
+
+    /**
+     * NEW: Check if character has required items for a task
+     */
+    hasRequiredItems(requiredItems) {
+        return hasRequiredItems(this, requiredItems);
+    }
+
+    /**
+     * NEW: Get total inventory weight
+     */
+    getInventoryWeight() {
+        return getInventoryWeight(this);
+    }
+
+    /**
+     * NEW: Find item in inventory by ID or name
+     */
+    findInventoryItem(itemId) {
+        return this.inventory.find(item => {
+            if (typeof item === 'object') {
+                return item.id === itemId || item.originalString === itemId;
+            }
+            return item === itemId;
+        });
+    }
+
+    /**
+     * NEW: Check if inventory has space (future enhancement)
+     */
+    canCarryMoreItems(additionalWeight = 0) {
+        const currentWeight = this.getInventoryWeight();
+        const maxWeight = 10; // Base carrying capacity
+        const strengthBonus = this.physicalAttributes.build === 'Athletic' ? 5 : 0;
+        
+        return (currentWeight + additionalWeight) <= (maxWeight + strengthBonus);
+    }
         
         // Observer pattern for UI updates
         this.observers = [];
@@ -92,7 +195,7 @@ export class Character {
         this.maxSightRange = 200; // pixels
         this.facingAngle = 180; // degrees (0 = north, 90 = east, 180 = south, 270 = west)
         
-        console.log(`👤 Character created: ${this.name} (${this.jobRole})`);
+        console.log(`✅ Character created: ${this.name} (${this.jobRole}) - Inventory: ${this.inventory.length} items, Desk: ${this.deskItems.length} items`);
     }
     
     /**
@@ -143,7 +246,35 @@ export class Character {
         this.updateMood();
         
         // Notify observers of need changes
-        this.notifyObservers('needs');
+        this.notifyObservers('needsUpdate');
+    }
+
+    /**
+     * NEW: Apply item effects to character (called by inventory system)
+     */
+    applyItemEffects(effects) {
+        if (!effects) return;
+        
+        // Apply to needs
+        const needsUpdates = {};
+        for (const [effect, value] of Object.entries(effects)) {
+            if (this.needs.hasOwnProperty(effect)) {
+                needsUpdates[effect] = value;
+            }
+        }
+        
+        if (Object.keys(needsUpdates).length > 0) {
+            this.updateNeeds(needsUpdates);
+        }
+        
+        // Apply to skills (temporary bonuses)
+        for (const [effect, value] of Object.entries(effects)) {
+            if (this.skills.hasOwnProperty(effect)) {
+                // Note: Skill bonuses should be temporary and managed by a buff system
+                console.log(`💪 ${this.name} gained temporary ${effect} bonus: +${value}`);
+            }
+        }
+    }
     }
     
     /**
@@ -487,6 +618,7 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
+
 
 
 
