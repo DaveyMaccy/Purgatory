@@ -4,9 +4,10 @@
  * PURPOSE: Handle player action commands and execution
  */
 
-// Available task actions based on current context
-// EXACT CODE FROM: main.js lines 748-777
-export const TASK_ACTIONS = {
+// Defensive declaration to prevent redeclaration errors from unknown duplicate scripts.
+// This checks if the object already exists on the global scope before creating it.
+if (typeof window.TASK_ACTIONS === 'undefined') {
+  window.TASK_ACTIONS = {
     // Primary task actions
     'work': 'WORK_ON_TASK',
     'work on task': 'WORK_ON_TASK', 
@@ -34,7 +35,11 @@ export const TASK_ACTIONS = {
     'meeting room': 'MOVE_TO_MEETING_ROOM',
     'break room': 'MOVE_TO_BREAK_ROOM',
     'printer': 'MOVE_TO_PRINTER'
-};
+  };
+}
+
+// Export a constant that points to the single, safe-guarded object.
+export const TASK_ACTIONS = window.TASK_ACTIONS;
 
 /**
  * Get display text for action suggestion
@@ -111,7 +116,7 @@ export function executePlayerAction(actionType, target, playerCharacter) {
                 
                 if (playerCharacter.assignedTask.progress >= 1.0) {
                     playerCharacter.completeCurrentTask();
-                    addToChatLog('System', 'Task completed! New task assigned.');
+                    if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Task completed! New task assigned.`);
                 } else {
                     if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Task progress: ${Math.round(playerCharacter.assignedTask.progress * 100)}%`);
                 }
@@ -124,7 +129,7 @@ export function executePlayerAction(actionType, target, playerCharacter) {
             if (playerCharacter.assignedTask) {
                 playerCharacter.completeCurrentTask();
                 if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>${playerCharacter.name}:</strong> Completed current task!`);
-                addToChatLog('System', 'New task assigned.');
+                if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> New task assigned.`);
             } else {
                 if (window.uiUpdater) window.uiUpdater.addChatMessage('<strong>System:</strong> No task to complete.');
             }
