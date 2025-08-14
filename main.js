@@ -323,7 +323,8 @@ window.startGameSimulation = async function(charactersFromCreator) {
         // Start the game loop
         gameEngine.start();
         
-        // FIXED: Start UI update loop
+        // FIXED: Connect UI observers AND start UI update loop
+        connectUIObservers();
         startUIUpdateLoop();
 
         // Make game accessible globally for debugging
@@ -505,6 +506,24 @@ function setFocusTarget(characterId) {
 }
 
 /**
+ * Connect observer pattern for automatic UI updates
+ */
+function connectUIObservers() {
+    console.log('🔄 Connecting UI observers...');
+    
+    if (uiUpdater && characterManager && characterManager.characters) {
+        // Register UIUpdater as observer for all characters
+        characterManager.characters.forEach(character => {
+            // Only add if not already added (prevent duplicates)
+            if (!character.observers.includes(uiUpdater)) {
+                character.addObserver(uiUpdater);
+                console.log(`✅ UI observer connected to ${character.name}`);
+            }
+        });
+    }
+}
+
+/**
  * Start continuous UI updates
  */
 function startUIUpdateLoop() {
@@ -525,14 +544,11 @@ function startUIUpdateLoop() {
             }
             
             if (focusedCharacter) {
-                // FIXED: Ensure character has needs object before updating UI
+                // Character needs should already exist from Character constructor
+                // If they don't exist, log error instead of creating placeholders
                 if (!focusedCharacter.needs) {
-                    focusedCharacter.needs = {
-                        energy: 8,
-                        hunger: 6,
-                        social: 7,
-                        stress: 3
-                    };
+                    console.error(`❌ Character ${focusedCharacter.name} missing needs object`);
+                    return;
                 }
                 
                 uiUpdater.updateUI(focusedCharacter);
@@ -807,5 +823,6 @@ function setupDebugPanel() {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
 
