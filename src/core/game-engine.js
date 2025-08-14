@@ -191,13 +191,8 @@ export class GameEngine {
         console.log(`✅ Task completed: ${taskId} by character ${characterId}`);
         
         const character = this.characterManager.getCharacter(characterId);
-        if (character && this.world) {
-            const tasks = this.world.taskDictionary[character.jobRole];
-            if (tasks && tasks.length > 0) {
-                const newTask = tasks[Math.floor(Math.random() * tasks.length)];
-                character.assignedTask = { ...newTask };
-                console.log(`📋 New task assigned to ${character.name}: ${newTask.displayName}`);
-            }
+        if (character && this.world && this.world.assignNewTaskToCharacter) {
+            this.world.assignNewTaskToCharacter(character);
         }
     }
     
@@ -216,4 +211,5 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
+
 
