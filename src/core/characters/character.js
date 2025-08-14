@@ -19,39 +19,42 @@ export class Character {
         this.id = characterData.id || `char_${Date.now()}`;
         this.name = characterData.name || 'Unknown';
         
-        // Physical attributes
-        this.physicalAttributes = {
-            age: characterData.age || 25,
-            height: characterData.height || 'average',
-            build: characterData.build || 'average'
-        };
+        // Physical attributes - FIXED: Use nested object structure
+        this.physicalAttributes = characterData.physicalAttributes || {};
+        if (!this.physicalAttributes.age) this.physicalAttributes.age = 25;
+        if (!this.physicalAttributes.height) this.physicalAttributes.height = 170;
+        if (!this.physicalAttributes.weight) this.physicalAttributes.weight = 70;
+        if (!this.physicalAttributes.build) this.physicalAttributes.build = 'Average';
+        if (!this.physicalAttributes.looks) this.physicalAttributes.looks = 5;
+        if (!this.physicalAttributes.gender) this.physicalAttributes.gender = 'Other';
         
         // Job and role
         this.jobRole = characterData.jobRole || 'Intern';
         this.experienceTags = characterData.experienceTags || [];
         
-        // Skills (0-10 scale)
-        this.skills = {
-            competence: characterData.competence || 5,
-            laziness: characterData.laziness || 5,
-            charisma: characterData.charisma || 5
-        };
+        // Skills - FIXED: Use nested object structure  
+        this.skills = characterData.skills || {};
+        if (!this.skills.competence) this.skills.competence = 5;
+        if (!this.skills.laziness) this.skills.laziness = 5;
+        if (!this.skills.charisma) this.skills.charisma = 5;
+        if (!this.skills.leadership) this.skills.leadership = 5;
         
         // Personality
         this.personalityTags = characterData.personalityTags || [];
         
-        // Needs (0-10 scale, 10 = fully satisfied)
-        this.needs = {
-            energy: 10,
-            hunger: 10,
-            social: 10
+        // Needs - FIXED: Use provided needs or defaults
+        this.needs = characterData.needs || {
+            energy: 8,
+            hunger: 6,
+            social: 7,
+            stress: 3
         };
         
         // Relationships (map of characterId -> relationship score)
         this.relationships = new Map();
         
-        // Inventory and items
-        this.inventory = characterData.personalItems || [];
+        // Inventory and items - FIXED: Use correct property names
+        this.inventory = characterData.inventory || [];
         this.deskItems = characterData.deskItems || [];
         this.heldItem = null;
         
@@ -351,3 +354,4 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
+
