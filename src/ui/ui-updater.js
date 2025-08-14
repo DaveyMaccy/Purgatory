@@ -46,6 +46,25 @@ export class UIUpdater {
         }
     }
 
+   /**
+     * Observer pattern update method - called when character state changes
+     * @param {Character} character - The character that changed
+     * @param {string} property - The property that changed
+     */
+    update(character, property) {
+        // Only update UI for the currently focused character
+        if (character.id === window.focusTargetId) {
+            if (property === 'needs') {
+                this.updateStatusBars(character);
+            } else if (property === 'portrait') {
+                this.updatePortrait(character);
+            } else if (property === 'mood') {
+                this.updateCharacterBasics(character);
+            }
+            console.log(`🔄 Observer update: ${character.name} ${property}`);
+        }
+    }
+
     /**
      * BULLETPROOF: Main UI update function
      */
@@ -552,5 +571,6 @@ export class UIUpdater {
         }
     }
 }
+
 
 
