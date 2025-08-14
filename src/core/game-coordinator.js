@@ -311,67 +311,6 @@ export function setFocusTarget(characterId) {
 }
 
 /**
- * Connect observer pattern for automatic UI updates
- * EXACT CODE FROM: main.js lines 516-528
- */
-export function connectUIObservers() {
-    console.log('🔄 Connecting UI observers...');
-    
-    if (window.uiUpdater && window.characterManager && window.characterManager.characters) {
-        // Register UIUpdater as observer for all characters
-        window.characterManager.characters.forEach(character => {
-            // Only add if not already added (prevent duplicates)
-            if (!character.observers.includes(window.uiUpdater)) {
-                character.addObserver(window.uiUpdater);
-                console.log(`✅ UI observer connected to ${character.name}`);
-            }
-        });
-    }
-}
-
-/**
- * Start continuous UI updates
- * EXACT CODE FROM: main.js lines 533-575
- */
-export function startUIUpdateLoop() {
-    console.log('🔄 Starting UI update loop...');
-    
-    function updateUILoop() {
-        if (window.uiUpdater && window.characterManager && window.characterManager.characters) {
-            // FIXED: Use focusTargetId to find character or default to player
-            let focusedCharacter = null;
-            
-            if (window.focusTargetId) {
-                focusedCharacter = window.characterManager.characters.find(char => char.id === window.focusTargetId);
-            }
-            
-            // Default to player character or first character
-            if (!focusedCharacter) {
-                focusedCharacter = window.characterManager.getPlayerCharacter() || window.characterManager.characters[0];
-            }
-            
-            if (focusedCharacter) {
-                // Character needs should already exist from Character constructor
-                // If they don't exist, log error instead of creating placeholders
-                if (!focusedCharacter.needs) {
-                    console.error(`❌ Character ${focusedCharacter.name} missing needs object`);
-                    return;
-                }
-                
-                window.uiUpdater.updateUI(focusedCharacter);
-            }
-        }
-        
-        // Update every 1000ms (1 second) - reduced frequency for stability
-        setTimeout(updateUILoop, 1000);
-    }
-    
-    // Start the loop
-    updateUILoop();
-    console.log('✅ UI update loop started');
-}
-
-/**
  * Set up character focus switching with number keys
  * EXACT CODE FROM: main.js lines 580-597
  */
