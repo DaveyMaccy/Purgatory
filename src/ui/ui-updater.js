@@ -550,7 +550,7 @@ export class UIUpdater {
         try {
             const messageElement = document.createElement('div');
             messageElement.className = `chat-message chat-${type}`;
-            messageElement.textContent = message;
+           messageElement.innerHTML = message;
             
             chatLog.appendChild(messageElement);
             
@@ -676,6 +676,7 @@ export function startUIUpdateLoop() {
     updateUILoop();
     console.log('✅ UI update loop started');
 }
+
 
 
 
