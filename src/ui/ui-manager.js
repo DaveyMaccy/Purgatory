@@ -552,4 +552,276 @@ class UIManager {
 
 export { UIManager };
 
+// ADDITIONAL FUNCTIONS MOVED FROM main.js
+
+/**
+ * Initialize UI elements and inject required styles
+ * EXACT CODE FROM: main.js lines 44-65
+ */
+export function initializeUIElements() {
+    console.log('🎨 Initializing UI elements...');
+    
+    // Hide game elements first
+    hideCharacterCreator();
+    hideGameView();
+    
+    // Setup status panel tabs  
+    setupStatusPanelTabs();
+    
+    // Inject tab CSS fixes
+    injectTabCSS();
+    
+    // ALWAYS show start screen last
+    showStartScreen();
+
+    // Setup debug panel
+    setupDebugPanel();
+    
+    console.log('✅ UI elements initialized');
+}
+
+/**
+ * Inject CSS fixes for tab alignment
+ * EXACT CODE FROM: main.js lines 109-163
+ */
+export function injectTabCSS() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Tab alignment fixes */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid #333;
+            background: #1a1a1a;
+        }
+        
+        .tab-link {
+            padding: 10px 20px;
+            background: transparent;
+            color: #888;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab-link:hover {
+            background: #2a2a2a;
+            color: #fff;
+        }
+        
+        .tab-link.active {
+            background: #333;
+            color: #0ff;
+            border-bottom: 2px solid #0ff;
+            margin-bottom: -1px;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 15px;
+            min-height: 200px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Ensure proper z-index for tab bar */
+        .tab-bar {
+            z-index: 10;
+            margin-top: -1px;
+        }
+        
+        /* Ensure the widget container has proper flex layout */
+        .widget.flex-grow {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .widget .flex-grow {
+            flex: 1;
+            overflow-y: auto;
+        }
+    `;
+    document.head.appendChild(style);
+    console.log('✅ Tab CSS injected with proper alignment');
+}
+
+/**
+ * Set up status panel tab switching
+ * EXACT CODE FROM: main.js lines 168-199
+ */
+export function setupStatusPanelTabs() {
+    console.log('🔧 Setting up status panel tabs...');
+    
+    const tabs = document.querySelectorAll('.status-tab');
+    const contents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.textContent.trim().toLowerCase();
+            console.log(`📋 Switching to tab: ${tabName}`);
+            
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Update content visibility
+            contents.forEach((content, contentIndex) => {
+                content.classList.toggle('hidden', contentIndex !== index);
+            });
+            
+            // FORCE UI UPDATE AFTER TAB SWITCH
+            if (window.characterManager && window.uiUpdater) {
+                setTimeout(() => {
+                    const focusedCharacter = window.characterManager.getPlayerCharacter();
+                    if (focusedCharacter) {
+                        console.log(`🔄 Forcing UI update for tab: ${tabName}`);
+                        window.uiUpdater.updateUI(focusedCharacter);
+                    }
+                }, 50);
+            }
+        });
+    });
+    
+    console.log('✅ Status panel tabs configured');
+}
+
+// UI Visibility Helper Functions - EXACT CODE FROM main.js lines 557-634
+
+export function showStartScreen() {
+    const startScreen = document.getElementById('start-screen-backdrop');
+    if (startScreen) {
+        startScreen.classList.remove('hidden');
+        startScreen.style.display = 'flex';
+    } else {
+        console.warn('UI Warning: Element with ID "start-screen-backdrop" not found.');
+    }
+}
+
+export function hideStartScreen() {
+    const startScreen = document.getElementById('start-screen-backdrop');
+    if (startScreen) {
+        startScreen.classList.add('hidden');
+        startScreen.style.display = 'none';
+    } else {
+        console.warn('UI Warning: Element with ID "start-screen-backdrop" not found.');
+    }
+}
+
+export function showCharacterCreator() {
+    const creator = document.getElementById('creator-modal-backdrop');
+    if (creator) {
+        creator.classList.remove('hidden');
+        creator.style.display = 'flex';
+    } else {
+        throw new Error('UI Error: Element with ID "creator-modal-backdrop" not found. Cannot open character creator.');
+    }
+}
+
+export function hideCharacterCreator() {
+    const creator = document.getElementById('creator-modal-backdrop');
+    if (creator) {
+        creator.classList.add('hidden');
+        creator.style.display = 'none';
+    } else {
+        console.warn('UI Warning: Element with ID "creator-modal-backdrop" not found.');
+    }
+}
+
+export function showGameView() {
+    const gameView = document.getElementById('main-game-ui');
+    if (gameView) {
+        gameView.classList.remove('hidden');
+        gameView.style.display = 'flex';
+    } else {
+        throw new Error('UI Error: Element with ID "main-game-ui" not found. Cannot show game view.');
+    }
+}
+
+export function hideGameView() {
+    const gameView = document.getElementById('main-game-ui');
+    if (gameView) {
+        gameView.classList.add('hidden');
+        gameView.style.display = 'none';
+    } else {
+        console.warn('UI Warning: Element with ID "main-game-ui" not found.');
+    }
+}
+
+/**
+ * Show error message to user
+ * EXACT CODE FROM: main.js lines 639-655
+ */
+export function showErrorMessage(message) {
+    console.error('❌ ERROR:', message);
+    
+    // Try to show in UI
+    const errorElement = document.getElementById('error-message');
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        setTimeout(() => {
+            errorElement.style.display = 'none';
+        }, 5000);
+    }
+    
+    // Also show as alert as fallback
+    alert(`Error: ${message}`);
+}
+
+/**
+ * Show success message to user
+ * EXACT CODE FROM: main.js lines 660-673
+ */
+export function showSuccessMessage(message) {
+    console.log('✅ SUCCESS:', message);
+    
+    // Try to show in UI
+    const successElement = document.getElementById('success-message');
+    if (successElement) {
+        successElement.textContent = message;
+        successElement.style.display = 'block';
+        setTimeout(() => {
+            successElement.style.display = 'none';
+        }, 3000);
+    }
+}
+
+/**
+ * Setup debug panel functionality
+ * EXTRACTED FROM: main.js lines 711-746 (setupDebugPanel function)
+ */
+export function setupDebugPanel() {
+    // Open debug panel button
+    const debugBtn = document.getElementById('debug-panel-btn');
+    if (debugBtn) {
+        debugBtn.addEventListener('click', () => {
+            const modal = document.getElementById('debug-modal-backdrop');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        });
+    }
+    
+    // Close debug modal
+    const closeBtn = document.getElementById('close-debug-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            const modal = document.getElementById('debug-modal-backdrop');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Run debug command setup is now in debug-manager.js
+    const runBtn = document.getElementById('run-debug-cmd');
+    if (runBtn) {
+        runBtn.addEventListener('click', async () => {
+            const { setupDebugCommands } = await import('../utils/debug-manager.js');
+            setupDebugCommands();
+        });
+    }
+}
+
 console.log('🎨 UI Manager Module loaded');
