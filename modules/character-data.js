@@ -182,23 +182,25 @@ export function validateCharacters(characters) {
         errors.push(`Maximum ${MAX_CHARACTERS} characters allowed`);
     }
     
-    // Ensure exactly one player
-    const playerCount = characters.filter(char => char.isPlayer).length;
-    if (playerCount === 0) {
-        characters[0].isPlayer = true;
-        console.log('⚠️ No player character found, making first character the player');
-    } else if (playerCount > 1) {
-        // Keep only first player
-        let foundFirst = false;
-        characters.forEach(char => {
-            if (char.isPlayer && foundFirst) {
-                char.isPlayer = false;
-            } else if (char.isPlayer) {
-                foundFirst = true;
-            }
-        });
-        console.log('⚠️ Multiple player characters found, using first one');
-    }
+    // Ensure exactly one player - but preserve the user's selection
+const playerCharacters = characters.filter(char => char.isPlayer);
+if (playerCharacters.length === 0) {
+    // Only make first character player if no explicit selection was made
+    characters[0].isPlayer = true;
+    console.log('⚠️ No player character selected, making first character the player');
+} else if (playerCharacters.length > 1) {
+    // Keep only the first player character found, preserve user intent
+    let foundFirst = false;
+    characters.forEach(char => {
+        if (char.isPlayer && foundFirst) {
+            char.isPlayer = false;
+            console.log(`⚠️ Removing player flag from ${char.name} (multiple players found)`);
+        } else if (char.isPlayer) {
+            foundFirst = true;
+            console.log(`✅ Keeping ${char.name} as player character`);
+        }
+    });
+}
     
     // Ensure all have names
     characters.forEach((char, index) => {
