@@ -374,7 +374,7 @@ export class UIUpdater {
             taskTitle.textContent = character.assignedTask.displayName || character.assignedTask.type || 'Unknown Task';
             taskContent.appendChild(taskTitle);
             
-            // Task progress (if available)
+           // Task progress (if available)
             if (character.assignedTask.progress !== undefined) {
                 const progressContainer = document.createElement('div');
                 progressContainer.className = 'mb-3';
@@ -384,16 +384,60 @@ export class UIUpdater {
                 progressLabel.innerHTML = `<span>Progress</span><span>${Math.round(character.assignedTask.progress * 100)}%</span>`;
                 
                 const progressBarContainer = document.createElement('div');
-                progressBarContainer.className = 'bg-gray-200 rounded-full h-2';
+                progressBarContainer.className = 'bg-gray-200 rounded-full h-3';
                 
                 const progressBar = document.createElement('div');
-                progressBar.className = 'bg-blue-500 h-2 rounded-full';
-                progressBar.style.width = `${character.assignedTask.progress * 100}%`;
+                progressBar.className = 'h-3 rounded-full transition-all duration-300';
+                
+                // Color progress bar based on completion
+                const progress = character.assignedTask.progress * 100;
+                if (progress < 25) {
+                    progressBar.className += ' bg-red-500';
+                } else if (progress < 50) {
+                    progressBar.className += ' bg-yellow-500';
+                } else if (progress < 75) {
+                    progressBar.className += ' bg-blue-500';
+                } else {
+                    progressBar.className += ' bg-green-500';
+                }
+                
+                progressBar.style.width = `${progress}%`;
                 
                 progressBarContainer.appendChild(progressBar);
                 progressContainer.appendChild(progressLabel);
                 progressContainer.appendChild(progressBarContainer);
                 taskContent.appendChild(progressContainer);
+                
+                // Add estimated time remaining
+                if (character.assignedTask.duration && character.assignedTask.elapsedTime) {
+                    const remaining = character.assignedTask.duration - character.assignedTask.elapsedTime;
+                    const timeRemaining = Math.max(0, Math.ceil(remaining / 1000));
+                    
+                    const timeDiv = document.createElement('div');
+                    timeDiv.className = 'text-xs text-gray-500 mt-1';
+                    timeDiv.textContent = `Est. ${timeRemaining}s remaining`;
+                    progressContainer.appendChild(timeDiv);
+                }
+                
+                // Show required location with status
+                if (character.assignedTask.requiredLocation) {
+                    const locationDiv = document.createElement('div');
+                    locationDiv.className = 'text-xs text-gray-600 mt-1';
+                    
+                    // SAFE: Check if method exists before calling
+                    const isAtLocation = (character.isAtTaskLocation && typeof character.isAtTaskLocation === 'function') 
+                        ? character.isAtTaskLocation() : false;
+                    
+                    locationDiv.innerHTML = `<span class="font-medium">Location:</span> ${character.assignedTask.requiredLocation} ${isAtLocation ? '✓' : '✗'}`;
+                    
+                    if (isAtLocation) {
+                        locationDiv.className += ' text-green-600';
+                    } else {
+                        locationDiv.className += ' text-orange-600';
+                    }
+                    
+                    progressContainer.appendChild(locationDiv);
+                }
             }
             
             // Current action
@@ -571,6 +615,7 @@ export class UIUpdater {
         }
     }
 }
+
 
 
 
