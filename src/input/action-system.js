@@ -164,19 +164,3 @@ export function executePlayerAction(actionType, target, playerCharacter) {
         window.uiUpdater.updateUI(playerCharacter);
     }
 }
-
-/**
- * Add message to chat log
- * EXACT CODE FROM: main.js lines 1060-1070
- */
-export function addToChatLog(speaker, message) {
-    const chatLog = document.getElementById('chat-log');
-    if (!chatLog) return;
-    
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'mb-2 p-2 bg-gray-100 rounded';
-    messageDiv.innerHTML = `<strong>${speaker}:</strong> ${message}`;
-    
-    chatLog.appendChild(messageDiv);
-    chatLog.scrollTop = chatLog.scrollHeight;
-}
