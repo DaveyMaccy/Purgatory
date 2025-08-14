@@ -132,7 +132,7 @@ export function handlePlayerInput(inputText, mode) {
     
     const playerCharacter = window.characterManager?.getPlayerCharacter();
     if (!playerCharacter) {
-        addToChatLog('System', 'No player character found.');
+        if (window.uiUpdater) window.uiUpdater.addChatMessage('<strong>System:</strong> No player character found.');
         return;
     }
     
@@ -148,5 +148,5 @@ export function handlePlayerInput(inputText, mode) {
  * EXACT CODE FROM: main.js lines 1052-1054
  */
 export function processPlayerDialogue(dialogueText, playerCharacter) {
-    addToChatLog(playerCharacter.name, dialogueText);
+    if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>${playerCharacter.name}:</strong> ${dialogueText}`);
 }
