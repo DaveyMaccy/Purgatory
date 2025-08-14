@@ -263,6 +263,10 @@ window.startGameSimulation = async function(charactersFromCreator) {
         
         // Initialize game engine with all systems
         gameEngine = new GameEngine(characterManager, renderer, mapData);
+        
+        // Expose gameEngine globally for task system communication
+        window.gameEngine = gameEngine;
+        
         console.log('✅ Game engine initialized');
 
         // Process the map data to understand its structure
@@ -833,6 +837,7 @@ function setupDebugPanel() {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
 
 
