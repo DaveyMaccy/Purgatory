@@ -939,13 +939,19 @@ function showActionSuggestions(inputText) {
         return;
     }
     
-    // Get player character for context
-    const playerCharacter = characterManager?.getPlayerCharacter();
-    const matchingActions = [];
-    
-    // Find matching actions
+    // Find matching actions with improved logic
     for (const [keyword, actionType] of Object.entries(TASK_ACTIONS)) {
-        if (keyword.includes(text) || text.includes(keyword)) {
+        // Check if user input matches keyword OR if keyword contains user input
+        const keywordMatch = keyword.toLowerCase().includes(text) || text.includes(keyword.toLowerCase());
+        
+        // Also check individual words in the keyword
+        const keywordWords = keyword.toLowerCase().split(' ');
+        const textWords = text.split(' ');
+        const wordMatch = keywordWords.some(word => 
+            textWords.some(textWord => word.includes(textWord) || textWord.includes(word))
+        );
+        
+        if (keywordMatch || wordMatch) {
             matchingActions.push({
                 keyword,
                 actionType,
@@ -1149,6 +1155,7 @@ function addToChatLog(speaker, message) {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
 
 
