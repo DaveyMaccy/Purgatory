@@ -573,7 +573,63 @@ generateNavGridForActiveArea() {
     update(deltaTime) {
         this.gameTime += deltaTime;
         
+        // Check for characters without tasks and assign new ones
+        this.checkForIdleCharacters();
+        
         // Future: Update world objects, environmental effects, etc.
+    }
+    
+    /**
+     * Assign a new task to a specific character
+     * @param {Object} character - Character object
+     */
+    assignNewTaskToCharacter(character) {
+        if (character.isPlayer) return; // Don't auto-assign tasks to player
+        
+        const availableTasks = this.taskDictionary[character.jobRole];
+        
+        if (availableTasks && availableTasks.length > 0) {
+            // Choose a different task than the previous one if possible
+            let availableOptions = availableTasks;
+            if (character.lastCompletedTask && availableTasks.length > 1) {
+                availableOptions = availableTasks.filter(
+                    task => task.displayName !== character.lastCompletedTask
+                );
+                // If filtering removed all options, use original list
+                if (availableOptions.length === 0) {
+                    availableOptions = availableTasks;
+                }
+            }
+            
+            const randomTask = availableOptions[Math.floor(Math.random() * availableOptions.length)];
+            
+            // SAFE: Use new assignTask method if it exists, fallback to direct assignment
+            if (character.assignTask && typeof character.assignTask === 'function') {
+                character.assignTask(randomTask);
+            } else {
+                // Fallback to old method for compatibility
+                character.assignedTask = { ...randomTask };
+                console.log(`📋 ${character.name} assigned new task: ${randomTask.displayName}`);
+            }
+            
+            character.lastCompletedTask = randomTask.displayName;
+        } else {
+            console.warn(`⚠️ No tasks available for job role: ${character.jobRole}`);
+        }
+    }
+    
+    /**
+     * Check for characters without assigned tasks and assign new ones
+     */
+    checkForIdleCharacters() {
+        if (!this.characterManager || !this.characterManager.characters) return;
+        
+        this.characterManager.characters.forEach(character => {
+            if (!character.isPlayer && !character.assignedTask) {
+                console.log(`🔄 Found idle character: ${character.name}, assigning new task...`);
+                this.assignNewTaskToCharacter(character);
+            }
+        });
     }
 }
 
