@@ -106,8 +106,18 @@ export class World {
         this.chunks = new Map(); // To store data for loaded chunks, keyed by "x,y"
         this.activeChunks = new Set(); // To track the keys of currently visible chunks
         // this.navGrid is now managed by this.navGridInstance
-        this.officeType = 'corporate';
-        this.taskDictionary = this.createTaskDictionary();
+       this.officeType = 'corporate';
+        
+        // Load task dictionary from external file
+        this.taskDictionary = TASK_DICTIONARY;
+        
+        // Validate task dictionary on initialization
+        const validation = validateTaskDictionary();
+        if (!validation.isValid) {
+            console.error('❌ Task dictionary validation failed:', validation.errors);
+        } else {
+            console.log('✅ Task dictionary validated successfully');
+        }
         
         // TILE_SIZE is now a property of the World class, making it accessible
         // to other modules like characterManager.js.
@@ -406,40 +416,8 @@ generateNavGridForActiveArea() {
     return [];
 }
 
-    /**
-     * Create task dictionary for character assignments
-     * Based on SSOT task system design - PRESERVED: Original task structure by job role
-     */
-    createTaskDictionary() {
-        return {
-            'Manager': [
-                { displayName: 'Review Reports', requiredLocation: 'desk', duration: 30000 },
-                { displayName: 'Attend Meeting', requiredLocation: 'meeting_room', duration: 45000 },
-                { displayName: 'Plan Strategy', requiredLocation: 'desk', duration: 60000 }
-            ],
-            'Developer': [
-                { displayName: 'Write Code', requiredLocation: 'desk', duration: 120000 },
-                { displayName: 'Debug Issues', requiredLocation: 'desk', duration: 90000 },
-                { displayName: 'Code Review', requiredLocation: 'desk', duration: 60000 }
-            ],
-            'Sales Rep': [
-                { displayName: 'Cold Calls', requiredLocation: 'desk', duration: 90000 },
-                { displayName: 'Update CRM', requiredLocation: 'desk', duration: 60000 },
-                { displayName: 'Client Meeting', requiredLocation: 'meeting_room', duration: 45000 }
-            ],
-            'Marketing': [
-                { displayName: 'Content Creation', requiredLocation: 'desk', duration: 150000 },
-                { displayName: 'Social Media', requiredLocation: 'desk', duration: 45000 },
-                { displayName: 'Campaign Analysis', requiredLocation: 'desk', duration: 90000 }
-            ],
-            'Intern': [
-                { displayName: 'Coffee Run', requiredLocation: 'break_room', duration: 30000 },
-                { displayName: 'File Organization', requiredLocation: 'desk', duration: 120000 },
-                { displayName: 'Data Entry', requiredLocation: 'desk', duration: 180000 }
-            ]
-        };
-    }
-
+    // NOTE: Task dictionary now loaded from external file in constructor
+    
     /**
      * Assign initial tasks to all characters based on their job roles
      * This ensures every character has something to do when the game starts
@@ -453,11 +431,9 @@ generateNavGridForActiveArea() {
         }
 
         this.characterManager.characters.forEach(character => {
-            // Skip player character for task assignment (they're controlled by the player)
-            if (character.isPlayer) {
-                console.log(`👤 Skipping task assignment for player character: ${character.name}`);
-                return;
-            }
+            // Assign tasks to ALL characters, including the player
+            this.assignNewTaskToCharacter(character);
+        });
 
             // Use the new task assignment method
             this.assignNewTaskToCharacter(character);
@@ -574,26 +550,13 @@ generateNavGridForActiveArea() {
      * Assign a new task to a specific character
      * @param {Object} character - Character object
      */
-    assignNewTaskToCharacter(character) {
-        if (character.isPlayer) return; // Don't auto-assign tasks to player
+   assignNewTaskToCharacter(character) {
+        // Allow both player and NPCs to get task assignments
         
-        const availableTasks = this.taskDictionary[character.jobRole];
+        // Use the helper function to get a random task, avoiding repetition
+        const randomTask = getRandomTaskForRole(character.jobRole, character.lastCompletedTask);
         
-        if (availableTasks && availableTasks.length > 0) {
-            // Choose a different task than the previous one if possible
-            let availableOptions = availableTasks;
-            if (character.lastCompletedTask && availableTasks.length > 1) {
-                availableOptions = availableTasks.filter(
-                    task => task.displayName !== character.lastCompletedTask
-                );
-                // If filtering removed all options, use original list
-                if (availableOptions.length === 0) {
-                    availableOptions = availableTasks;
-                }
-            }
-            
-            const randomTask = availableOptions[Math.floor(Math.random() * availableOptions.length)];
-            
+        if (randomTask) {
             // SAFE: Use new assignTask method if it exists, fallback to direct assignment
             if (character.assignTask && typeof character.assignTask === 'function') {
                 character.assignTask(randomTask);
@@ -616,13 +579,23 @@ generateNavGridForActiveArea() {
         if (!this.characterManager || !this.characterManager.characters) return;
         
         this.characterManager.characters.forEach(character => {
-            if (!character.isPlayer && !character.assignedTask) {
-                console.log(`🔄 Found idle character: ${character.name}, assigning new task...`);
-                this.assignNewTaskToCharacter(character);
+            // Check for characters without tasks - allow both NPCs and player
+            // But maybe be less aggressive about reassigning to player
+            if (!character.assignedTask) {
+                if (character.isPlayer) {
+                    // For player, only auto-assign if they've been idle for a while
+                    // This gives player agency while still having workplace expectations
+                    console.log(`👤 Player ${character.name} has no assigned task`);
+                    this.assignNewTaskToCharacter(character);
+                } else {
+                    console.log(`🔄 Found idle NPC: ${character.name}, assigning new task...`);
+                    this.assignNewTaskToCharacter(character);
+                }
             }
         });
     }
 }
+
 
 
 
