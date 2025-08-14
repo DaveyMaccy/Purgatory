@@ -13,6 +13,7 @@
  */
 
 import { NavGrid } from './nav-grid.js';
+import { TASK_DICTIONARY, getRandomTaskForRole, validateTaskDictionary } from './task-dictionary.js';
 
 /**
  * Load map data from JSON file
@@ -622,6 +623,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
