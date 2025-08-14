@@ -84,7 +84,7 @@ export function processPlayerAction(actionText, playerCharacter) {
     }
     
     if (!actionType) {
-        addToChatLog('System', `Unknown action: "${actionText}". Try "work", "complete task", or "move to desk".`);
+        if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Unknown action: "${actionText}". Try "work", "complete task", or "move to desk".`);
         return;
     }
     
@@ -100,7 +100,7 @@ export function executePlayerAction(actionType, target, playerCharacter) {
     switch (actionType) {
         case 'WORK_ON_TASK':
             if (playerCharacter.assignedTask) {
-                addToChatLog(playerCharacter.name, `Working on: ${playerCharacter.assignedTask.displayName}`);
+                if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>${playerCharacter.name}:</strong> Working on: ${playerCharacter.assignedTask.displayName}`);
                 // Manually progress task
                 const progressAmount = 0.2; // 20% progress per action
                 if (!playerCharacter.assignedTask.progress) {
@@ -113,20 +113,20 @@ export function executePlayerAction(actionType, target, playerCharacter) {
                     playerCharacter.completeCurrentTask();
                     addToChatLog('System', 'Task completed! New task assigned.');
                 } else {
-                    addToChatLog('System', `Task progress: ${Math.round(playerCharacter.assignedTask.progress * 100)}%`);
+                    if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Task progress: ${Math.round(playerCharacter.assignedTask.progress * 100)}%`);
                 }
             } else {
-                addToChatLog('System', 'No task assigned.');
+                if (window.uiUpdater) window.uiUpdater.addChatMessage('<strong>System:</strong> No task assigned.');
             }
             break;
             
         case 'COMPLETE_TASK':
             if (playerCharacter.assignedTask) {
                 playerCharacter.completeCurrentTask();
-                addToChatLog(playerCharacter.name, 'Completed current task!');
+                if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>${playerCharacter.name}:</strong> Completed current task!`);
                 addToChatLog('System', 'New task assigned.');
             } else {
-                addToChatLog('System', 'No task to complete.');
+                if (window.uiUpdater) window.uiUpdater.addChatMessage('<strong>System:</strong> No task to complete.');
             }
             break;
             
@@ -141,22 +141,22 @@ export function executePlayerAction(actionType, target, playerCharacter) {
                 'MOVE_TO_PRINTER': 'printer'
             };
             const location = locationMap[actionType];
-            addToChatLog(playerCharacter.name, `Moving to ${location}...`);
+            if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>${playerCharacter.name}:</strong> Moving to ${location}...`);
             // Note: Actual movement would be handled by movement system
             break;
             
         case 'DRINK_COFFEE':
             playerCharacter.needs.energy = Math.min(10, playerCharacter.needs.energy + 3);
-            addToChatLog(playerCharacter.name, 'Had some coffee. Feeling more energized!');
+            if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>${playerCharacter.name}:</strong> Had some coffee. Feeling more energized!`);
             break;
             
         case 'EAT_SNACK':
             playerCharacter.needs.hunger = Math.min(10, playerCharacter.needs.hunger + 2);
-            addToChatLog(playerCharacter.name, 'Had a snack. Feeling less hungry.');
+            if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>${playerCharacter.name}:</strong> Had a snack. Feeling less hungry.`);
             break;
             
         default:
-            addToChatLog('System', `Action "${actionType}" not implemented yet.`);
+            if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Action "${actionType}" not implemented yet.`);
     }
     
     // Trigger UI update
