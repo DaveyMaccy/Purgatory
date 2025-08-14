@@ -233,20 +233,6 @@ updateActiveChunks(characters, renderer) {
             console.log(`Unloaded chunk: ${key}`);
         }
     }
- }
-
-    // Unload old chunks that are no longer needed.
-    for (const key of this.activeChunks) {
-        if (!neededChunks.has(key)) {
-            chunksChanged = true;
-            const [x, y] = key.split(',').map(Number);
-            // In the original renderer code, removeChunk seems to take a single key. Let's adapt.
-            // The user's code base is a bit inconsistent here. Let's just delete from activeChunks
-            // and let the renderer handle visual culling. A proper removeChunk would be better.
-            this.activeChunks.delete(key);
-            console.log(`Unloaded chunk: ${key}`);
-        }
-    }
 
     // Regenerate collision grid for the active area ONLY if the set of active chunks has changed.
     if (chunksChanged) {
@@ -590,6 +576,7 @@ generateNavGridForActiveArea() {
         // Future: Update world objects, environmental effects, etc.
     }
 }
+
 
 
 
