@@ -279,20 +279,29 @@ export class Renderer {
         const containerWidth = containerRect.width || this.container.clientWidth || 800;
         const containerHeight = containerRect.height || this.container.clientHeight || 600;
 
+        // FIXED: Leave small margin for borders/padding but maximize canvas size
+        const usableWidth = Math.max(containerWidth - 20, 400); // 10px margin each side, min 400px
+        const usableHeight = Math.max(containerHeight - 20, 300); // 10px margin top/bottom, min 300px
+
         const targetAspectRatio = 16 / 9;
-        const containerAspectRatio = containerWidth / containerHeight;
+        const containerAspectRatio = usableWidth / usableHeight;
 
         if (containerAspectRatio > targetAspectRatio) {
-            this.WORLD_HEIGHT = Math.min(containerHeight * 0.85, this.BASE_HEIGHT);
+            // Container is wider than 16:9, fit to height
+            this.WORLD_HEIGHT = usableHeight;
             this.WORLD_WIDTH = this.WORLD_HEIGHT * targetAspectRatio;
         } else {
-            this.WORLD_WIDTH = Math.min(containerWidth * 0.85, this.BASE_WIDTH);
+            // Container is taller than 16:9, fit to width
+            this.WORLD_WIDTH = usableWidth;
             this.WORLD_HEIGHT = this.WORLD_WIDTH / targetAspectRatio;
         }
 
-        this.WORLD_WIDTH = Math.max(this.WORLD_WIDTH, 800);
-        this.WORLD_HEIGHT = Math.max(this.WORLD_HEIGHT, 450);
-        console.log(`📐 Canvas sized: ${this.WORLD_WIDTH}x${this.WORLD_HEIGHT} (16:9 aspect ratio)`);
+        // FIXED: Keep reasonable minimums but allow larger sizes
+        this.WORLD_WIDTH = Math.max(this.WORLD_WIDTH, 640);  // Reduced minimum for small screens
+        this.WORLD_HEIGHT = Math.max(this.WORLD_HEIGHT, 360); // Reduced minimum for small screens
+        
+        // FIXED: No maximum limits - let it scale up for large containers
+        console.log(`📐 Canvas sized: ${Math.round(this.WORLD_WIDTH)}x${Math.round(this.WORLD_HEIGHT)} (16:9 aspect ratio, ${Math.round((this.WORLD_WIDTH * this.WORLD_HEIGHT) / (containerWidth * containerHeight) * 100)}% of container)`);
     }
 
     setupResponsiveCanvas() {
