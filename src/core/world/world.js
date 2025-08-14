@@ -435,10 +435,6 @@ generateNavGridForActiveArea() {
             this.assignNewTaskToCharacter(character);
         });
 
-            // Use the new task assignment method
-            this.assignNewTaskToCharacter(character);
-        });
-
         console.log('✅ Initial task assignment complete');
     }
 
@@ -595,15 +591,3 @@ generateNavGridForActiveArea() {
         });
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
