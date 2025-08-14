@@ -5,7 +5,7 @@
  */
 
 // CORRECTED: 'addToChatLog' has been removed from this import line.
-import { TASK_ACTIONS, getActionDisplayText, processPlayerAction } from './action-system.js';
+import { TASK_ACTIONS, getActionDisplayText, processPlayerAction } from '../core/systems/action-system.js';
 
 /**
  * Setup player input event handlers
