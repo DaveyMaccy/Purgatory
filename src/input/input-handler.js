@@ -4,7 +4,7 @@
  * PURPOSE: Handle player input, suggestions, and dialogue processing
  */
 
-import { TASK_ACTIONS, getActionDisplayText, processPlayerAction, addToChatLog } from './action-system.js';
+import { TASK_ACTIONS, getActionDisplayText, processPlayerAction } from './action-system.js';
 
 /**
  * Setup player input event handlers
