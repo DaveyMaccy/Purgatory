@@ -125,14 +125,19 @@ export class Character {
     updateNeeds(deltaTime) {
         const decayRate = deltaTime / 1000 / 60; // Convert to minutes
         
-        // Energy decreases over time (gets tired)
-        this.needs.energy = Math.max(0, this.needs.energy - decayRate * 0.5);
+        // Energy decreases over time (gets tired) - slower, more realistic decay
+        this.needs.energy = Math.max(0, this.needs.energy - decayRate * 0.1);
         
-        // Hunger decreases over time (gets hungry)
-        this.needs.hunger = Math.max(0, this.needs.hunger - decayRate * 0.3);
+        // Hunger decreases over time (gets hungry) - slower, more realistic decay  
+        this.needs.hunger = Math.max(0, this.needs.hunger - decayRate * 0.08);
         
-        // Social decreases over time (gets lonely)
-        this.needs.social = Math.max(0, this.needs.social - decayRate * 0.2);
+        // Social decreases over time (gets lonely) - slower, more realistic decay
+        this.needs.social = Math.max(0, this.needs.social - decayRate * 0.05);
+        
+        // Stress can increase randomly (office life!)
+        if (Math.random() < 0.001) { // 0.1% chance per frame
+            this.needs.stress = Math.min(10, this.needs.stress + 0.1);
+        }
         
         // Update mood based on needs
         this.updateMood();
@@ -354,4 +359,5 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
+
 
