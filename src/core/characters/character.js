@@ -256,6 +256,9 @@ export class Character {
                 this.notifyObservers('actionComplete');
             }
         }
+        
+        // Update assigned task progress based on location and time
+        this.updateTaskProgress(deltaTime);
     }
     
     /**
@@ -311,6 +314,131 @@ export class Character {
     }
     
     /**
+     * Update assigned task progress based on location and activity
+     * @param {number} deltaTime - Time elapsed in milliseconds
+     */
+    updateTaskProgress(deltaTime) {
+        if (!this.assignedTask) return;
+        
+        // Initialize progress if not set
+        if (this.assignedTask.progress === undefined) {
+            this.assignedTask.progress = 0;
+            this.assignedTask.elapsedTime = 0;
+        }
+        
+        // Check if character is at the required location for their task
+        const isAtRequiredLocation = this.isAtTaskLocation();
+        
+        if (isAtRequiredLocation) {
+            // Progress the task based on competence and time
+            this.assignedTask.elapsedTime += deltaTime;
+            
+            // Calculate progress rate based on character competence (1-10 scale)
+            const baseProgressRate = 1.0; // 100% progress per duration
+            const competenceModifier = this.skills.competence / 10; // 0.1 to 1.0
+            const lazynessModifier = (11 - this.skills.laziness) / 10; // 1.0 to 0.1
+            
+            const effectiveRate = baseProgressRate * competenceModifier * lazynessModifier;
+            
+            // Calculate progress as a percentage of duration
+            if (this.assignedTask.duration) {
+                this.assignedTask.progress = Math.min(1.0, 
+                    (this.assignedTask.elapsedTime * effectiveRate) / this.assignedTask.duration
+                );
+            }
+            
+            // Check for task completion
+            if (this.assignedTask.progress >= 1.0) {
+                this.completeCurrentTask();
+            }
+            
+            // Notify observers of progress update
+            this.notifyObservers('taskProgress');
+        }
+    }
+    
+    /**
+     * Check if character is at the location required for their current task
+     * @returns {boolean} True if at required location
+     */
+    isAtTaskLocation() {
+        if (!this.assignedTask || !this.assignedTask.requiredLocation) return false;
+        
+        const requiredLocation = this.assignedTask.requiredLocation;
+        
+        // Define approximate locations for different task types
+        const taskLocations = {
+            'desk': { x: 400, y: 300, radius: 50 }, // Near character's desk area
+            'meeting_room': { x: 600, y: 200, radius: 80 }, // Meeting room area
+            'break_room': { x: 200, y: 400, radius: 60 }, // Break room area
+            'printer': { x: 500, y: 400, radius: 30 } // Printer area
+        };
+        
+        const location = taskLocations[requiredLocation];
+        if (!location) return true; // If location not defined, assume we can work anywhere
+        
+        // Calculate distance to required location
+        const distance = Math.sqrt(
+            Math.pow(this.position.x - location.x, 2) + 
+            Math.pow(this.position.y - location.y, 2)
+        );
+        
+        return distance <= location.radius;
+    }
+    
+    /**
+     * Complete the current assigned task and request a new one
+     */
+    completeCurrentTask() {
+        if (!this.assignedTask) return;
+        
+        const completedTask = this.assignedTask.displayName;
+        console.log(`✅ ${this.name} completed task: ${completedTask}`);
+        
+        // Add to memory
+        this.addToShortTermMemory(`Completed task: ${completedTask}`);
+        
+        // Improve mood slightly for completing tasks
+        if (this.mood === 'Tired' || this.mood === 'Stressed') {
+            this.setMood('Neutral');
+        } else if (this.mood === 'Neutral') {
+            this.setMood('Happy');
+        }
+        
+        // Store last completed task to avoid immediate repetition
+        this.lastCompletedTask = completedTask;
+        
+        // Clear current task
+        this.assignedTask = null;
+        
+        // Notify observers
+        this.notifyObservers('taskComplete');
+        
+        // Trigger task reassignment through world system - SAFE: Check existence first
+        if (window.gameEngine && window.gameEngine.world && window.gameEngine.world.assignNewTaskToCharacter) {
+            window.gameEngine.world.assignNewTaskToCharacter(this);
+        }
+    }
+    
+    /**
+     * Assign a new task to this character
+     * @param {Object} task - Task object with displayName, requiredLocation, duration
+     */
+    assignTask(task) {
+        this.assignedTask = {
+            ...task,
+            progress: 0,
+            elapsedTime: 0,
+            startTime: Date.now()
+        };
+        
+        console.log(`📋 ${this.name} assigned new task: ${task.displayName}`);
+        this.addToShortTermMemory(`Started new task: ${task.displayName}`);
+        
+        this.notifyObservers('newTask');
+    }
+    
+    /**
      * Serialize character data for saving
      * @returns {Object} Serialized character data
      */
@@ -359,5 +487,6 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
+
 
 
