@@ -276,7 +276,7 @@ function createCharacter(index) {
     return {
         id: `char_${index}`,
         name: generateNameByGender(gender),
-        isPlayer: index === 0,
+        isPlayer: false,
         spriteSheet: SPRITE_OPTIONS[index % SPRITE_OPTIONS.length] || SPRITE_OPTIONS[0],
         spriteIndex: index % SPRITE_OPTIONS.length || 0, // Track current sprite - ensure never undefined
         portrait: null, // Generated from sprite
