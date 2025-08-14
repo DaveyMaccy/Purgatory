@@ -25,36 +25,54 @@ export class CharacterManager {
      * @param {Array} charactersData - Array of character data from character creator
      */
     loadCharacters(charactersData) {
-        console.log('📝 Loading characters from character creator:', charactersData);
+    console.log('📝 Loading characters from character creator:', charactersData);
 
-        // Clear existing characters
-        this.characters = [];
-        this.playerCharacter = null;
+    // Clear existing characters
+    this.characters = [];
+    this.playerCharacter = null;
 
-        // Convert character creator data to Character instances
-        charactersData.forEach((charData, index) => {
-            try {
-                // Create Character instance
-                const character = new Character(charData);
+    // Convert character creator data to Character instances
+    charactersData.forEach((charData, index) => {
+        try {
+            // Create Character instance
+            const character = new Character(charData);
 
-                // Set as player character if it's the first one or explicitly marked
-                if (index === 0 || charData.isPlayer) {
-                    character.isPlayer = true;
-                    this.playerCharacter = character;
-                    console.log(`🎯 Set ${character.name} as player character`);
-                }
-
-                // Add to characters array
-                this.characters.push(character);
-                console.log(`✅ Created character: ${character.name} (${character.jobRole})`);
-
-            } catch (error) {
-                console.error(`❌ Failed to create character from data:`, charData, error);
+            // FIXED: Only set as player if explicitly marked in character data
+            if (charData.isPlayer === true) {
+                character.isPlayer = true;
+                this.playerCharacter = character;
+                console.log(`🎯 Set ${character.name} as player character (from creator selection)`);
+            } else {
+                character.isPlayer = false;
             }
-        });
 
-        console.log(`📋 Loaded ${this.characters.length} characters total`);
+            // Add to characters array
+            this.characters.push(character);
+            console.log(`✅ Created character: ${character.name} (${character.jobRole}), isPlayer: ${character.isPlayer}`);
+
+        } catch (error) {
+            console.error(`❌ Failed to create character from data:`, charData, error);
+        }
+    });
+
+    // SAFETY CHECK: Ensure we have exactly one player character
+    const playerCharacters = this.characters.filter(char => char.isPlayer);
+    if (playerCharacters.length === 0) {
+        // If no player found, make first character player as fallback
+        this.characters[0].isPlayer = true;
+        this.playerCharacter = this.characters[0];
+        console.warn(`⚠️ No player character found in data, making ${this.characters[0].name} the player`);
+    } else if (playerCharacters.length > 1) {
+        // If multiple players found, keep only the first one
+        for (let i = 1; i < playerCharacters.length; i++) {
+            playerCharacters[i].isPlayer = false;
+        }
+        this.playerCharacter = playerCharacters[0];
+        console.warn(`⚠️ Multiple player characters found, keeping ${this.playerCharacter.name} as player`);
     }
+
+    console.log(`📋 Loaded ${this.characters.length} characters total, player: ${this.playerCharacter?.name}`);
+}
 
     /**
      * Initialize all characters - called after world is set up
@@ -274,4 +292,5 @@ export class CharacterManager {
         console.log('🔄 Forced observer notifications for all characters');
     }
 }
+
 
