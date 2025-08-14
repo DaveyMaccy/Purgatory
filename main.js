@@ -305,9 +305,13 @@ window.startGameSimulation = async function(charactersFromCreator) {
             uiUpdater.updateUI(initialCharacter);
         }
         
-        // Set initial focus on player character
-        if (playerCharacter) {
-            setFocusTarget(playerCharacter.id);
+        // FIXED: Set initial focus and camera on the actual player character
+        const actualPlayerCharacter = characterManager.getPlayerCharacter();
+        if (actualPlayerCharacter) {
+            setFocusTarget(actualPlayerCharacter.id);
+            console.log(`🎯 Initial focus set on player character: ${actualPlayerCharacter.name}`);
+        } else {
+            console.error('❌ No player character found after loading!');
         }
         
         // Assign initial tasks to all characters
@@ -492,6 +496,12 @@ function startGameWithFallbackCharacters() {
  */
 function setFocusTarget(characterId) {
     focusTargetId = characterId;
+    
+    // FIXED: Also update camera to follow the focused character
+    if (renderer && renderer.setFollowTarget) {
+        renderer.setFollowTarget(characterId);
+        console.log(`📹 Camera now following: ${characterId}`);
+    }
     
     if (uiUpdater && characterManager) {
         // Get the character by ID and update UI
@@ -823,6 +833,7 @@ function setupDebugPanel() {
 }
 
 console.log('✅ Main.js loaded - Complete version with all functions');
+
 
 
 
