@@ -458,18 +458,8 @@ generateNavGridForActiveArea() {
                 return;
             }
 
-            // Get available tasks for the character's job role
-            const availableTasks = this.taskDictionary[character.jobRole];
-            
-            if (availableTasks && availableTasks.length > 0) {
-                // Assign a random task from their job role
-                const randomTask = availableTasks[Math.floor(Math.random() * availableTasks.length)];
-                character.assignedTask = { ...randomTask };
-                
-                console.log(`📋 Assigned "${randomTask.displayName}" to ${character.name} (${character.jobRole})`);
-            } else {
-                console.warn(`⚠️ No tasks available for job role: ${character.jobRole}`);
-            }
+            // Use the new task assignment method
+            this.assignNewTaskToCharacter(character);
         });
 
         console.log('✅ Initial task assignment complete');
@@ -632,6 +622,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
