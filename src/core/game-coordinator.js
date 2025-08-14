@@ -9,7 +9,8 @@ import { CharacterManager } from './characters/character-manager.js';
 import { UIUpdater } from '../ui/ui-updater.js';
 import { Renderer } from '../rendering/renderer.js';
 import { loadMapData } from './world/world.js';
-import { showErrorMessage, showSuccessMessage } from '../ui/ui-manager.js';
+import { showErrorMessage, showSuccessMessage, hideCharacterCreator, showGameView } from '../ui/ui-manager.js';
+import { connectUIObservers, startUIUpdateLoop } from '../ui/ui-updater.js';
 
 /**
  * MAIN GAME START FUNCTION - Called from character creator
@@ -25,7 +26,6 @@ export async function startGameSimulation(charactersFromCreator) {
         }
         
         // Hide character creator
-        const { hideCharacterCreator, showGameView } = await import('../ui/ui-manager.js');
         hideCharacterCreator();
         
         // Show game view
