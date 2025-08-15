@@ -712,16 +712,26 @@ sprite.anchor.set(0.5, 0.5);
         const chairData = chairTiles.get(tileKey);
 
         if (chairData) {
-            // If on a chair tile, force the sit animation and direction
-            state.name = 'sit';
-            state.direction = chairData.direction;
-            
-            // Apply positional offset if one is defined
-            if (chairData.offset) {
-                sprite.pivot.set(-chairData.offset.x, -chairData.offset.y);
-            } else {
-                sprite.pivot.set(0, 0); // Reset pivot if not on an offset chair
-            }
+    // If on a chair tile, force the sit animation
+    state.name = 'sit';
+
+    // THE FIX: Translate the compass direction from the map ('east'/'west')
+    // into the key the animation data expects ('right'/'left').
+    if (chairData.direction === 'east') {
+        state.direction = 'right';
+    } else if (chairData.direction === 'west') {
+        state.direction = 'left';
+    } else {
+        // For 'up' and 'down', the names match, so no change is needed.
+        state.direction = chairData.direction;
+    }
+    
+    // Apply positional offset if one is defined
+    if (chairData.offset) {
+        sprite.pivot.set(-chairData.offset.x, -chairData.offset.y);
+    } else {
+        sprite.pivot.set(0, 0); // Reset pivot if not on an offset chair
+    }
         } else {
             // If NOT on a chair tile, check if the character was sitting and needs to transition.
             if (state.name === 'sit') {
