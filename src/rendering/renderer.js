@@ -361,12 +361,13 @@ export class Renderer {
 
             sprite.width = this.CHARACTER_WIDTH;
             sprite.height = this.CHARACTER_HEIGHT;
-            // CRITICAL FIX: Anchor at (0.5, 0.5) for center positioning, not (0.5, 1.0) for bottom
-            sprite.anchor.set(0.5, 0.5);
+            // THE FOUNDATIONAL FIX: The anchor MUST be at the bottom-center (0.5, 1.0)
+            // for a top-down game. This aligns the character's feet with their
+            // logical (x, y) position, making them stand correctly in the tile's center.
+            sprite.anchor.set(0.5, 1.0);
             sprite.x = character.position?.x || 100;
             sprite.y = character.position?.y || 100;
-            
-            console.error(`[RENDERER DEBUG] Character ${character.name} sprite positioned at (${sprite.x}, ${sprite.y})`);
+
 
             sprite.animationState = {
                 name: 'idle',
