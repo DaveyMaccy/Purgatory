@@ -371,40 +371,37 @@ class UIManager {
     showSearchResultsPopup(containerName, items, position, onTakeItem, onGiveItem) {
         const options = [];
         
-        // Add container items
+        // Add container items for taking
         if (items && items.length > 0) {
             items.forEach(item => {
+                // Look up the item's display name from the central inventory system
+                const itemData = window.getItemById(item.id);
+                const displayName = itemData ? itemData.name : item.id;
                 options.push({
-                    text: `Take ${item.name}`,
+                    text: `Take ${displayName} (${item.quantity})`,
                     action: () => onTakeItem(item),
                     keepOpen: false
                 });
             });
         } else {
-            options.push({
-                text: 'Empty',
-                action: null,
-                keepOpen: false
-            });
+            // Use a non-clickable label for an empty container
+            options.push({ text: '(Empty)', action: null, keepOpen: true });
         }
         
         // Add player inventory items for giving
         const player = window.characterManager?.getPlayerCharacter();
         if (player && player.inventory && player.inventory.length > 0) {
-            options.push({
-                text: '--- Give Items ---',
-                action: null,
-                keepOpen: true
-            });
+            options.push({ text: '--- Give Item ---', action: null, keepOpen: true });
             
             player.inventory.forEach(invItem => {
-                const itemId = typeof invItem === 'object' ? invItem.id : invItem;
-                const item = window.getItemById ? window.getItemById(itemId) : { name: itemId };
-                options.push({
-                    text: `Give ${item.name || itemId}`,
-                    action: () => onGiveItem(invItem),
-                    keepOpen: false
-                });
+                const itemData = window.getItemById(typeof invItem === 'object' ? invItem.id : invItem);
+                if (itemData) {
+                    options.push({
+                        text: `Give ${itemData.name}`,
+                        action: () => onGiveItem(invItem),
+                        keepOpen: false
+                    });
+                }
             });
         }
         
