@@ -10,100 +10,74 @@ export class MovementSystem {
     }
 
     /**
-     * Move character along their path
-     * FINAL FIX: Animation direction is now based on the final destination
-     * for stability, preventing "moonwalking" and random flips.
+     * Move character along their path. This function has been rebuilt from the ground up
+     * to fix the foundational character centering issue.
      */
     moveCharacter(character, world, deltaTime, TILE_SIZE = 48) {
         if (!character.path || character.path.length === 0) {
-            // No path, ensure character is idle.
+            // If there is no path, ensure the character is idle and do nothing else.
             if (character.actionState !== 'idle') {
                 character.setActionState('idle');
             }
             return;
         }
-        
-        // The character physically moves toward the next immediate step in its path.
-        const immediateTarget = character.path[0];
-        const dx = immediateTarget.x - character.position.x;
-        const dy = immediateTarget.y - character.position.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // --- NEW DIRECTION LOGIC ---
-        // For animation, we determine direction based on the *final* destination.
-        // This creates a stable direction that doesn't flip on small detours.
+
+        // 1. SET TARGET AND DIRECTION
+        // The immediate target is the next waypoint in the path. This waypoint
+        // is already a centered coordinate, calculated correctly by world.js.
+        const target = character.path[0];
         const finalDestination = character.path[character.path.length - 1];
+
+        // Set facing direction based on the final destination to prevent jittering.
         const overall_dx = finalDestination.x - character.position.x;
         const overall_dy = finalDestination.y - character.position.y;
-
         if (Math.abs(overall_dx) > Math.abs(overall_dy)) {
             character.facingDirection = overall_dx > 0 ? 'right' : 'left';
-        } else {
-            if (Math.abs(overall_dy) > 0) {
-                 character.facingDirection = overall_dy > 0 ? 'down' : 'up';
-            }
-        }
-        // --- END NEW DIRECTION LOGIC ---
-        
-        // Ensure the character is in the 'walking' state.
-        if (character.actionState !== 'walking') {
-            character.setActionState('walking');
+        } else if (Math.abs(overall_dy) > 0) {
+            character.facingDirection = overall_dy > 0 ? 'down' : 'up';
         }
 
-        // If we're close to the waypoint, move to the next one.
-        if (distance < this.ARRIVAL_THRESHOLD) {
-            // THE DEFINITIVE FIX:
-            // Re-calculate the mathematical center of the target tile and snap the
-            // character's position to it. This acts as a final safeguard, overriding
-            // any potential floating-point or coordinate space errors from upstream.
-            const centeredX = Math.floor(immediateTarget.x / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2);
-            const centeredY = Math.floor(immediateTarget.y / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2);
-            character.position = { x: centeredX, y: centeredY };
+        // 2. CALCULATE MOVEMENT
+        const dx = target.x - character.position.x;
+        const dy = target.y - character.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const moveDistance = this.MOVEMENT_SPEED * deltaTime;
 
+        // 3. CHECK FOR ARRIVAL
+        // If the remaining distance is less than the distance we would move in this frame,
+        // it means we have arrived at the waypoint.
+        if (distance <= moveDistance || distance < this.ARRIVAL_THRESHOLD) {
+            // THE CORE FIX: Instead of snapping to the (potentially flawed) target coordinate,
+            // we calculate the mathematical center of the target's tile and snap to that.
+            // This guarantees a perfectly centered final position.
+            const targetTileX = Math.floor(target.x / TILE_SIZE);
+            const targetTileY = Math.floor(target.y / TILE_SIZE);
+            character.position.x = (targetTileX * TILE_SIZE) + (TILE_SIZE / 2);
+            character.position.y = (targetTileY * TILE_SIZE) + (TILE_SIZE / 2);
+
+            // Remove the reached waypoint from the path.
             character.path.shift();
-            
-            // If no more path points, the character has arrived.
+
+            // If that was the last waypoint, the character stops and executes their action.
             if (character.path.length === 0) {
                 character.setActionState('idle');
-
-                // Check for and execute a queued action upon arrival.
                 if (character.queuedAction && window.gameEngine) {
                     window.gameEngine.executeAction(character, character.queuedAction);
-                    character.queuedAction = null; // Clear action after execution
+                    character.queuedAction = null;
                 }
             }
-            return;
-        }
-        
-        // Calculate movement for this frame towards the immediate target.
-        const moveDistance = this.MOVEMENT_SPEED * deltaTime;
-        const ratio = Math.min(moveDistance / distance, 1);
-        
-        const newX = character.position.x + (dx * ratio);
-        const newY = character.position.y + (dy * ratio);
-        
-        // Check if new position is walkable BEFORE moving.
-        if (world.isPositionWalkable(newX, newY)) {
-            character.position.x = newX;
-            character.position.y = newY;
-            character.notifyObservers('position');
         } else {
-            // Hit an obstacle, recalculate entire path.
-            console.log(`⚠️ ${character.name} hit obstacle, recalculating path`);
-            
-            const newPath = world.findPath(character.position, finalDestination);
-            
-            if (newPath && newPath.length > 0) {
-                character.path = newPath;
-                console.log(`✅ New path calculated with ${newPath.length} waypoints`);
-            } else {
-                character.path = [];
-                character.setActionState('idle');
-                console.log(`❌ No valid path found for ${character.name}`);
-            }
+            // 4. MOVE CHARACTER
+            // If we have not arrived, move the character along the path.
+            character.setActionState('walking');
+            character.position.x += (dx / distance) * moveDistance;
+            character.position.y += (dy / distance) * moveDistance;
         }
+        
+        // Notify observers of the position change for rendering.
+        character.notifyObservers('position');
     }
-}
+
 
 
 
