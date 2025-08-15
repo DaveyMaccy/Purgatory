@@ -47,6 +47,12 @@ export class MovementSystem {
         // If the remaining distance is less than the distance we would move in this frame,
         // it means we have arrived at the waypoint.
         if (distance <= moveDistance || distance < this.ARRIVAL_THRESHOLD) {
+            // DEBUG: Log what position we're snapping to
+            console.error(`[MOVEMENT DEBUG] ${character.name} arriving at waypoint: (${target.x}, ${target.y})`);
+            console.error(`[MOVEMENT DEBUG] Is ${target.x} divisible by 48? ${target.x % 48 === 0}`);
+            console.error(`[MOVEMENT DEBUG] Is ${target.y} divisible by 48? ${target.y % 48 === 0}`);
+            console.error(`[MOVEMENT DEBUG] Should be at center (24 or 72): x%48=${target.x % 48}, y%48=${target.y % 48}`);
+            
             // SNAP TO EXACT TARGET: The target from findPath is already centered
             // We trust the pathfinding system's centered coordinates
             character.position.x = target.x;
@@ -74,4 +80,5 @@ export class MovementSystem {
         character.notifyObservers('position');
     }
 }
+
 
