@@ -593,20 +593,22 @@ generateNavGridForActiveArea() {
     const gridHeight = this.worldBounds.maxY - this.worldBounds.minY;
 
     while (attempts < maxAttempts) {
-        const tileX = Math.floor(Math.random() * gridWidth);
-        const tileY = Math.floor(Math.random() * gridHeight);
+        // Generate LOCAL grid coordinates (0-based for the navGrid)
+        const localTileX = Math.floor(Math.random() * gridWidth);
+        const localTileY = Math.floor(Math.random() * gridHeight);
 
-        if (this.navGridInstance.isWalkable(tileX, tileY)) {
-            // Convert tile position back to PIXEL coordinates, re-adding the offset
+        if (this.navGridInstance.isWalkable(localTileX, localTileY)) {
+            // Convert LOCAL tile position to GLOBAL PIXEL coordinates
+            const globalTileX = localTileX + this.worldBounds.minX;
+            const globalTileY = localTileY + this.worldBounds.minY;
             return {
-                x: ((tileX + this.worldBounds.minX) * this.TILE_SIZE) + (this.TILE_SIZE / 2),
-                y: ((tileY + this.worldBounds.minY) * this.TILE_SIZE) + (this.TILE_SIZE / 2)
+                x: (globalTileX * this.TILE_SIZE) + (this.TILE_SIZE / 2),
+                y: (globalTileY * this.TILE_SIZE) + (this.TILE_SIZE / 2)
             };
         }
 
         attempts++;
     }
-
     // Fallback to a safe position if no walkable position found
     console.warn('⚠️ Could not find random walkable position, using fallback');
     return {
@@ -695,6 +697,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
