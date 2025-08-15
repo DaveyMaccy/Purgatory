@@ -549,11 +549,16 @@ generateNavGridForActiveArea() {
     let attempts = 0;
         
         while (attempts < maxAttempts) {
-            const x = Math.random() * (this.width - 2) + 1; // Keep away from walls
-            const y = Math.random() * (this.height - 2) + 1;
+            // This logic now correctly generates random coordinates within the GLOBAL tile bounds
+            const gridWidth = this.worldBounds.maxX - this.worldBounds.minX;
+            const gridHeight = this.worldBounds.maxY - this.worldBounds.minY;
             
-            const pixelX = x * this.TILE_SIZE + this.TILE_SIZE / 2;
-            const pixelY = y * this.TILE_SIZE + this.TILE_SIZE / 2;
+            const tileX = Math.floor(Math.random() * gridWidth) + this.worldBounds.minX;
+            const tileY = Math.floor(Math.random() * gridHeight) + this.worldBounds.minY;
+
+            // Convert the global tile coordinate to a global centered pixel coordinate
+            const pixelX = (tileX * this.TILE_SIZE) + (this.TILE_SIZE / 2);
+            const pixelY = (tileY * this.TILE_SIZE) + (this.TILE_SIZE / 2);
             
             if (this.isPositionWalkable(pixelX, pixelY)) {
                 return { x: pixelX, y: pixelY };
@@ -690,6 +695,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
