@@ -95,6 +95,9 @@ export class Character {
         this.longTermMemory = []; // Up to 100 significant events
         this.currentActionTranscript = []; // Current action steps
         
+        // Action Queuing System
+        this.queuedAction = null; // Stores an action to be performed upon arrival
+        
         // Position and movement
         this.position = { x: 0, y: 0 };
         this.targetPosition = null;
@@ -611,4 +614,5 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
+
 
