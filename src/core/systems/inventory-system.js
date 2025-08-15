@@ -109,7 +109,7 @@ export const GAME_ITEMS = {
             interactions: {
                 drink: {
                     result: 'coffee_mug_empty',
-                    effects: { energy: +3, stress: -1 },
+                    effects: { energy: +30, stress: -10 },
                     duration: 5000 // 5 seconds to drink
                 }
             }
@@ -125,7 +125,7 @@ export const GAME_ITEMS = {
             interactions: {
                 eat: {
                     result: null, // Item consumed
-                    effects: { hunger: +2, energy: +1 },
+                    effects: { hunger: +20, energy: +10 },
                     duration: 3000 // 3 seconds to eat
                 }
             }
@@ -141,7 +141,7 @@ export const GAME_ITEMS = {
             interactions: {
                 eat: {
                     result: null,
-                    effects: { hunger: +5, energy: +1 },
+                    effects: { hunger: +50, energy: +10 },
                     duration: 8000 // 8 seconds to eat
                 }
             }
