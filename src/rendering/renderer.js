@@ -35,6 +35,7 @@ const animationData = {
             'left': { y: 2 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
             'down': { y: 2 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
+    },
     'sit': {
     frames: 6,
     loop: true, // Looping a single frame is fine for a static pose
