@@ -95,6 +95,17 @@ window.setFocusTarget = setFocusTarget;
 window.showErrorMessage = showErrorMessage;
 window.showSuccessMessage = showSuccessMessage;
 
+// Export inventory system functions globally for action system
+if (typeof window.addItemToInventory === 'undefined') {
+    import('./src/core/systems/inventory-system.js').then(module => {
+        window.addItemToInventory = module.addItemToInventory;
+        window.removeItemFromInventory = module.removeItemFromInventory;
+        window.useItem = module.useItem;
+        window.getItemById = module.getItemById;
+        window.getAllItems = module.getAllItems;
+    });
+}
+
 // Console confirmation
 console.log('✅ Main.js refactored - Modular system loaded');
 console.log('📦 Modules loaded:');
@@ -150,4 +161,5 @@ window.TASK_ACTIONS = window.TASK_ACTIONS || {};
  * - Character creator integration unchanged
  * - Existing API preserved 100%
  */
+
 
