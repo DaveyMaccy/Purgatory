@@ -112,7 +112,7 @@ export class GameEngine {
             const characters = this.characterManager.characters;
             
             for (const character of characters) {
-                this.movementSystem.moveCharacter(character, this.world, deltaTime / 1000);
+                this.movementSystem.moveCharacter(character, this.world, deltaTime / 1000, this.world.TILE_SIZE);
                 
                 if (this.renderer) {
                     this.renderer.updateCharacterPosition(character.id, character.position.x, character.position.y);
@@ -721,6 +721,7 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
+
 
 
 
