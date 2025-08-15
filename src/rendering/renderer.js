@@ -133,6 +133,39 @@ const animationData = {
     }
 };
 
+// --- Chair and Sitting Logic Data ---
+// This map defines all the tiles that should trigger a "sit" animation.
+// The key is the tile coordinate "x,y", and the value is the direction the character should face.
+// An optional 'offset' can be added to nudge the character's sprite for better alignment.
+const chairTiles = new Map([
+    // Break Room
+    ['10,12', { direction: 'west', offset: { x: 0, y: 12 } }], // break_room_chair_2 (butt to bottom)
+    ['3,13',  { direction: 'east' }],    // Couch part 1
+    ['3,14',  { direction: 'east' }],    // Couch part 2
+    ['3,15',  { direction: 'up' }],      // Couch part 3
+
+    // Unmarked Chairs
+    ['3,6',   { direction: 'east' }],
+    ['6,6',   { direction: 'west' }],
+
+    // Main Office & Reception
+    ['-7,8',  { direction: 'up' }],      // Office Chair
+    ['-2,8',  { direction: 'up' }],      // Office Chair
+    ['-6,-5', { direction: 'up' }],      // Office Chair
+    ['-2,-3', { direction: 'up' }],      // Receptionist Chair
+    ['-7,5',  { direction: 'east' }],    // Office Chair
+    ['10,-3', { direction: 'west' }],    // HR Chair
+    ['3,-4',  { direction: 'down' }],    // Boss Chair
+
+    // Meeting Room
+    ['15,8',  { direction: 'up' }],
+    ['16,8',  { direction: 'up' }],
+    ['18,7',  { direction: 'west' }],
+    ['16,5',  { direction: 'down', offset: { x: 0, y: 12 } }], // Meeting chair (butt to bottom)
+    ['15,5',  { direction: 'down', offset: { x: 0, y: 12 } }]  // Meeting chair (butt to bottom)
+]);
+// --- End Chair Logic ---
+
 export class Renderer {
     constructor(containerElement) {
         this.container = containerElement;
@@ -666,35 +699,65 @@ sprite.anchor.set(0.5, 0.5);
     }
 
     updateAllCharacterAnimations(deltaTime) {
-        if (!USE_ENHANCED_SPRITES) return;
+    if (!USE_ENHANCED_SPRITES) return;
 
-        for (const sprite of this.characterSprites.values()) {
-            const state = sprite.animationState;
-            const anim = animationData[state.name];
-            if (!anim) continue;
+    for (const sprite of this.characterSprites.values()) {
+        const state = sprite.animationState;
+        
+        // --- Sitting Logic ---
+        // Convert sprite's pixel position to tile coordinates
+        const tileX = Math.floor(sprite.x / this.TILE_SIZE);
+        const tileY = Math.floor(sprite.y / this.TILE_SIZE);
+        const tileKey = `${tileX},${tileY}`;
+        
+        const chairData = chairTiles.get(tileKey);
 
-            state.timer += deltaTime;
-            if (state.timer >= anim.frameSpeed) {
-                state.timer -= anim.frameSpeed;
-                let nextFrame = state.frame + 1;
+        if (chairData) {
+            // If on a chair tile, force the sit animation and direction
+            state.name = 'sit';
+            state.direction = chairData.direction;
+            
+            // Apply positional offset if one is defined
+            if (chairData.offset) {
+                sprite.pivot.set(-chairData.offset.x, -chairData.offset.y);
+            } else {
+                sprite.pivot.set(0, 0); // Reset pivot if not on an offset chair
+            }
 
-                if (nextFrame >= anim.frames) {
-                    if (anim.loop) {
-                        nextFrame = 0;
-                    } else if (anim.loopSection) {
-                        nextFrame = anim.loopSection.start;
-                    } else {
-                        nextFrame = anim.frames - 1;
-                    }
+        } else {
+            // If NOT on a chair tile, revert to idle if currently sitting
+            if (state.name === 'sit') {
+                state.name = 'idle';
+            }
+            sprite.pivot.set(0, 0); // Always reset pivot when not on a chair
+        }
+        // --- End Sitting Logic ---
+
+        const anim = animationData[state.name];
+        if (!anim) continue;
+
+        state.timer += deltaTime;
+        if (state.timer >= anim.frameSpeed) {
+            state.timer -= anim.frameSpeed;
+            let nextFrame = state.frame + 1;
+
+            if (nextFrame >= anim.frames) {
+                if (anim.loop) {
+                    nextFrame = 0;
+                } else if (anim.loopSection) {
+                    nextFrame = anim.loopSection.start;
+                } else {
+                    nextFrame = anim.frames - 1;
                 }
+            }
 
-                if (state.frame !== nextFrame) {
-                    state.frame = nextFrame;
-                    this.updateSpriteVisualFrame(sprite);
-                }
+            if (state.frame !== nextFrame) {
+                state.frame = nextFrame;
+                this.updateSpriteVisualFrame(sprite);
             }
         }
     }
+}
 
     /**
     * Setup world click detection for objects and containers
