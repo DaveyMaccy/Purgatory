@@ -14,7 +14,7 @@ export class MovementSystem {
      * FINAL FIX: Animation direction is now based on the final destination
      * for stability, preventing "moonwalking" and random flips.
      */
-    moveCharacter(character, world, deltaTime) {
+    moveCharacter(character, world, deltaTime, TILE_SIZE = 48) {
         if (!character.path || character.path.length === 0) {
             // No path, ensure character is idle.
             if (character.actionState !== 'idle') {
@@ -52,14 +52,14 @@ export class MovementSystem {
 
         // If we're close to the waypoint, move to the next one.
         if (distance < this.ARRIVAL_THRESHOLD) {
-            // DEFINITIVE FIX: Force-snap the character to the mathematical center
-            // of the target tile. This corrects any floating-point drift that
-            // may have occurred during movement and guarantees centered alignment.
-            const TILE_SIZE = 48;
+            // THE DEFINITIVE FIX:
+            // Re-calculate the mathematical center of the target tile and snap the
+            // character's position to it. This acts as a final safeguard, overriding
+            // any potential floating-point or coordinate space errors from upstream.
             const centeredX = Math.floor(immediateTarget.x / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2);
             const centeredY = Math.floor(immediateTarget.y / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2);
-
             character.position = { x: centeredX, y: centeredY };
+
             character.path.shift();
             
             // If no more path points, the character has arrived.
@@ -104,5 +104,6 @@ export class MovementSystem {
         }
     }
 }
+
 
 
