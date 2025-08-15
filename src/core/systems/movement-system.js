@@ -55,9 +55,15 @@ export class MovementSystem {
             character.position = { ...immediateTarget };
             character.path.shift();
             
-            // If no more path points, set to idle.
+            // If no more path points, the character has arrived.
             if (character.path.length === 0) {
                 character.setActionState('idle');
+
+                // Check for and execute a queued action upon arrival.
+                if (character.queuedAction && window.gameEngine) {
+                    window.gameEngine.executeAction(character, character.queuedAction);
+                    character.queuedAction = null; // Clear action after execution
+                }
             }
             return;
         }
@@ -91,3 +97,4 @@ export class MovementSystem {
         }
     }
 }
+
