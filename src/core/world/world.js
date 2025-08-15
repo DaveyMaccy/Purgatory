@@ -394,11 +394,22 @@ generateNavGridForActiveArea() {
      * @returns {Object|null} A walkable {x, y} position in pixels, or null if none is found.
      */
     findNearestWalkablePosition(targetPos) {
+        // Convert the target to tile coordinates first.
+        const targetTile = {
+            x: Math.floor(targetPos.x / this.TILE_SIZE),
+            y: Math.floor(targetPos.y / this.TILE_SIZE)
+        };
+        
+        // If the target's tile is walkable, return the CENTER of that tile.
+        // This is the fix for characters walking on grid lines.
         if (this.isPositionWalkable(targetPos.x, targetPos.y)) {
-            return targetPos;
+            return {
+                x: (targetTile.x * this.TILE_SIZE) + (this.TILE_SIZE / 2),
+                y: (targetTile.y * this.TILE_SIZE) + (this.TILE_SIZE / 2)
+            };
         }
 
-        // Convert the target to tile coordinates to begin the search
+        // If the initial tile isn't walkable, begin searching nearby for one.
         const startTile = {
             x: Math.floor(targetPos.x / this.TILE_SIZE),
             y: Math.floor(targetPos.y / this.TILE_SIZE)
@@ -679,6 +690,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
