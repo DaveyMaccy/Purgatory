@@ -42,7 +42,7 @@ const animationData = {
     frameSpeed: 0.1,
     directions: {
         'right': { y: 5 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
-        'up': { y: 0 * SPRITE_HEIGHT, x: 2 * SPRITE_WIDTH },
+        'up': { y: 2 * SPRITE_HEIGHT, x: 8 * SPRITE_WIDTH },
         'left': { y: 5 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
         'down': { y: 2 * SPRITE_HEIGHT, x: 20 * SPRITE_WIDTH }
     }
