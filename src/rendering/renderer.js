@@ -43,7 +43,7 @@ const animationData = {
         directions: {
             'right': { y: 4 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
             'up': { y: 0 * SPRITE_HEIGHT, x: 2 * SPRITE_WIDTH },
-            'left': { y: 4 * SPRITE_HEIGHT, x: 7 * SPRITE_WIDTH },
+            'left': { y: 5 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
             'down': { y: 2 * SPRITE_HEIGHT, x: 20 * SPRITE_WIDTH }
         }
     },
