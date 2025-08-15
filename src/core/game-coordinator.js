@@ -54,6 +54,10 @@ export async function startGameSimulation(charactersFromCreator) {
         // Initialize game engine with all systems
         window.gameEngine = new GameEngine(window.characterManager, window.renderer, mapData);
         
+        // CRITICAL: Initialize the world's items now that the world and state manager exist.
+        // This must happen BEFORE the first UI update to ensure containers appear stocked.
+        window.gameEngine.world.worldStateManager.initializeWorldItems();
+        
         console.log('✅ Game engine initialized');
 
         // Process the map data to understand its structure
