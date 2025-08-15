@@ -238,6 +238,9 @@ export class Renderer {
             this.worldContainer.addChild(this.objectLayer);
             this.worldContainer.addChild(this.characterLayer);
 
+            // Enable automatic sorting by zIndex for proper layering
+            this.characterLayer.sortableChildren = true;
+
             // Set up world click detection
             this.setupWorldClickDetection();
 
@@ -422,12 +425,14 @@ export class Renderer {
     }
 
     updateCharacterPosition(characterId, x, y) {
-        const sprite = this.characterSprites.get(characterId);
-        if (sprite) {
-            sprite.x = x;
-            sprite.y = y;
-        }
+    const sprite = this.characterSprites.get(characterId);
+    if (sprite) {
+        sprite.x = x;
+        sprite.y = y;
+        // Set the zIndex to the sprite's y-coordinate for depth sorting
+        sprite.zIndex = y;
     }
+}
 
     setFollowTarget(characterId) {
         this.followTarget = characterId;
