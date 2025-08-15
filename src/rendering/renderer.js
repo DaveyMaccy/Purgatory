@@ -693,9 +693,12 @@ createTileSprite(gid) {
                 y: event.data.global.y - this.worldContainer.y
             };
 
-            // Check for object interactions first
+           // Check for object interactions first
             const clickedObject = this.findObjectAtPosition(worldPos);
             if (clickedObject) {
+                // Stop the event from bubbling up to the generic world click handler.
+                event.stopPropagation();
+                
                 console.log(`🖱️ Object clicked: ${clickedObject.name}`);
                 if (window.gameEngine && window.gameEngine.onObjectClick) {
                     window.gameEngine.onObjectClick(clickedObject, {
