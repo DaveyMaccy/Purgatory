@@ -612,12 +612,16 @@ export class GameEngine {
     movePlayerToActionPoint(player, actionPoint) {
         if (!actionPoint) return;
 
+        // Center the action point to the nearest tile first
+        const TILE_SIZE = 48;
+        const centeredActionPoint = {
+            x: Math.floor(actionPoint.x / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2),
+            y: Math.floor(actionPoint.y / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2)
+        };
+
         // First, find the nearest walkable tile to the desired action point.
         // This prevents pathfinding from failing if the point is inside an object.
-        const targetDestination = this.world.findNearestWalkablePosition({
-            x: actionPoint.x,
-            y: actionPoint.y
-        });
+        const targetDestination = this.world.findNearestWalkablePosition(centeredActionPoint);
 
         if (!targetDestination) {
             console.warn(`Could not find a walkable path to the action point for ${player.name}.`);
@@ -721,6 +725,7 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
+
 
 
 
