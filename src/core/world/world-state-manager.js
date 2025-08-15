@@ -19,7 +19,7 @@ import {
     WORLD_ITEM_PLACEMENT_RULES 
 } from './world-item-locations.js';
 
-import { addItemToInventory, removeItemFromInventory } from '../input/inventory-system.js';
+import { addItemToInventory, removeItemFromInventory } from '../systems/inventory-system.js';
 
 export class WorldStateManager {
     constructor() {
