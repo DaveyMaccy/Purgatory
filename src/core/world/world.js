@@ -520,7 +520,12 @@ generateNavGridForActiveArea() {
             const spawn = spawnPoints[spawnIndex % spawnPoints.length];
             this.usedSpawnPoints = (this.usedSpawnPoints || 0) + 1;
             console.log(`🎯 Using map spawn point ${spawnIndex}: (${spawn.x}, ${spawn.y})`);
-            return spawn;
+            
+            // Center the spawn point within its tile for consistent positioning.
+            const centeredX = Math.floor(spawn.x / this.TILE_SIZE) * this.TILE_SIZE + (this.TILE_SIZE / 2);
+            const centeredY = Math.floor(spawn.y / this.TILE_SIZE) * this.TILE_SIZE + (this.TILE_SIZE / 2);
+            
+            return { x: centeredX, y: centeredY };
         }
     }
     
@@ -671,5 +676,6 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
