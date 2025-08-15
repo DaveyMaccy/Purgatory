@@ -1,14 +1,12 @@
 /**
  * Character Class - Core character definition with Inventory Integration
  * Based on SSOT Chapter 2 specifications
- * 
- * PHASE 4 ADDITIONS:
+ * * PHASE 4 ADDITIONS:
  * - facingDirection property for animation
  * - actionState property for movement states
  * - path property for pathfinding
  * - setActionState method with animation support
- * 
- * NEW INVENTORY INTEGRATION:
+ * * NEW INVENTORY INTEGRATION:
  * - Enhanced inventory management with item objects
  * - Starting inventory based on job role
  * - Item interaction support
@@ -112,7 +110,15 @@ export class Character {
         // Player flag
         this.isPlayer = characterData.isPlayer || false;
 
-}
+        // Observer pattern for UI updates
+        this.observers = [];
+        
+        // Perception and awareness
+        this.maxSightRange = 200; // pixels
+        this.facingAngle = 180; // degrees (0 = north, 90 = east, 180 = south, 270 = west)
+        
+        console.log(`✅ Character created: ${this.name} (${this.jobRole}) - Inventory: ${this.inventory.length} items, Desk: ${this.deskItems.length} items`);
+    }
 
     /**
      * NEW: Initialize inventory items from string array to proper item objects
@@ -183,16 +189,6 @@ export class Character {
         const strengthBonus = this.physicalAttributes.build === 'Athletic' ? 5 : 0;
         
         return (currentWeight + additionalWeight) <= (maxWeight + strengthBonus);
-    }
-        
-        // Observer pattern for UI updates
-        this.observers = [];
-        
-        // Perception and awareness
-        this.maxSightRange = 200; // pixels
-        this.facingAngle = 180; // degrees (0 = north, 90 = east, 180 = south, 270 = west)
-        
-        console.log(`✅ Character created: ${this.name} (${this.jobRole}) - Inventory: ${this.inventory.length} items, Desk: ${this.deskItems.length} items`);
     }
     
     /**
@@ -271,7 +267,6 @@ export class Character {
                 console.log(`💪 ${this.name} gained temporary ${effect} bonus: +${value}`);
             }
         }
-    }
     }
     
     /**
@@ -615,8 +610,3 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
-
-
-
-
-
