@@ -766,6 +766,7 @@ createTileSprite(gid) {
     */
     hasSpecialAction(obj) {
         const specialObjects = [
+            'desk',
             'coffee_machine', 'coffee_station', 'vending_machine',
             'tv', 'games_console', 'whiteboard', 'printer',
             'bathroom_stall', 'couch', 'break_room_tv'
