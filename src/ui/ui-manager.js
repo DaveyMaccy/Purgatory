@@ -260,8 +260,12 @@ class UIManager {
                 if (option.action) {
                     option.action();
                 }
+
                 if (!option.keepOpen) {
-                    this.closePopup(popupId);
+                    // Use a timeout to prevent the old popup from being destroyed before
+                    // a new one (potentially opened by the action) can render. This fixes
+                    // the non-functional "Search" and inventory item buttons.
+                    setTimeout(() => this.closePopup(popupId), 0);
                 }
             };
             
