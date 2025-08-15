@@ -35,7 +35,6 @@ const animationData = {
             'left': { y: 2 * SPRITE_HEIGHT, x: 12 * SPRITE_WIDTH },
             'down': { y: 2 * SPRITE_HEIGHT, x: 18 * SPRITE_WIDTH }
         }
-    },
     'sit': {
     frames: 6,
     loop: true, // Looping a single frame is fine for a static pose
@@ -47,8 +46,7 @@ const animationData = {
         'down': { y: 2 * SPRITE_HEIGHT, x: 20 * SPRITE_WIDTH }
     }
 },
-    },
-    'phone': {
+'phone': {
         frames: 12,
         loop: false,
         loopSection: { start: 3, end: 8 },
