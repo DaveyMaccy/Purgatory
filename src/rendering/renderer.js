@@ -41,9 +41,9 @@ const animationData = {
     loop: true, // Looping a single frame is fine for a static pose
     frameSpeed: 0.1,
     directions: {
-        'right': { y: 5 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
+        'right': { y: 5 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
         'up': { y: 0 * SPRITE_HEIGHT, x: 2 * SPRITE_WIDTH },
-        'left': { y: 5 * SPRITE_HEIGHT, x: 6 * SPRITE_WIDTH },
+        'left': { y: 5 * SPRITE_HEIGHT, x: 0 * SPRITE_WIDTH },
         'down': { y: 2 * SPRITE_HEIGHT, x: 20 * SPRITE_WIDTH }
     }
 },
@@ -722,13 +722,18 @@ sprite.anchor.set(0.5, 0.5);
             } else {
                 sprite.pivot.set(0, 0); // Reset pivot if not on an offset chair
             }
-
         } else {
-            // If NOT on a chair tile, revert to idle if currently sitting
+            // If NOT on a chair tile, check if the character was sitting and needs to transition.
             if (state.name === 'sit') {
-                state.name = 'idle';
+                // The character just left a chair. Check the game state to see if they are moving.
+                const character = window.characterManager.getCharacter(sprite.characterId);
+                if (character && character.path && character.path.length > 0) {
+                    state.name = 'walking'; // They have a path, so switch to walking instantly.
+                } else {
+                    state.name = 'idle'; // They have no path, so switch to idle.
+                }
             }
-            sprite.pivot.set(0, 0); // Always reset pivot when not on a chair
+            sprite.pivot.set(0, 0); // Always reset the pivot when not on a chair.
         }
         // --- End Sitting Logic ---
 
@@ -762,61 +767,64 @@ sprite.anchor.set(0.5, 0.5);
     * Setup world click detection for objects and containers
     */
     setupWorldClickDetection() {
-        this.worldContainer.interactive = true;
-        // This is now the SINGLE source of truth for all world clicks.
-        this.worldContainer.on('click', (event) => {
-            const worldPos = {
-                x: event.data.global.x - this.worldContainer.x,
-                y: event.data.global.y - this.worldContainer.y
-            };
+    this.worldContainer.interactive = true;
+    // This is now the SINGLE source of truth for all world clicks.
+    this.worldContainer.on('click', (event) => {
+        const worldPos = {
+            x: event.data.global.x - this.worldContainer.x,
+            y: event.data.global.y - this.worldContainer.y
+        };
 
-            const clickedObject = this.findObjectAtPosition(worldPos);
-            
-            // THE DEFINITIVE FIX: Check if the clicked object is a real, interactable object,
-            // and NOT just an invisible 'room' object.
-            if (clickedObject && clickedObject.type !== 'room') {
-                // --- OBJECT CLICK LOGIC ---
-                console.log(`[Renderer] INTERACTABLE Object clicked: ${clickedObject.name}`);
-                if (window.gameEngine && window.gameEngine.onObjectClick) {
-                    window.gameEngine.onObjectClick(clickedObject, {
-                        x: event.data.global.x,
-                        y: event.data.global.y
-                    });
-                }
-            } else {
-                // --- GROUND CLICK LOGIC ---
-                // This code now runs if the click was on empty ground OR on a 'room' object.
-                console.log(`[Renderer] Ground clicked at world position: (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)})`);
-                const player = window.characterManager?.getPlayerCharacter();
-                if (player) {
-                    // THE FOUNDATIONAL FIX:
-                    // The world has a negative offset. We MUST account for it when calculating
-                    // the target tile from a world-space mouse click.
-                    const TILE_SIZE = window.gameEngine.world.TILE_SIZE;
-                    const worldBounds = window.gameEngine.world.worldBounds;
+        const clickedObject = this.findObjectAtPosition(worldPos);
 
-                    const targetTileX = Math.floor(worldPos.x / TILE_SIZE);
-                    const targetTileY = Math.floor(worldPos.y / TILE_SIZE);
+        // FIX: Define object types that should allow clicks to "pass through" to the ground layer.
+        const passthroughTypes = ['chair', 'desk', 'storage', 'misc'];
+        const isPassthrough = clickedObject && passthroughTypes.includes(clickedObject.type);
+        
+        // The click is an "object click" ONLY if the object is NOT a room and NOT a passthrough type.
+        if (clickedObject && clickedObject.type !== 'room' && !isPassthrough) {
+            // --- OBJECT CLICK LOGIC ---
+            console.log(`[Renderer] INTERACTABLE Object clicked: ${clickedObject.name}`);
+            if (window.gameEngine && window.gameEngine.onObjectClick) {
+                window.gameEngine.onObjectClick(clickedObject, {
+                    x: event.data.global.x,
+                    y: event.data.global.y
+                });
+            }
+        } else {
+            // --- GROUND CLICK LOGIC ---
+            // This code now runs for empty ground OR for passthrough objects like chairs.
+            console.log(`[Renderer] Ground clicked at world position: (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)})`);
+            const player = window.characterManager?.getPlayerCharacter();
+            if (player) {
+                // THE FOUNDATIONAL FIX:
+                // The world has a negative offset. We MUST account for it when calculating
+                // the target tile from a world-space mouse click.
+                const TILE_SIZE = window.gameEngine.world.TILE_SIZE;
+                const worldBounds = window.gameEngine.world.worldBounds;
 
-                    // Now, convert that global tile coordinate back to a perfectly centered PIXEL coordinate.
-                    const centeredWorldPos = {
-                        x: (targetTileX * TILE_SIZE) + (TILE_SIZE / 2),
-                        y: (targetTileY * TILE_SIZE) + (TILE_SIZE / 2)
-                    };
-                    
-                    const path = window.gameEngine.world.findPath(player.position, centeredWorldPos);
-                    if (path && path.length > 0) {
-                        // A new manual move command ALWAYS cancels a queued action.
-                        if (player.queuedAction) {
-                            player.queuedAction = null;
-                            console.log("Action cancelled by manual movement.");
-                        }
-                        player.path = path;
+                const targetTileX = Math.floor(worldPos.x / TILE_SIZE);
+                const targetTileY = Math.floor(worldPos.y / TILE_SIZE);
+
+                // Now, convert that global tile coordinate back to a perfectly centered PIXEL coordinate.
+                const centeredWorldPos = {
+                    x: (targetTileX * TILE_SIZE) + (TILE_SIZE / 2),
+                    y: (targetTileY * TILE_SIZE) + (TILE_SIZE / 2)
+                };
+                
+                const path = window.gameEngine.world.findPath(player.position, centeredWorldPos);
+                if (path && path.length > 0) {
+                    // A new manual move command ALWAYS cancels a queued action.
+                    if (player.queuedAction) {
+                        player.queuedAction = null;
+                        console.log("Action cancelled by manual movement.");
                     }
+                    player.path = path;
                 }
             }
-        });
-    }
+        }
+    });
+}
 
     /**
     * Find clickable object at world position
@@ -898,25 +906,31 @@ sprite.anchor.set(0.5, 0.5);
     }
 
     updateSpriteVisualFrame(sprite) {
-        const state = sprite.animationState;
-        const anim = animationData[state.name];
-        if (!anim || !sprite.texture) return;
+    const state = sprite.animationState;
+    const anim = animationData[state.name];
+    if (!anim || !sprite.texture) return;
 
-        let directionData = anim.directions[state.direction];
-        if (!directionData) {
-            directionData = anim.directions[Object.keys(anim.directions)[0]];
-        }
-        if (!directionData) {
-            console.warn(`Animation '${state.name}' has no direction data.`);
-            return;
-        }
-
-        const sourceX = directionData.x + (state.frame * SPRITE_WIDTH);
-        const sourceY = directionData.y;
-
-        sprite.texture.frame = new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT);
-        sprite.texture.updateUvs();
+    let directionData = anim.directions[state.direction];
+    if (!directionData) {
+        directionData = anim.directions[Object.keys(anim.directions)[0]];
     }
+    if (!directionData) {
+        console.warn(`Animation '${state.name}' has no direction data.`);
+        return;
+    }
+
+    // FIX: Lock the frame for static up/down sitting poses to prevent flickering
+    let frameToUse = state.frame;
+    if (state.name === 'sit' && (state.direction === 'up' || state.direction === 'down')) {
+        frameToUse = 0;
+    }
+
+    const sourceX = directionData.x + (frameToUse * SPRITE_WIDTH);
+    const sourceY = directionData.y;
+
+    sprite.texture.frame = new PIXI.Rectangle(sourceX, sourceY, SPRITE_WIDTH, SPRITE_HEIGHT);
+    sprite.texture.updateUvs();
+}
 
     removeCharacter(characterId) {
         const sprite = this.characterSprites.get(characterId);
