@@ -730,7 +730,7 @@ createTileSprite(gid) {
                         player.path = path;
                     }
                 }
-            }}
+            }
         });
     }
 
