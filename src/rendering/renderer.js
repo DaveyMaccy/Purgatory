@@ -685,21 +685,19 @@ createTileSprite(gid) {
     * Setup world click detection for objects and containers
     */
     setupWorldClickDetection() {
-        // Make the world container interactive for object detection
         this.worldContainer.interactive = true;
+        // This is now the SINGLE source of truth for all world clicks.
         this.worldContainer.on('click', (event) => {
             const worldPos = {
                 x: event.data.global.x - this.worldContainer.x,
                 y: event.data.global.y - this.worldContainer.y
             };
 
-           // Check for object interactions first
             const clickedObject = this.findObjectAtPosition(worldPos);
+            
             if (clickedObject) {
-                // Stop the event from bubbling up to the generic world click handler.
-                event.stopPropagation();
-                
-                console.log(`🖱️ Object clicked: ${clickedObject.name}`);
+                // --- OBJECT CLICK LOGIC ---
+                console.log(`[Renderer] Object clicked: ${clickedObject.name}`);
                 if (window.gameEngine && window.gameEngine.onObjectClick) {
                     window.gameEngine.onObjectClick(clickedObject, {
                         x: event.data.global.x,
@@ -707,9 +705,19 @@ createTileSprite(gid) {
                     });
                 }
             } else {
-                // Handle world click for movement
-                if (window.handleWorldClick) {
-                    window.handleWorldClick(event.data.originalEvent);
+                // --- GROUND CLICK LOGIC ---
+                console.log(`[Renderer] Ground clicked at world position: (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)})`);
+                const player = window.characterManager?.getPlayerCharacter();
+                if (player) {
+                    const path = window.gameEngine.world.findPath(player.position, worldPos);
+                    if (path && path.length > 0) {
+                        player.path = path;
+                        // Clear any queued action when the player is given a manual move order.
+                        if (player.queuedAction) {
+                            player.queuedAction = null;
+                            console.log("Action cancelled by manual movement.");
+                        }
+                    }
                 }
             }
         });
