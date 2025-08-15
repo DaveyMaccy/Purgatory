@@ -130,8 +130,12 @@ export class CharacterManager {
 
         // Fallback position calculation if world positioning fails
         if (!position) {
-            const fallbackX = 100 + (index * 100) % 600; // Spread characters across width
-            const fallbackY = 200 + (index * 80) % 300;  // Spread characters across height
+            // Use tile-based positioning to ensure centering
+            const TILE_SIZE = 48;
+            const fallbackTileX = 2 + (index * 2) % 12;
+            const fallbackTileY = 4 + (index * 2) % 6;
+            const fallbackX = (fallbackTileX * TILE_SIZE) + (TILE_SIZE / 2); // Center of tile
+            const fallbackY = (fallbackTileY * TILE_SIZE) + (TILE_SIZE / 2); // Center of tile
             position = { x: fallbackX, y: fallbackY };
             console.warn(`⚠️ Using fallback position for ${character.name}: (${position.x}, ${position.y})`);
         }
@@ -292,5 +296,6 @@ export class CharacterManager {
         console.log('🔄 Forced observer notifications for all characters');
     }
 }
+
 
 
