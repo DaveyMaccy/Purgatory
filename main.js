@@ -12,6 +12,8 @@ import { startGameSimulation } from './src/core/game-coordinator.js';
 import { setFocusTarget } from './src/core/game-coordinator.js';
 import { showErrorMessage, showSuccessMessage } from './src/ui/ui-manager.js';
 import { setupDebugCommands } from './src/utils/debug-manager.js';
+import { setupGameInputHandlers } from './src/input/input-handler.js';
+import { processPlayerAction } from './src/core/systems/action-system.js';
 
 // Global game state variables - maintained for backward compatibility
 let gameEngine = null;
@@ -30,8 +32,11 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🎮 Office Purgatory - Initializing modular systems...');
     
     try {
-        // Initialize the game through modular system
+       // Initialize the game through modular system
         initializeGame();
+        
+        // Setup input handlers
+        setupGameInputHandlers();
         
         // Setup debug commands
         setupDebugCommands();
@@ -101,6 +106,10 @@ console.log('  - action-system.js: Action processing and execution');
 console.log('  - debug-manager.js: Debug commands and character inspection');
 console.log('🎯 Ready for Phase 4 development!');
 
+// Export action system functions for global access
+window.processPlayerAction = processPlayerAction;
+window.TASK_ACTIONS = window.TASK_ACTIONS || {};
+
 /**
  * DEVELOPER NOTES:
  * 
@@ -141,3 +150,4 @@ console.log('🎯 Ready for Phase 4 development!');
  * - Character creator integration unchanged
  * - Existing API preserved 100%
  */
+
