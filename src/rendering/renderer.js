@@ -544,12 +544,11 @@ createTileSprite(gid) {
     const sprite = new PIXI.Sprite(texture);
 
     // --- Definitive Transformation Logic ---
-    const originalTileWidth = tilesetData.tilewidth;
-    const originalTileHeight = tilesetData.tileheight;
+const originalTileWidth = tilesetData.tilewidth;
+const originalTileHeight = tilesetData.tileheight;
 
-    sprite.anchor.set(0.5, 0.5);
-    sprite.x += originalTileWidth / 2;
-    sprite.y += originalTileHeight / 2;
+// Anchor point (0, 0) is the top-left corner, which is the standard for tile rendering.
+sprite.anchor.set(0, 0);
     
     // STEP 1: DATA CORRECTION FOR THE ANOMALOUS TILE
     // We identify the anomalous Layer 4 tile by its cleanGid and correct its flags in memory.
