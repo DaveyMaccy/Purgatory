@@ -503,9 +503,9 @@ export function addItemToInventory(character, itemId, quantity = 1) {
 
     console.log(`✅ Added ${quantity}x ${item.name} to ${character.name}'s inventory`);
     
-    // Notify UI update if available
+   // Notify UI update if available
     if (window.uiUpdater && character.isPlayer) {
-        window.uiUpdater.updateCharacterData(character);
+        window.uiUpdater.updateUI(character);
     }
 
     return true;
@@ -540,9 +540,9 @@ export function removeItemFromInventory(character, itemId, quantity = 1) {
 
     console.log(`✅ Removed ${quantity}x ${itemId} from ${character.name}'s inventory`);
     
-    // Notify UI update if available
+    /// Notify UI update if available
     if (window.uiUpdater && character.isPlayer) {
-        window.uiUpdater.updateCharacterData(character);
+        window.uiUpdater.updateUI(character);
     }
 
     return true;
