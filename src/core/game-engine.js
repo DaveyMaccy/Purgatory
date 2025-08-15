@@ -633,15 +633,26 @@ export class GameEngine {
     movePlayerToActionPoint(player, actionPoint) {
         if (!actionPoint) return;
 
-        // Set player path to action point
-       const path = this.world.findPath(player.position, {
+        // First, find the nearest walkable tile to the desired action point.
+        // This prevents pathfinding from failing if the point is inside an object.
+        const targetDestination = this.world.findNearestWalkablePosition({
             x: actionPoint.x,
             y: actionPoint.y
         });
 
+        if (!targetDestination) {
+            console.warn(`Could not find a walkable path to the action point for ${player.name}.`);
+            return;
+        }
+
+        // Set player path to the validated, walkable destination
+        const path = this.world.findPath(player.position, targetDestination);
+
         if (path && path.length > 0) {
             player.path = path;
-            console.log(`🚶 Moving ${player.name} to action point`);
+            console.log(`🚶 Moving ${player.name} to action point near (${Math.round(actionPoint.x)}, ${Math.round(actionPoint.y)})`);
+        } else {
+            console.log(`❌ No valid path could be found for ${player.name}, even to the nearest walkable tile.`);
         }
     }
 
@@ -725,6 +736,7 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
+
 
 
 
