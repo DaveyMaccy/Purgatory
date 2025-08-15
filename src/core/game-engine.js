@@ -594,13 +594,6 @@ export class GameEngine {
         }
     }
 
-        this.movePlayerToActionPoint(player, actionPoint);
-
-        if (window.uiUpdater) {
-            window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Uses the whiteboard for presentation`);
-        }
-    }
-
     /**
     * Find couch action point for TV/games
     */
@@ -634,7 +627,7 @@ export class GameEngine {
         // Set player path to the validated, walkable destination
         const path = this.world.findPath(player.position, targetDestination);
 
-        / A new path assignment cancels any previously queued action.
+        // A new path assignment cancels any previously queued action.
         if (player.queuedAction) {
             console.log(`Movement overrides queued action for ${player.name}. Action cancelled.`);
             player.queuedAction = null;
@@ -728,6 +721,7 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
+
 
 
 
