@@ -401,7 +401,7 @@ generateNavGridForActiveArea() {
         };
         
         // If the target's tile is walkable, return the CENTER of that tile.
-        // This is the fix for characters walking on grid lines.
+        // CRITICAL FIX: Always return centered coordinates for ANY walkable position
         if (this.isPositionWalkable(targetPos.x, targetPos.y)) {
             return {
                 x: (targetTile.x * this.TILE_SIZE) + (this.TILE_SIZE / 2),
@@ -695,6 +695,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
