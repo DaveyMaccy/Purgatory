@@ -54,10 +54,11 @@ export class Character {
         
         // Needs - FIXED: Use provided needs or defaults
         this.needs = characterData.needs || {
-            energy: 8,
-            hunger: 6,
-            social: 7,
-            stress: 3
+            energy: 80,
+            hunger: 60,
+            social: 70,
+            stress: 30,
+            bladder: 80
         };
         
         // Relationships (map of characterId -> relationship score)
@@ -610,3 +611,4 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
+
