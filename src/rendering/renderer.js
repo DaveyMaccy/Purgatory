@@ -361,9 +361,12 @@ export class Renderer {
 
             sprite.width = this.CHARACTER_WIDTH;
             sprite.height = this.CHARACTER_HEIGHT;
-            sprite.anchor.set(0.5, 1.0);
+            // CRITICAL FIX: Anchor at (0.5, 0.5) for center positioning, not (0.5, 1.0) for bottom
+            sprite.anchor.set(0.5, 0.5);
             sprite.x = character.position?.x || 100;
             sprite.y = character.position?.y || 100;
+            
+            console.error(`[RENDERER DEBUG] Character ${character.name} sprite positioned at (${sprite.x}, ${sprite.y})`);
 
             sprite.animationState = {
                 name: 'idle',
