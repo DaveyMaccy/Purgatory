@@ -500,11 +500,7 @@ generateNavGridForActiveArea() {
 
        console.log('✅ Initial task assignment complete');
         
-        // Initialize world items AFTER characters are loaded to preserve character inventories
-        if (this.worldStateManager) {
-            this.worldStateManager.initializeWorldItems();
-        }
-    }
+        // World item initialization is now handled by the GameCoordinator during startup.
 
     /**
      * PRESERVED: Get a spawn position that avoids obstacles
@@ -676,6 +672,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
