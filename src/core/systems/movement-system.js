@@ -77,7 +77,4 @@ export class MovementSystem {
         // Notify observers of the position change for rendering.
         character.notifyObservers('position');
     }
-
-
-
-
+}
