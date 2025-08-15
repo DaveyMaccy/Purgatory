@@ -468,6 +468,12 @@ generateNavGridForActiveArea() {
     // Use the NavGrid's findPath method
     if (this.navGridInstance) {
         const tilePath = this.navGridInstance.findPath(startTile, endTile);
+        
+        // If a path is found, remove the first node (which is the starting tile).
+        // This ensures the character immediately moves towards the next tile's center.
+        if (tilePath.length > 0) {
+            tilePath.shift();
+        }
 
         // Convert tile path back to PIXEL coordinates, re-adding the offset
         return tilePath.map(tile => ({
@@ -672,6 +678,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
