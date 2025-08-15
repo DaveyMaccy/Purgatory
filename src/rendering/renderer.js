@@ -232,9 +232,14 @@ export class Renderer {
             this.app.stage.addChild(this.worldContainer);
 
             this.mapLayer = new PIXI.Container();
+            this.objectLayer = new PIXI.Container();
             this.characterLayer = new PIXI.Container();
             this.worldContainer.addChild(this.mapLayer);
+            this.worldContainer.addChild(this.objectLayer);
             this.worldContainer.addChild(this.characterLayer);
+
+            // Set up world click detection
+            this.setupWorldClickDetection();
 
             this.setupResizeListener();
 
@@ -366,6 +371,20 @@ export class Renderer {
                 frame: 0,
                 timer: 0,
             };
+            // Make character sprite interactive for clicking
+            sprite.interactive = true;
+            sprite.buttonMode = true;
+            sprite.on('click', (event) => {
+                event.stopPropagation();
+                console.log(`🖱️ Character clicked: ${character.name}`);
+                if (window.gameEngine && window.gameEngine.onCharacterClick) {
+                    window.gameEngine.onCharacterClick(character, {
+                        x: event.data.global.x,
+                        y: event.data.global.y
+                    });
+                }
+            });
+
             sprite.characterId = character.id;
             this.characterLayer.addChild(sprite);
             this.characterSprites.set(character.id, sprite);
@@ -660,6 +679,115 @@ createTileSprite(gid) {
                 }
             }
         }
+    }
+
+    /**
+    * Setup world click detection for objects and containers
+    */
+    setupWorldClickDetection() {
+        // Make the world container interactive for object detection
+        this.worldContainer.interactive = true;
+        this.worldContainer.on('click', (event) => {
+            const worldPos = {
+                x: event.data.global.x - this.worldContainer.x,
+                y: event.data.global.y - this.worldContainer.y
+            };
+
+            // Check for object interactions first
+            const clickedObject = this.findObjectAtPosition(worldPos);
+            if (clickedObject) {
+                console.log(`🖱️ Object clicked: ${clickedObject.name}`);
+                if (window.gameEngine && window.gameEngine.onObjectClick) {
+                    window.gameEngine.onObjectClick(clickedObject, {
+                        x: event.data.global.x,
+                        y: event.data.global.y
+                    });
+                }
+            } else {
+                // Handle world click for movement
+                if (window.handleWorldClick) {
+                    window.handleWorldClick(event.data.originalEvent);
+                }
+            }
+        });
+    }
+
+    /**
+    * Find clickable object at world position
+    */
+    findObjectAtPosition(worldPos) {
+        if (!this.mapData || !this.mapData.layers) return null;
+
+        // Find object layer
+        const objectLayer = this.mapData.layers.find(layer =>
+            layer.type === 'objectgroup' && layer.name === 'Object Layer 1'
+        );
+
+        if (!objectLayer || !objectLayer.objects) return null;
+
+        // Check each object for collision with click position
+        for (const obj of objectLayer.objects) {
+            if (worldPos.x >= obj.x &&
+                worldPos.x <= obj.x + obj.width &&
+                worldPos.y >= obj.y &&
+                worldPos.y <= obj.y + obj.height) {
+
+                // Return object with interaction metadata
+                return {
+                    name: obj.name,
+                    type: obj.type,
+                    x: obj.x,
+                    y: obj.y,
+                    width: obj.width,
+                    height: obj.height,
+                    isContainer: this.isContainerObject(obj),
+                    hasSpecialAction: this.hasSpecialAction(obj),
+                    actionPoint: this.getActionPoint(obj)
+                };
+            }
+        }
+
+        return null;
+    }
+
+    /**
+    * Check if object is a container
+    */
+    isContainerObject(obj) {
+        const containerTypes = ['desk', 'storage', 'food_and_drink'];
+        return containerTypes.includes(obj.type) ||
+            obj.name.includes('shelf') ||
+            obj.name.includes('desk') ||
+            obj.name.includes('cabinet');
+    }
+
+    /**
+    * Check if object has special actions
+    */
+    hasSpecialAction(obj) {
+        const specialObjects = [
+            'coffee_machine', 'coffee_station', 'vending_machine',
+            'tv', 'games_console', 'whiteboard', 'printer',
+            'bathroom_stall', 'couch', 'break_room_tv'
+        ];
+
+        return specialObjects.some(special => obj.name.includes(special));
+    }
+
+    /**
+    * Get action point for object (where character should stand)
+    */
+    getActionPoint(obj) {
+        // Calculate action point based on object center and type
+        const centerX = obj.x + (obj.width / 2);
+        const centerY = obj.y + (obj.height / 2);
+
+        // For most objects, action point is in front (below the object)
+        return {
+            x: centerX,
+            y: obj.y + obj.height + 20, // 20 pixels in front
+            facing: 'up' // Character faces toward object
+        };
     }
 
     updateSpriteVisualFrame(sprite) {
