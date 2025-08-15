@@ -6,6 +6,7 @@
 
 import { GameEngine } from './game-engine.js';
 import { CharacterManager } from './characters/character-manager.js';
+import { UIManager } from '../ui/ui-manager.js';
 import { UIUpdater } from '../ui/ui-updater.js';
 import { Renderer } from '../rendering/renderer.js';
 import { loadMapData } from './world/world.js';
@@ -78,10 +79,13 @@ export async function startGameSimulation(charactersFromCreator) {
             window.renderer.setPlayerCharacter(playerCharacter.id);
         }
         
+       // Initialize UI systems
+        window.uiManager = new UIManager();
+        await window.uiManager.initialize();
+        
        // Initialize UI updater for real-time status updates
         window.uiUpdater = new UIUpdater(window.characterManager);
-        console.log('✅ UI updater initialized');
-        
+        console.log('✅ UI systems initialized');
         // Setup player input handling
         const { setupGameInputHandlers } = await import('../input/input-handler.js');
         setupGameInputHandlers();
