@@ -715,13 +715,20 @@ createTileSprite(gid) {
                 console.log(`[Renderer] Ground clicked at world position: (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)})`);
                 const player = window.characterManager?.getPlayerCharacter();
                 if (player) {
-                    // CENTER CLICK TO TILE: This ensures characters move to tile centers
-                    const TILE_SIZE = 48;
+                    // THE FOUNDATIONAL FIX:
+                    // The world has a negative offset. We MUST account for it when calculating
+                    // the target tile from a world-space mouse click.
+                    const TILE_SIZE = window.gameEngine.world.TILE_SIZE;
+                    const worldBounds = window.gameEngine.world.worldBounds;
+
+                    const targetTileX = Math.floor(worldPos.x / TILE_SIZE);
+                    const targetTileY = Math.floor(worldPos.y / TILE_SIZE);
+
+                    // Now, convert that global tile coordinate back to a perfectly centered PIXEL coordinate.
                     const centeredWorldPos = {
-                        x: Math.floor(worldPos.x / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2),
-                        y: Math.floor(worldPos.y / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2)
+                        x: (targetTileX * TILE_SIZE) + (TILE_SIZE / 2),
+                        y: (targetTileY * TILE_SIZE) + (TILE_SIZE / 2)
                     };
-                    console.log(`[Renderer] Centered to tile: (${centeredWorldPos.x}, ${centeredWorldPos.y})`);
                     
                     const path = window.gameEngine.world.findPath(player.position, centeredWorldPos);
                     if (path && path.length > 0) {
