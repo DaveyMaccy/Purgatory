@@ -37,7 +37,7 @@ export class MovementSystem {
             character.facingDirection = overall_dy > 0 ? 'down' : 'up';
         }
 
-        // 2. CALCULATE MOVEMENT
+       // 2. CALCULATE MOVEMENT
         const dx = target.x - character.position.x;
         const dy = target.y - character.position.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -47,14 +47,10 @@ export class MovementSystem {
         // If the remaining distance is less than the distance we would move in this frame,
         // it means we have arrived at the waypoint.
         if (distance <= moveDistance || distance < this.ARRIVAL_THRESHOLD) {
-            // THE CORE FIX: Instead of snapping to the (potentially flawed) target coordinate,
-            // we calculate the mathematical center of the target's tile and snap to that.
-            // This guarantees a perfectly centered final position.
-            const targetTileX = Math.floor(target.x / TILE_SIZE);
-            const targetTileY = Math.floor(target.y / TILE_SIZE);
-            character.position.x = (targetTileX * TILE_SIZE) + (TILE_SIZE / 2);
-            character.position.y = (targetTileY * TILE_SIZE) + (TILE_SIZE / 2);
-
+            // SNAP TO EXACT TARGET: The target from findPath is already centered
+            // We trust the pathfinding system's centered coordinates
+            character.position.x = target.x;
+            character.position.y = target.y;
             // Remove the reached waypoint from the path.
             character.path.shift();
 
@@ -78,3 +74,4 @@ export class MovementSystem {
         character.notifyObservers('position');
     }
 }
+
