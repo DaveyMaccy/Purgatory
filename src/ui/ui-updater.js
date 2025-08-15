@@ -61,7 +61,7 @@ export class UIUpdater {
             } else if (property === 'mood') {
                 this.updateCharacterBasics(character);
             }
-            console.log(`🔄 Observer update: ${character.name} ${property}`);
+            // console.log(`🔄 Observer update: ${character.name} ${property}`);
         }
     }
 
@@ -84,7 +84,7 @@ export class UIUpdater {
             this.updateRelationshipsTab(character);
             
             this.lastFocusCharacter = character;
-            console.log(`✅ UI updated successfully for ${character.name}`);
+            // console.log(`✅ UI updated successfully for ${character.name}`);
             
         } catch (error) {
             console.error('❌ Error updating UI:', error);
@@ -726,6 +726,7 @@ export function startUIUpdateLoop() {
     updateUILoop();
     console.log('✅ UI update loop started');
 }
+
 
 
 
