@@ -695,9 +695,11 @@ createTileSprite(gid) {
 
             const clickedObject = this.findObjectAtPosition(worldPos);
             
-            if (clickedObject) {
+            // THE DEFINITIVE FIX: Check if the clicked object is a real, interactable object,
+            // and NOT just an invisible 'room' object.
+            if (clickedObject && clickedObject.type !== 'room') {
                 // --- OBJECT CLICK LOGIC ---
-                console.log(`[Renderer] Object clicked: ${clickedObject.name}`);
+                console.log(`[Renderer] INTERACTABLE Object clicked: ${clickedObject.name}`);
                 if (window.gameEngine && window.gameEngine.onObjectClick) {
                     window.gameEngine.onObjectClick(clickedObject, {
                         x: event.data.global.x,
@@ -706,17 +708,18 @@ createTileSprite(gid) {
                 }
             } else {
                 // --- GROUND CLICK LOGIC ---
+                // This code now runs if the click was on empty ground OR on a 'room' object.
                 console.log(`[Renderer] Ground clicked at world position: (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)})`);
                 const player = window.characterManager?.getPlayerCharacter();
                 if (player) {
                     const path = window.gameEngine.world.findPath(player.position, worldPos);
                     if (path && path.length > 0) {
-                        player.path = path;
-                        // Clear any queued action when the player is given a manual move order.
+                        // A new manual move command ALWAYS cancels a queued action.
                         if (player.queuedAction) {
                             player.queuedAction = null;
                             console.log("Action cancelled by manual movement.");
                         }
+                        player.path = path;
                     }
                 }
             }
