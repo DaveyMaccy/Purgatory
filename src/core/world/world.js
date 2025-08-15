@@ -507,6 +507,7 @@ generateNavGridForActiveArea() {
        console.log('✅ Initial task assignment complete');
         
         // World item initialization is now handled by the GameCoordinator during startup.
+    }
 
     /**
      * PRESERVED: Get a spawn position that avoids obstacles
@@ -678,6 +679,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
