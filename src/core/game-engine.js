@@ -200,6 +200,7 @@ export class GameEngine {
     * Handle character click events with popup interaction
     */
     onCharacterClick(character, clickPosition) {
+        if (window.uiManager) window.uiManager.closeAllPopups();
         console.log(`🖱️ Character clicked in game engine: ${character.name}`);
 
         const player = this.characterManager.getPlayerCharacter();
@@ -216,20 +217,79 @@ export class GameEngine {
         }
     }
 
-    /**
+   /**
     * Handle object click events
     */
     onObjectClick(clickedObject, clickPosition) {
+        if (window.uiManager) window.uiManager.closeAllPopups();
         console.log(`🖱️ Object clicked: ${clickedObject.name} (${clickedObject.type})`);
 
         const player = this.characterManager.getPlayerCharacter();
         if (!player) return;
 
-        // Show appropriate popup based on object type
+        const options = [];
+
+        // 1. Add container-related options
         if (clickedObject.isContainer) {
-            this.showContainerInteractionPopup(clickedObject, clickPosition, player);
-        } else if (clickedObject.hasSpecialAction) {
-            this.showObjectInteractionPopup(clickedObject, clickPosition, player);
+            options.push({
+                text: 'Search',
+                action: () => this.showContainerItemPopup(clickedObject, clickPosition, player)
+            });
+        }
+
+        // 2. Add special actions
+        if (clickedObject.hasSpecialAction) {
+            this.addSpecialActions(options, clickedObject, player);
+        }
+
+        // 3. Show the combined popup if any options were found
+        if (options.length > 0) {
+            window.uiManager.showPopup(clickedObject.name, options, clickPosition);
+        }
+    }
+    
+    /**
+     * NEW HELPER: Opens the second-level menu showing container items.
+     */
+    showContainerItemPopup(container, position, player) {
+        const items = this.getContainerContents(container);
+
+        const onTakeItem = (item) => {
+            this.takeItemFromContainer(player, container, item);
+        };
+
+        const onGiveItem = (item) => {
+            this.giveItemToContainer(player, container, item);
+        };
+
+        if (window.uiManager) {
+            // This function from ui-manager.js handles creating the item list popup
+            window.uiManager.showSearchResultsPopup(container.name, items, position, onTakeItem, onGiveItem);
+        }
+    }
+    
+    /**
+     * NEW HELPER: Populates an options array with special actions for an object.
+     */
+    addSpecialActions(options, obj, player) {
+        if (obj.name.includes('desk')) {
+            options.push({ text: 'Work on Task', action: () => this.workAtDesk(player, obj) });
+            options.push({ text: 'Browse Web', action: () => this.browseWeb(player, obj) });
+        }
+        if (obj.name.includes('coffee')) {
+            options.push({ text: 'Make Coffee', action: () => this.makeCoffee(player, obj) });
+        }
+        if (obj.name.includes('tv')) {
+            options.push({ text: 'Watch TV', action: () => this.watchTV(player, obj) });
+        }
+        if (obj.name.includes('games_console')) {
+            options.push({ text: 'Play Games', action: () => this.playGames(player, obj) });
+        }
+        if (obj.name.includes('bathroom_stall')) {
+            options.push({ text: 'Use Bathroom', action: () => this.useBathroom(player, obj) });
+        }
+        if (obj.name.includes('whiteboard')) {
+            options.push({ text: 'Use Whiteboard', action: () => this.useWhiteboard(player, obj) });
         }
     }
 
@@ -574,9 +634,9 @@ export class GameEngine {
         if (!actionPoint) return;
 
         // Set player path to action point
-        const path = this.world.findPath(player.position, {
+       const path = this.world.findPath(player.position, {
             x: actionPoint.x,
-            y: action.y
+            y: actionPoint.y
         });
 
         if (path && path.length > 0) {
@@ -665,6 +725,7 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
+
 
 
 
