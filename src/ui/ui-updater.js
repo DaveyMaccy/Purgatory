@@ -335,17 +335,19 @@ export class UIUpdater {
         if (character.inventory && character.inventory.length > 0) {
             character.inventory.forEach(item => {
                 const li = document.createElement('li');
-                li.className = 'p-2 bg-gray-50 border border-gray-200 rounded text-sm';
+                li.className = 'p-2 bg-gray-50 border border-gray-200 rounded text-sm cursor-pointer hover:bg-gray-100';
                 
-                // HANDLE BOTH STRING AND OBJECT FORMATS
-                if (typeof item === 'string') {
-                    li.textContent = item;
-                } else if (item && item.originalString) {
-                    li.textContent = item.originalString;
-                } else if (item) {
-                    li.textContent = item.name || item.type || 'Unknown Item';
+                const itemId = typeof item === 'object' ? (item.id || item.originalString) : item;
+                const itemData = window.getItemById ? window.getItemById(itemId) : { name: itemId, id: itemId };
+
+                if (itemData) {
+                    li.textContent = itemData.name;
+
+                    li.addEventListener('click', (event) => {
+                        this.handleInventoryItemClick(itemData, event, character);
+                    });
                 } else {
-                    li.textContent = 'Unknown Item';
+                     li.textContent = itemId;
                 }
                 
                 inventoryList.appendChild(li);
@@ -529,15 +531,63 @@ export class UIUpdater {
         });
     }
 
-    /**
-     * Get color for relationship score
-     */
     getRelationshipColor(score) {
         if (score >= 80) return '#10b981'; // green-500
         if (score >= 60) return '#3b82f6'; // blue-500
         if (score >= 40) return '#f59e0b'; // amber-500
         if (score >= 20) return '#ef4444'; // red-500
         return '#7f1d1d'; // red-900
+    }
+
+    /**
+    * Handle inventory item click
+    */
+    handleInventoryItemClick(item, event, character) {
+        if (!window.uiManager) return;
+
+        // Get click position
+        const rect = event.target.getBoundingClientRect();
+        const position = {
+            x: rect.left,
+            y: rect.bottom + 5
+        };
+
+        // Define actions for inventory items
+        const actions = {
+            eat: (item) => {
+                if (window.useItem) {
+                    const success = window.useItem(character, item.id, 'eat');
+                    if (success) {
+                        this.addChatMessage(`<strong>${character.name}:</strong> Ate ${item.name}`);
+                        this.updateUI(character);
+                    }
+                }
+            },
+            drink: (item) => {
+                if (window.useItem) {
+                    const success = window.useItem(character, item.id, 'drink');
+                    if (success) {
+                        this.addChatMessage(`<strong>${character.name}:</strong> Drank ${item.name}`);
+                        this.updateUI(character);
+                    }
+                }
+            },
+            use: (item) => {
+                if (window.useItem) {
+                    const success = window.useItem(character, item.id, 'use');
+                    if (success) {
+                        this.addChatMessage(`<strong>${character.name}:</strong> Used ${item.name}`);
+                        this.updateUI(character);
+                    }
+                }
+            },
+            useWith: (item) => {
+                this.addChatMessage(`<strong>System:</strong> Click on an object to use ${item.name} with it.`);
+                // TODO: Implement use-with system
+            }
+        };
+
+        window.uiManager.showInventoryItemPopup(item, position, actions);
     }
 
     /**
@@ -676,6 +726,7 @@ export function startUIUpdateLoop() {
     updateUILoop();
     console.log('✅ UI update loop started');
 }
+
 
 
 
