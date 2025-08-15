@@ -252,7 +252,8 @@ export class GameEngine {
      * NEW HELPER: Opens the second-level menu showing container items.
      */
     showContainerItemPopup(container, position, player) {
-        const items = this.getContainerContents(container);
+        // Get real items from the world state manager, not a placeholder
+        const items = this.world.worldStateManager.getItemsAtLocation(container.name);
 
         const onTakeItem = (item) => {
             this.takeItemFromContainer(player, container, item);
@@ -263,11 +264,9 @@ export class GameEngine {
         };
 
         if (window.uiManager) {
-            // This function from ui-manager.js handles creating the item list popup
             window.uiManager.showSearchResultsPopup(container.name, items, position, onTakeItem, onGiveItem);
         }
     }
-    
     /**
      * NEW HELPER: Populates an options array with special actions for an object.
      */
@@ -401,212 +400,199 @@ export class GameEngine {
         }
     }
 
-    /**
-    * Get container contents
-    */
-    getContainerContents(container) {
-        // TODO: Implement proper container system
-        // For now, return some example items based on container type
-        const exampleItems = {
-            'desk': [
-                { id: 'pen', name: 'Pen' },
-                { id: 'documents', name: 'Documents' }
-            ],
-            'storage': [
-                { id: 'office_supplies', name: 'Office Supplies' }
-            ],
-            'food_and_drink': [
-                { id: 'energy_bar', name: 'Energy Bar' },
-                { id: 'coffee_mug_empty', name: 'Empty Coffee Mug' }
-            ]
-        };
-
-        return exampleItems[container.type] || [];
-    }
 
     /**
-    * Take item from container
-    */
+     * NEW: Queues a "take item" action.
+     */
     takeItemFromContainer(player, container, item) {
-        // Move player to container if needed
-        if (container.actionPoint) {
-            this.movePlayerToActionPoint(player, container.actionPoint);
-        }
-
-        // Add item to inventory
-        if (window.addItemToInventory) {
-            const success = window.addItemToInventory(player, item.id, 1);
-            if (success && window.uiUpdater) {
-                window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Took ${item.name} from ${container.name}`);
-                window.uiUpdater.updateUI(player);
-            }
-        }
+        player.queuedAction = {
+            type: 'TAKE_ITEM',
+            target: container,
+            payload: item
+        };
+        this.movePlayerToActionPoint(player, container.actionPoint);
     }
 
     /**
-    * Give item to container
-    */
+     * NEW: Queues a "give item" action.
+     */
     giveItemToContainer(player, container, item) {
-        // Move player to container if needed
-        if (container.actionPoint) {
-            this.movePlayerToActionPoint(player, container.actionPoint);
-        }
-
-        // Remove item from inventory
-        if (window.removeItemFromInventory) {
-            const itemId = typeof item === 'object' ? item.id : item;
-            const success = window.removeItemFromInventory(player, itemId, 1);
-            if (success && window.uiUpdater) {
-                const itemObj = window.getItemById ? window.getItemById(itemId) : { name: itemId };
-                window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Put ${itemObj.name} in ${container.name}`);
-                window.uiUpdater.updateUI(player);
-            }
-        }
+        player.queuedAction = {
+            type: 'GIVE_ITEM',
+            target: container,
+            payload: item
+        };
+        this.movePlayerToActionPoint(player, container.actionPoint);
     }
 
     /**
-    * Work at desk
-    */
+     * NEW: Queues a "work at desk" action.
+     */
     workAtDesk(player, desk) {
+        player.queuedAction = {
+            type: 'WORK_AT_DESK',
+            target: desk
+        };
         this.movePlayerToActionPoint(player, desk.actionPoint);
-
-        if (player.assignedTask) {
-            // Progress task
-            const progressAmount = 0.2;
-            if (!player.assignedTask.progress) {
-                player.assignedTask.progress = 0;
-            }
-            player.assignedTask.progress = Math.min(1.0,
-                player.assignedTask.progress + progressAmount);
-
-            if (window.uiUpdater) {
-                if (player.assignedTask.progress >= 1.0) {
-                    player.completeCurrentTask();
-                    window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Completed task at desk! New task assigned.`);
-                } else {
-                    window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Working on ${player.assignedTask.displayName} - ${Math.round(player.assignedTask.progress * 100)}% complete`);
-                }
-                window.uiUpdater.updateUI(player);
-            }
-        } else {
-            if (window.uiUpdater) {
-                window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> No task assigned to work on.`);
-            }
-        }
     }
 
     /**
-    * Browse web at desk
-    */
+     * NEW: Queues a "browse web" action.
+     */
     browseWeb(player, desk) {
+        player.queuedAction = {
+            type: 'BROWSE_WEB',
+            target: desk
+        };
         this.movePlayerToActionPoint(player, desk.actionPoint);
-
-        // Reduce stress but don't count as task work
-        player.needs.stress = Math.max(0, player.needs.stress - 20);
-
-        if (window.uiUpdater) {
-            window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Browses the web (stress reduced)`);
-            window.uiUpdater.updateUI(player);
-        }
     }
 
     /**
-    * Make coffee
-    */
+     * NEW: Queues a "make coffee" action.
+     */
     makeCoffee(player, coffeeStation) {
+        player.queuedAction = {
+            type: 'MAKE_COFFEE',
+            target: coffeeStation
+        };
         this.movePlayerToActionPoint(player, coffeeStation.actionPoint);
-
-        // Check if player has empty mug
-        const hasEmptyMug = player.inventory?.some(item => {
-            const itemId = typeof item === 'object' ? item.id : item;
-            return itemId === 'coffee_mug_empty';
-        });
-
-        if (hasEmptyMug) {
-            // Replace empty mug with full mug
-            if (window.removeItemFromInventory && window.addItemToInventory) {
-                window.removeItemFromInventory(player, 'coffee_mug_empty', 1);
-                window.addItemToInventory(player, 'coffee_mug_full', 1);
-
-                if (window.uiUpdater) {
-                    window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Made fresh coffee!`);
-                    window.uiUpdater.updateUI(player);
-                }
-            }
-        } else {
-            // Give them a full coffee mug
-            if (window.addItemToInventory) {
-                window.addItemToInventory(player, 'coffee_mug_full', 1);
-
-                if (window.uiUpdater) {
-                    window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Made coffee and took a mug!`);
-                    window.uiUpdater.updateUI(player);
-                }
-            }
-        }
     }
 
     /**
-    * Watch TV
-    */
+     * NEW: Queues a "watch TV" action.
+     */
     watchTV(player, tv) {
-        // Move to couch if available, otherwise stand in front of TV
-        const actionPoint = tv.name.includes('break_room') ?
-            this.findCouchActionPoint() : tv.actionPoint;
-
+        const actionPoint = tv.name.includes('break_room') ? this.findCouchActionPoint() : tv.actionPoint;
+        player.queuedAction = {
+            type: 'WATCH_TV',
+            target: tv
+        };
         this.movePlayerToActionPoint(player, actionPoint);
-
-        // Reduce stress
-        player.needs.stress = Math.max(0, player.needs.stress - 30);
-
-        if (window.uiUpdater) {
-            window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Watches TV (stress reduced)`);
-            window.uiUpdater.updateUI(player);
-        }
     }
 
     /**
-    * Play games
-    */
+     * NEW: Queues a "play games" action.
+     */
     playGames(player, gamesConsole) {
-        // Move to couch facing TV
         const actionPoint = this.findCouchActionPoint();
+        player.queuedAction = {
+            type: 'PLAY_GAMES',
+            target: gamesConsole
+        };
         this.movePlayerToActionPoint(player, actionPoint);
-
-        // Reduce stress significantly
-        player.needs.stress = Math.max(0, player.needs.stress - 40);
-
-        if (window.uiUpdater) {
-            window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Plays games (stress greatly reduced)`);
-            window.uiUpdater.updateUI(player);
-        }
     }
 
     /**
-    * Use bathroom
-    */
+     * NEW: Queues a "use bathroom" action.
+     */
     useBathroom(player, bathroom) {
+        player.queuedAction = {
+            type: 'USE_BATHROOM',
+            target: bathroom
+        };
         this.movePlayerToActionPoint(player, bathroom.actionPoint);
-
-        // Restore bladder need
-        player.needs.bladder = 100;
-
-        if (window.uiUpdater) {
-            window.uiUpdater.addChatMessage(`<strong>${player.name}:</strong> Uses the bathroom`);
-            window.uiUpdater.updateUI(player);
-        }
     }
 
     /**
-    * Use whiteboard
-    */
+     * NEW: Queues a "use whiteboard" action.
+     */
     useWhiteboard(player, whiteboard) {
-        // Stand at action point facing the meeting room table
         const actionPoint = {
             x: whiteboard.x + (whiteboard.width / 2),
             y: whiteboard.y + whiteboard.height + 20,
             facing: 'up'
         };
+        player.queuedAction = {
+            type: 'USE_WHITEBOARD',
+            target: whiteboard
+        };
+        this.movePlayerToActionPoint(player, actionPoint);
+    }
+
+    /**
+     * NEW: Main action executor, called by the movement system upon arrival.
+     */
+    executeAction(character, action) {
+        const { type, target, payload } = action;
+        const ui = window.uiUpdater;
+
+        switch (type) {
+            case 'TAKE_ITEM':
+                this.world.worldStateManager.pickupItemFromLocation(character, target.name, payload.id, 1);
+                break;
+
+            case 'GIVE_ITEM':
+                const itemId = typeof payload === 'object' ? payload.id : payload;
+                this.world.worldStateManager.dropItemAtLocation(character, target.name, itemId, 1);
+                break;
+
+            case 'WORK_AT_DESK':
+                if (character.assignedTask) {
+                    const progressAmount = 0.2;
+                    character.assignedTask.progress = Math.min(1.0, (character.assignedTask.progress || 0) + progressAmount);
+                    if (ui) {
+                        if (character.assignedTask.progress >= 1.0) {
+                            character.completeCurrentTask();
+                            ui.addChatMessage(`<strong>${character.name}:</strong> Completed task at desk!`);
+                        } else {
+                            ui.addChatMessage(`<strong>${character.name}:</strong> Worked on ${character.assignedTask.displayName}.`);
+                        }
+                        ui.updateUI(character);
+                    }
+                } else if (ui) {
+                    ui.addChatMessage(`<strong>${character.name}:</strong> No task assigned to work on.`);
+                }
+                break;
+
+            case 'BROWSE_WEB':
+                character.needs.stress = Math.max(0, character.needs.stress - 20);
+                if (ui) {
+                    ui.addChatMessage(`<strong>${character.name}:</strong> Browses the web (stress reduced).`);
+                    ui.updateUI(character);
+                }
+                break;
+
+            case 'MAKE_COFFEE':
+                const hasEmptyMug = character.inventory?.some(item => (typeof item === 'object' ? item.id : item) === 'coffee_mug_empty');
+                if (hasEmptyMug) {
+                    window.removeItemFromInventory(character, 'coffee_mug_empty', 1);
+                    window.addItemToInventory(character, 'coffee_mug_full', 1);
+                    if (ui) ui.addChatMessage(`<strong>${character.name}:</strong> Made fresh coffee!`);
+                } else if (ui) {
+                    ui.addChatMessage(`<strong>${character.name}:</strong> Needs an empty mug to make coffee.`);
+                }
+                if (ui) ui.updateUI(character);
+                break;
+
+            case 'WATCH_TV':
+                character.needs.stress = Math.max(0, character.needs.stress - 30);
+                if (ui) {
+                    ui.addChatMessage(`<strong>${character.name}:</strong> Watches TV (stress reduced).`);
+                    ui.updateUI(character);
+                }
+                break;
+
+            case 'PLAY_GAMES':
+                character.needs.stress = Math.max(0, character.needs.stress - 40);
+                if (ui) {
+                    ui.addChatMessage(`<strong>${character.name}:</strong> Plays games (stress greatly reduced).`);
+                    ui.updateUI(character);
+                }
+                break;
+
+            case 'USE_BATHROOM':
+                character.needs.bladder = 100;
+                if (ui) {
+                    ui.addChatMessage(`<strong>${character.name}:</strong> Uses the bathroom.`);
+                    ui.updateUI(character);
+                }
+                break;
+
+            case 'USE_WHITEBOARD':
+                 if (ui) ui.addChatMessage(`<strong>${character.name}:</strong> Uses the whiteboard for a presentation.`);
+                 break;
+        }
+    }
 
         this.movePlayerToActionPoint(player, actionPoint);
 
@@ -648,6 +634,12 @@ export class GameEngine {
         // Set player path to the validated, walkable destination
         const path = this.world.findPath(player.position, targetDestination);
 
+        / A new path assignment cancels any previously queued action.
+        if (player.queuedAction) {
+            console.log(`Movement overrides queued action for ${player.name}. Action cancelled.`);
+            player.queuedAction = null;
+        }
+        
         if (path && path.length > 0) {
             player.path = path;
             console.log(`🚶 Moving ${player.name} to action point near (${Math.round(actionPoint.x)}, ${Math.round(actionPoint.y)})`);
@@ -736,6 +728,7 @@ export class GameEngine {
         console.log('🧹 Game engine destroyed');
     }
 }
+
 
 
 
