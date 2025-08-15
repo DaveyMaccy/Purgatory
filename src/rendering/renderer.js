@@ -167,7 +167,6 @@ const chairTiles = new Map([
 
 export class Renderer {
     constructor(containerElement) {
-        this.activeDoors = new Map(); // Tracks open doors { key: 'x,y', value: { sprite, originalRotation } }
         this.container = containerElement;
         this.app = null;
         this.worldContainer = null;
@@ -701,119 +700,75 @@ sprite.anchor.set(0.5, 0.5);
     updateAllCharacterAnimations(deltaTime) {
     if (!USE_ENHANCED_SPRITES) return;
 
-    const occupiedTiles = new Set();
-
     for (const sprite of this.characterSprites.values()) {
         const state = sprite.animationState;
+        
+        // --- Sitting Logic ---
+        // Convert sprite's pixel position to tile coordinates
         const tileX = Math.floor(sprite.x / this.TILE_SIZE);
         const tileY = Math.floor(sprite.y / this.TILE_SIZE);
         const tileKey = `${tileX},${tileY}`;
-        occupiedTiles.add(tileKey);
         
-        // --- Door Logic ---
-        const navGrid = window.gameEngine.world.navGridInstance;
-        if (navGrid) {
-            const isHorizontalGap = !navGrid.isWalkable(tileX - 1, tileY) && !navGrid.isWalkable(tileX + 1, tileY);
-            const isVerticalGap = !navGrid.isWalkable(tileX, tileY - 1) && !navGrid.isWalkable(tileX, tileY + 1);
-
-            if (isHorizontalGap || isVerticalGap) {
-                const doorSprite = this.findTileSpriteAt('Tile Layer 4', tileX, tileY);
-                if (doorSprite && !this.activeDoors.has(tileKey)) {
-                    this.activeDoors.set(tileKey, { sprite: doorSprite, originalRotation: doorSprite.rotation });
-                    doorSprite.rotation -= Math.PI / 2; // 90 degrees counter-clockwise
-                }
-            }
-        }
-
-        /**
- * Helper function to find a specific tile sprite in the rendered world.
- * @param {string} layerName - The name of the layer to search in (e.g., 'Tile Layer 4').
- * @param {number} globalTileX - The tile's X coordinate in the world.
- * @param {number} globalTileY - The tile's Y coordinate in the world.
- * @returns {PIXI.Sprite|null} The sprite object or null if not found.
- */
-findTileSpriteAt(layerName, globalTileX, globalTileY) {
-    // This assumes a uniform chunk size, which is common in Tiled.
-    const CHUNK_WIDTH = 16;
-    const CHUNK_HEIGHT = 16;
-
-    // 1. Determine which chunk the tile belongs to.
-    const chunkTileX = Math.floor(globalTileX / CHUNK_WIDTH) * CHUNK_WIDTH;
-    const chunkTileY = Math.floor(globalTileY / CHUNK_HEIGHT) * CHUNK_HEIGHT;
-    const chunkKey = `${layerName},${chunkTileX},${chunkTileY}`;
-    const chunkContainer = this.chunkContainers.get(chunkKey);
-
-    if (!chunkContainer) {
-        return null; // The chunk isn't rendered.
-    }
-
-    // 2. Calculate the tile's LOCAL pixel position within its chunk container.
-    // The rendered tile sprites are anchored at their center.
-    const localPixelX = (globalTileX % CHUNK_WIDTH) * this.TILE_SIZE + (this.TILE_SIZE / 2);
-    const localPixelY = (globalTileY % CHUNK_HEIGHT) * this.TILE_SIZE + (this.TILE_SIZE / 2);
-
-    // 3. Search for the child sprite at that precise local position.
-    for (const child of chunkContainer.children) {
-        if (child.x === localPixelX && child.y === localPixelY) {
-            return child;
-        }
-    }
-
-    return null; // No sprite found at the coordinates.
-}
-        
-        // --- Sitting Logic ---
         const chairData = chairTiles.get(tileKey);
+
         if (chairData) {
-            state.name = 'sit';
-            if (chairData.direction === 'east') {
-                state.direction = 'right';
-            } else if (chairData.direction === 'west') {
-                state.direction = 'left';
-            } else {
-                state.direction = chairData.direction;
-            }
-            if (chairData.offset) {
-                sprite.pivot.set(-chairData.offset.x, -chairData.offset.y);
-            } else {
-                sprite.pivot.set(0, 0);
-            }
+    // If on a chair tile, force the sit animation
+    state.name = 'sit';
+
+    // THE FIX: Translate the compass direction from the map ('east'/'west')
+    // into the key the animation data expects ('right'/'left').
+    if (chairData.direction === 'east') {
+        state.direction = 'right';
+    } else if (chairData.direction === 'west') {
+        state.direction = 'left';
+    } else {
+        // For 'up' and 'down', the names match, so no change is needed.
+        state.direction = chairData.direction;
+    }
+    
+    // Apply positional offset if one is defined
+    if (chairData.offset) {
+        sprite.pivot.set(-chairData.offset.x, -chairData.offset.y);
+    } else {
+        sprite.pivot.set(0, 0); // Reset pivot if not on an offset chair
+    }
         } else {
+            // If NOT on a chair tile, check if the character was sitting and needs to transition.
             if (state.name === 'sit') {
+                // The character just left a chair. Check the game state to see if they are moving.
                 const character = window.characterManager.getCharacter(sprite.characterId);
                 if (character && character.path && character.path.length > 0) {
-                    state.name = 'walking';
+                    state.name = 'walking'; // They have a path, so switch to walking instantly.
                 } else {
-                    state.name = 'idle';
+                    state.name = 'idle'; // They have no path, so switch to idle.
                 }
             }
-            sprite.pivot.set(0, 0);
+            sprite.pivot.set(0, 0); // Always reset the pivot when not on a chair.
         }
-        
+        // --- End Sitting Logic ---
+
         const anim = animationData[state.name];
         if (!anim) continue;
+
         state.timer += deltaTime;
         if (state.timer >= anim.frameSpeed) {
             state.timer -= anim.frameSpeed;
             let nextFrame = state.frame + 1;
+
             if (nextFrame >= anim.frames) {
-                if (anim.loop) nextFrame = 0;
-                else if (anim.loopSection) nextFrame = anim.loopSection.start;
-                else nextFrame = anim.frames - 1;
+                if (anim.loop) {
+                    nextFrame = 0;
+                } else if (anim.loopSection) {
+                    nextFrame = anim.loopSection.start;
+                } else {
+                    nextFrame = anim.frames - 1;
+                }
             }
+
             if (state.frame !== nextFrame) {
                 state.frame = nextFrame;
                 this.updateSpriteVisualFrame(sprite);
             }
-        }
-    }
-
-    // --- Reset Doors Logic ---
-    // Check if any active doors are no longer occupied and close them.
-    for (const [tileKey, door] of this.activeDoors.entries()) {
-        if (!occupiedTiles.has(tileKey)) {
-            door.sprite.rotation = door.originalRotation;
-            this.activeDoors.delete(tileKey);
         }
     }
 }
