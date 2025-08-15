@@ -470,12 +470,15 @@ export class Renderer {
         if (gid === 0) continue;
 
         const tileSprite = this.createTileSprite(gid);
-        if (tileSprite) {
-            const x = (i % chunk.width) * this.TILE_SIZE;
-            const y = Math.floor(i / chunk.width) * this.TILE_SIZE;
-            tileSprite.position.set(x, y);
-            chunkContainer.addChild(tileSprite);
-        }
+if (tileSprite) {
+    // Calculate the coordinate for the CENTER of the tile's destination.
+    const x = (i % chunk.width) * this.TILE_SIZE + (this.TILE_SIZE / 2);
+    const y = Math.floor(i / chunk.width) * this.TILE_SIZE + (this.TILE_SIZE / 2);
+
+    // Set the sprite's center-anchored position to the tile's center coordinate.
+    tileSprite.position.set(x, y);
+    chunkContainer.addChild(tileSprite);
+}
     }
 
     this.mapLayer.addChild(chunkContainer);
@@ -547,8 +550,9 @@ createTileSprite(gid) {
 const originalTileWidth = tilesetData.tilewidth;
 const originalTileHeight = tilesetData.tileheight;
 
-// Anchor point (0, 0) is the top-left corner, which is the standard for tile rendering.
-sprite.anchor.set(0, 0);
+// Set the anchor to the center (0.5, 0.5) so that rotations and flips
+// are calculated correctly around the tile's central point.
+sprite.anchor.set(0.5, 0.5);
     
     // STEP 1: DATA CORRECTION FOR THE ANOMALOUS TILE
     // We identify the anomalous Layer 4 tile by its cleanGid and correct its flags in memory.
