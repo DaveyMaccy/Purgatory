@@ -131,10 +131,21 @@ export class Character {
         if (!Array.isArray(itemArray)) return [];
         
         return itemArray.map(item => {
+            const itemString = (typeof item === 'string' ? item : item.id || '').toLowerCase();
+            let canonicalId = itemString.replace(/\s+/g, '_');
+
+            // Find the canonical item ID to fix issues like "char_0_Energy_Bar"
+            if (window.getAllItems) {
+                const allItems = window.getAllItems();
+                const foundItem = allItems.find(gameItem => itemString.includes(gameItem.name.toLowerCase()));
+                if (foundItem) {
+                    canonicalId = foundItem.id;
+                }
+            }
+
             if (typeof item === 'string') {
-                // Convert string to item object
                 return {
-                    id: item.toLowerCase().replace(/\s+/g, '_'),
+                    id: canonicalId,
                     originalString: item,
                     quantity: 1,
                     acquiredAt: Date.now()
@@ -614,5 +625,6 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
+
 
 
