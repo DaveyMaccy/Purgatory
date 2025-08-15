@@ -118,7 +118,7 @@ export class UIUpdater {
      * Update a single status bar
      */
     updateStatusBar(statName, value) {
-        const percentage = Math.round((value / 10) * 100);
+        const percentage = Math.round((value / 100) * 100);
         
         const valueElement = document.getElementById(`${statName}-value`);
         const barElement = document.getElementById(`${statName}-bar`);
@@ -676,6 +676,7 @@ export function startUIUpdateLoop() {
     updateUILoop();
     console.log('✅ UI update loop started');
 }
+
 
 
 
