@@ -488,10 +488,14 @@ generateNavGridForActiveArea() {
         }
 
         // Convert tile path back to PIXEL coordinates, re-adding the offset
-        return tilePath.map(tile => ({
-            x: ((tile.x + this.worldBounds.minX) * this.TILE_SIZE) + (this.TILE_SIZE / 2),
-            y: ((tile.y + this.worldBounds.minY) * this.TILE_SIZE) + (this.TILE_SIZE / 2)
-        }));
+        const pixelPath = tilePath.map(tile => {
+            const pixelX = ((tile.x + this.worldBounds.minX) * this.TILE_SIZE) + (this.TILE_SIZE / 2);
+            const pixelY = ((tile.y + this.worldBounds.minY) * this.TILE_SIZE) + (this.TILE_SIZE / 2);
+            console.error(`[FINDPATH DEBUG] Tile (${tile.x}, ${tile.y}) -> Pixel (${pixelX}, ${pixelY})`);
+            console.error(`[FINDPATH DEBUG] Should be centered: x%48=${pixelX % 48}, y%48=${pixelY % 48} (should be 24)`);
+            return { x: pixelX, y: pixelY };
+        });
+        return pixelPath;
     }
 
     return [];
@@ -698,6 +702,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
