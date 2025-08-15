@@ -55,7 +55,21 @@ if (typeof window.TASK_ACTIONS === 'undefined') {
     'meeting room': 'MOVE_TO_MEETING_ROOM',
     'break room': 'MOVE_TO_BREAK_ROOM',
     'printer': 'MOVE_TO_PRINTER',
-    'coffee machine': 'MOVE_TO_COFFEE_MACHINE'
+    'coffee machine': 'MOVE_TO_COFFEE_MACHINE',
+
+    // NEW: Object interaction actions
+    'search': 'SEARCH_CONTAINER',
+    'work on task': 'WORK_AT_DESK',
+    'browse web': 'BROWSE_WEB',
+    'make coffee': 'MAKE_COFFEE',
+    'watch tv': 'WATCH_TV',
+    'play games': 'PLAY_GAMES',
+    'use bathroom': 'USE_BATHROOM',
+    'use whiteboard': 'USE_WHITEBOARD',
+
+    // NEW: Character interaction actions
+    'ask for': 'ASK_FOR_ITEM',
+    'ask to use': 'ASK_TO_USE_OBJECT'
   };
 }
 
@@ -95,6 +109,26 @@ export function getActionDisplayText(keyword, actionType, playerCharacter) {
             return `Combine items`;
         case 'GIVE_ITEM':
             return `Give item to someone`;
+        case 'SEARCH_CONTAINER':
+            return `Search container`;
+        case 'WORK_AT_DESK':
+            return `Work on task at desk`;
+        case 'BROWSE_WEB':
+            return `Browse web (reduces stress)`;
+        case 'MAKE_COFFEE':
+            return `Make coffee`;
+        case 'WATCH_TV':
+            return `Watch TV (reduces stress)`;
+        case 'PLAY_GAMES':
+            return `Play games (reduces stress)`;
+        case 'USE_BATHROOM':
+            return `Use bathroom`;
+        case 'USE_WHITEBOARD':
+            return `Use whiteboard`;
+        case 'ASK_FOR_ITEM':
+            return `Ask for item`;
+        case 'ASK_TO_USE_OBJECT':
+            return `Ask to use object`;
         default:
             return keyword;
     }
