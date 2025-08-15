@@ -105,7 +105,10 @@ export class World {
 
         // NEW PROPERTIES FOR INFINITE MAP
         this.mapData = officeLayout; // Store the raw map data
-        this.TILE_SIZE = this.mapData.tilewidth || 48;
+        // CRITICAL FIX: Set TILE_SIZE only once and ensure it's always 48
+        this.TILE_SIZE = 48; // FORCE 48 pixels, ignore map data
+        console.error(`[WORLD DEBUG] TILE_SIZE forced to: ${this.TILE_SIZE}, map tilewidth was: ${this.mapData?.tilewidth}`);
+        
         this.worldBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 }; // To store the true map size in tiles
         this.chunks = new Map(); // To store data for loaded chunks, keyed by "x,y"
         this.activeChunks = new Set(); // To track the keys of currently visible chunks
@@ -123,9 +126,7 @@ export class World {
             console.log('✅ Task dictionary validated successfully');
         }
         
-        // TILE_SIZE is now a property of the World class, making it accessible
-        // to other modules like characterManager.js.
-        this.TILE_SIZE = officeLayout?.tilewidth || 48; // Standard tile size from map data
+        // REMOVED DUPLICATE TILE_SIZE ASSIGNMENT
         
         // World dimensions
         // Use actual layer dimensions to match renderer
@@ -697,6 +698,7 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
 
 
