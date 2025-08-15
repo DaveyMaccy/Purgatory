@@ -712,7 +712,15 @@ createTileSprite(gid) {
                 console.log(`[Renderer] Ground clicked at world position: (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)})`);
                 const player = window.characterManager?.getPlayerCharacter();
                 if (player) {
-                    const path = window.gameEngine.world.findPath(player.position, worldPos);
+                    // CENTER CLICK TO TILE: This ensures characters move to tile centers
+                    const TILE_SIZE = 48;
+                    const centeredWorldPos = {
+                        x: Math.floor(worldPos.x / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2),
+                        y: Math.floor(worldPos.y / TILE_SIZE) * TILE_SIZE + (TILE_SIZE / 2)
+                    };
+                    console.log(`[Renderer] Centered to tile: (${centeredWorldPos.x}, ${centeredWorldPos.y})`);
+                    
+                    const path = window.gameEngine.world.findPath(player.position, centeredWorldPos);
                     if (path && path.length > 0) {
                         // A new manual move command ALWAYS cancels a queued action.
                         if (player.queuedAction) {
@@ -722,7 +730,7 @@ createTileSprite(gid) {
                         player.path = path;
                     }
                 }
-            }
+            }}
         });
     }
 
