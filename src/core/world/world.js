@@ -388,6 +388,65 @@ generateNavGridForActiveArea() {
 }
 
     /**
+     * NEW HELPER: Finds the nearest walkable position to a target pixel coordinate.
+     * This prevents pathfinding failures when an object's default action point is inside an obstacle.
+     * @param {Object} targetPos - The desired destination {x, y} in pixels.
+     * @returns {Object|null} A walkable {x, y} position in pixels, or null if none is found.
+     */
+    findNearestWalkablePosition(targetPos) {
+        if (this.isPositionWalkable(targetPos.x, targetPos.y)) {
+            return targetPos;
+        }
+
+        // Convert the target to tile coordinates to begin the search
+        const startTile = {
+            x: Math.floor(targetPos.x / this.TILE_SIZE),
+            y: Math.floor(targetPos.y / this.TILE_SIZE)
+        };
+
+        const queue = [startTile];
+        const visited = new Set([`${startTile.x},${startTile.y}`]);
+        const maxSearchDistance = 5; // Search a 5-tile radius
+
+        while (queue.length > 0) {
+            const currentTile = queue.shift();
+            
+            // Check if this tile is a valid destination by converting back to centered pixel coordinates
+            const currentPixelPos = {
+                x: (currentTile.x * this.TILE_SIZE) + (this.TILE_SIZE / 2),
+                y: (currentTile.y * this.TILE_SIZE) + (this.TILE_SIZE / 2)
+            };
+
+            if (this.isPositionWalkable(currentPixelPos.x, currentPixelPos.y)) {
+                return currentPixelPos; // Found a walkable spot
+            }
+            
+            // If the search radius is exceeded, stop exploring from this branch
+            const distance = Math.abs(currentTile.x - startTile.x) + Math.abs(currentTile.y - startTile.y);
+            if (distance >= maxSearchDistance) {
+                continue;
+            }
+
+            // Add neighbors to the queue for the next level of search
+            const neighbors = [
+                { x: currentTile.x, y: currentTile.y - 1 }, { x: currentTile.x + 1, y: currentTile.y },
+                { x: currentTile.x, y: currentTile.y + 1 }, { x: currentTile.x - 1, y: currentTile.y }
+            ];
+            
+            for (const neighbor of neighbors) {
+                const key = `${neighbor.x},${neighbor.y}`;
+                if (!visited.has(key)) {
+                    visited.add(key);
+                    queue.push(neighbor);
+                }
+            }
+        }
+
+        console.warn(`Pathfinding: Could not find any walkable tile near (${targetPos.x}, ${targetPos.y})`);
+        return null; // No walkable position found nearby
+    }
+
+    /**
      * PHASE 4 ADD: Find path between two pixel positions
      * Converts to tile coordinates and uses NavGrid's A* implementation
      * @param {Object} startPos - Starting position {x, y} in pixels
@@ -612,4 +671,5 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
 
