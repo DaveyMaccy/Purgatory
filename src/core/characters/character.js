@@ -67,23 +67,20 @@ export class Character {
         
         // === NEW ENHANCED INVENTORY SYSTEM ===
         
-        // Initialize inventory from character creator data or generate based on role
-        if (characterData.inventory && characterData.inventory.length > 0) {
+      // Initialize inventory ONLY from character creator selections - never use defaults
+        this.inventory = [];
+        if (characterData.inventory && Array.isArray(characterData.inventory)) {
             // Convert character creator inventory (strings) to proper item objects
             this.inventory = this.initializeInventoryItems(characterData.inventory);
-        } else {
-            // Generate starting inventory based on job role
-            const startingItems = getStartingInventory(this.jobRole);
-            this.inventory = this.initializeInventoryItems(startingItems);
         }
+        // IMPORTANT: Never fall back to role-based defaults - only use what was selected in character creator
         
-        // Initialize desk items from character creator data or generate based on role
-        if (characterData.deskItems && characterData.deskItems.length > 0) {
+       // Initialize desk items ONLY from character creator selections - never use defaults  
+        this.deskItems = [];
+        if (characterData.deskItems && Array.isArray(characterData.deskItems)) {
             this.deskItems = this.initializeInventoryItems(characterData.deskItems);
-        } else {
-            const startingDeskItems = getStartingDeskItems(this.jobRole);
-            this.deskItems = this.initializeInventoryItems(startingDeskItems);
         }
+        // IMPORTANT: Never fall back to role-based defaults - only use what was selected in character creator
         
         // Item currently being held (not in inventory)
         this.heldItem = characterData.heldItem || null;
@@ -618,6 +615,7 @@ export class Character {
         this.path = []; // PHASE 4: Reset path
     }
 }
+
 
 
 
