@@ -118,7 +118,8 @@ export class WorldStateManager {
         // Notify UI if this is the player character
         if (character.isPlayer && window.uiUpdater) {
             window.uiUpdater.addChatMessage(`<strong>${character.name}:</strong> Picked up ${itemId} from ${this.getLocationDisplayName(locationKey)}.`);
-            window.uiUpdater.updateCharacterData(character);
+            window.uiUpdater.updateUI(character);
+
         }
 
         return true;
@@ -154,7 +155,7 @@ export class WorldStateManager {
         // Notify UI if this is the player character
         if (character.isPlayer && window.uiUpdater) {
             window.uiUpdater.addChatMessage(`<strong>${character.name}:</strong> Dropped ${itemId} at ${this.getLocationDisplayName(locationKey)}.`);
-            window.uiUpdater.updateCharacterData(character);
+            window.uiUpdater.updateUI(character);
         }
 
         return true;
