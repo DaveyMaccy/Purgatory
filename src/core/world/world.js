@@ -14,6 +14,7 @@
 
 import { NavGrid } from './nav-grid.js';
 import { TASK_DICTIONARY, getRandomTaskForRole, validateTaskDictionary } from './task-dictionary.js';
+import { WorldStateManager } from './world-state-manager.js';
 
 /**
  * Load map data from JSON file
@@ -98,6 +99,9 @@ export class World {
         // this.navGrid = []; // REMOVED
         this.navGridInstance = null; 
         this.gameTime = 0; // Game time in milliseconds
+        
+        // World state manager for item tracking
+        this.worldStateManager = new WorldStateManager();
 
         // NEW PROPERTIES FOR INFINITE MAP
         this.mapData = officeLayout; // Store the raw map data
@@ -435,7 +439,12 @@ generateNavGridForActiveArea() {
             this.assignNewTaskToCharacter(character);
         });
 
-        console.log('✅ Initial task assignment complete');
+       console.log('✅ Initial task assignment complete');
+        
+        // Initialize world items AFTER characters are loaded to preserve character inventories
+        if (this.worldStateManager) {
+            this.worldStateManager.initializeWorldItems();
+        }
     }
 
     /**
@@ -530,7 +539,7 @@ generateNavGridForActiveArea() {
         return this.taskDictionary;
     }
 
-    /**
+  /**
      * PRESERVED: Update world state (called each frame)
      */
     update(deltaTime) {
@@ -539,7 +548,19 @@ generateNavGridForActiveArea() {
         // Check for characters without tasks and assign new ones
         this.checkForIdleCharacters();
         
+        // Update world state manager
+        if (this.worldStateManager) {
+            this.worldStateManager.update(deltaTime, Date.now());
+        }
+        
         // Future: Update world objects, environmental effects, etc.
+    }
+    
+    /**
+     * Get the world state manager for item interactions
+     */
+    getWorldStateManager() {
+        return this.worldStateManager;
     }
     
     /**
@@ -591,3 +612,4 @@ generateNavGridForActiveArea() {
         });
     }
 }
+
