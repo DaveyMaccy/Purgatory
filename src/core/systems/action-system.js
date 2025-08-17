@@ -13,6 +13,7 @@
  */
 
 import { useItem, addItemToInventory, removeItemFromInventory, getItemById, getAllItems } from './inventory-system.js';
+import { hasRequiredItems, getRandomTaskForRole } from '../world/task-dictionary.js';
 
 // Defensive declaration to prevent redeclaration errors from unknown duplicate scripts.
 // This checks if the object already exists on the global scope before creating it.
@@ -135,6 +136,49 @@ export function getActionDisplayText(keyword, actionType, playerCharacter) {
 }
 
 /**
+ * Execute a formal task using the task dictionary system
+ * @param {Object} character - Character performing the task
+ * @param {Object} task - Task object from task dictionary
+ * @returns {boolean} Success status
+ */
+function executeTask(character, task) {
+    if (!character || !task) return false;
+    
+    // Check if character is at required location
+    if (!character.isAtTaskLocation()) {
+        console.warn(`⚠️ ${character.name} not at required location for task: ${task.displayName}`);
+        return false;
+    }
+    
+    // Check if character has required items
+    if (task.requiredItems && !hasRequiredItems(character, task.requiredItems)) {
+        console.warn(`⚠️ ${character.name} missing required items for task: ${task.displayName}`);
+        return false;
+    }
+    
+    // Apply skill modifiers if task has them
+    if (task.skillModifiers) {
+        Object.entries(task.skillModifiers).forEach(([skill, modifier]) => {
+            if (character.skills && character.skills[skill]) {
+                // Temporarily apply skill modifiers for this task execution
+                character._taskSkillBonus = character._taskSkillBonus || {};
+                character._taskSkillBonus[skill] = modifier;
+            }
+        });
+    }
+    
+    // Log task execution
+    console.log(`🔧 ${character.name} executing task: ${task.displayName}`);
+    
+    // Add to character's action transcript
+    if (character.currentActionTranscript) {
+        character.currentActionTranscript.push(`Working on: ${task.displayName}`);
+    }
+    
+    return true;
+}
+
+/**
  * NEW: Parse item name from action text
  */
 function parseItemFromAction(actionText, actionKeyword) {
@@ -195,6 +239,237 @@ function executeInventoryAction(actionType, playerCharacter, itemName, targetCha
         default:
             return false;
     }
+}
+
+/**
+ * Execute pick up item action
+ */
+function executePickUpItem(character, itemName) {
+    if (!itemName) {
+        if (window.uiUpdater) {
+            window.uiUpdater.addChatMessage(`<strong>System:</strong> Pick up what? Try "pick up coffee mug" or "take pen".`);
+        }
+        return false;
+    }
+
+    // Try to get world state manager for picking up from world
+    const worldStateManager = window.gameEngine?.world?.worldStateManager;
+    
+    if (worldStateManager && worldStateManager.getItemsAtLocation) {
+        const playerPos = character.position;
+        const nearbyItems = worldStateManager.getItemsAtLocation(playerPos.x, playerPos.y, 100); // 100px radius
+        
+        const targetItem = nearbyItems.find(item => 
+            item.id === itemName || item.name.toLowerCase().includes(itemName.toLowerCase())
+        );
+        
+        if (targetItem) {
+            const success = addItemToInventory(character, targetItem.id, 1);
+            if (success) {
+                worldStateManager.removeItemFromWorld(targetItem.id, playerPos.x, playerPos.y);
+                if (window.uiUpdater) {
+                    window.uiUpdater.addChatMessage(`<strong>${character.name}:</strong> Picked up ${targetItem.name}.`);
+                }
+                return true;
+            }
+        }
+    }
+
+    // Fallback: Check if item exists in game items and add it directly
+    const gameItem = getItemById(itemName);
+    if (gameItem && gameItem.canHold) {
+        const success = addItemToInventory(character, itemName, 1);
+        if (success) {
+            if (window.uiUpdater) {
+                window.uiUpdater.addChatMessage(`<strong>${character.name}:</strong> Picked up ${gameItem.name}.`);
+            }
+            return true;
+        }
+    }
+
+    if (window.uiUpdater) {
+        window.uiUpdater.addChatMessage(`<strong>System:</strong> Cannot find "${itemName}" to pick up.`);
+    }
+    return false;
+}
+
+/**
+ * Execute use item action
+ */
+function executeUseItem(character, itemName) {
+    if (!itemName) {
+        if (window.uiUpdater) {
+            window.uiUpdater.addChatMessage(`<strong>System:</strong> Use what? Try "use coffee" or "drink coffee".`);
+        }
+        return false;
+    }
+
+    // Check character's inventory for the item
+    const inventory = character.inventory || [];
+    const targetItem = inventory.find(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        const gameItem = getItemById(itemId);
+        return gameItem && (
+            gameItem.id === itemName || 
+            gameItem.name.toLowerCase().includes(itemName.toLowerCase()) ||
+            itemId.includes(itemName.replace(/\s+/g, '_'))
+        );
+    });
+
+    if (targetItem) {
+        const itemId = typeof targetItem === 'object' ? targetItem.id : targetItem;
+        const success = useItem(character, itemId, 'use');
+        
+        if (success) {
+            const gameItem = getItemById(itemId);
+            if (window.uiUpdater) {
+                window.uiUpdater.addChatMessage(`<strong>${character.name}:</strong> Used ${gameItem?.name || itemName}.`);
+            }
+            return true;
+        }
+    }
+
+    if (window.uiUpdater) {
+        window.uiUpdater.addChatMessage(`<strong>System:</strong> You don't have "${itemName}" to use.`);
+    }
+    return false;
+}
+
+/**
+ * Execute drop item action
+ */
+function executeDropItem(character, itemName) {
+    if (!itemName) {
+        if (window.uiUpdater) {
+            window.uiUpdater.addChatMessage(`<strong>System:</strong> Drop what? Try "drop pen" or "drop coffee mug".`);
+        }
+        return false;
+    }
+
+    const inventory = character.inventory || [];
+    const targetItem = inventory.find(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        const gameItem = getItemById(itemId);
+        return gameItem && (
+            gameItem.id === itemName || 
+            gameItem.name.toLowerCase().includes(itemName.toLowerCase()) ||
+            itemId.includes(itemName.replace(/\s+/g, '_'))
+        );
+    });
+
+    if (targetItem) {
+        const itemId = typeof targetItem === 'object' ? targetItem.id : targetItem;
+        const success = removeItemFromInventory(character, itemId, 1);
+        
+        if (success) {
+            // Add item to world at character's position
+            const worldStateManager = window.gameEngine?.world?.worldStateManager;
+            if (worldStateManager && worldStateManager.addItemToWorld) {
+                worldStateManager.addItemToWorld(itemId, character.position.x, character.position.y);
+            }
+            
+            const gameItem = getItemById(itemId);
+            if (window.uiUpdater) {
+                window.uiUpdater.addChatMessage(`<strong>${character.name}:</strong> Dropped ${gameItem?.name || itemName}.`);
+            }
+            return true;
+        }
+    }
+
+    if (window.uiUpdater) {
+        window.uiUpdater.addChatMessage(`<strong>System:</strong> You don't have "${itemName}" to drop.`);
+    }
+    return false;
+}
+
+/**
+ * Execute combine items action
+ */
+function executeCombineItems(character, itemNames) {
+    if (window.uiUpdater) {
+        window.uiUpdater.addChatMessage(`<strong>System:</strong> Item combination not yet implemented. Try using individual items.`);
+    }
+    return false;
+}
+
+/**
+ * Execute give item action
+ */
+function executeGiveItem(character, itemName, targetCharacter) {
+    if (window.uiUpdater) {
+        window.uiUpdater.addChatMessage(`<strong>System:</strong> Giving items to other characters not yet implemented.`);
+    }
+    return false;
+}
+
+/**
+ * NEW: Execute location-based actions with items
+ */
+function executeLocationAction(character, actionType) {
+    switch (actionType) {
+        case 'DRINK_COFFEE':
+            return executeDrinkCoffee(character);
+        case 'MOVE_TO_COFFEE_MACHINE':
+            return executeMoveToCofffeMachine(character);
+        default:
+            return false;
+    }
+}
+
+/**
+ * Execute drink coffee action
+ */
+function executeDrinkCoffee(character) {
+    const inventory = character.inventory || [];
+    const coffeeItem = inventory.find(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        return itemId === 'coffee_mug_full' || itemId.includes('coffee_mug_full');
+    });
+
+    if (coffeeItem) {
+        const success = useItem(character, 'coffee_mug_full', 'drink');
+        if (success) {
+            if (window.uiUpdater) {
+                window.uiUpdater.addChatMessage(`<strong>${character.name}:</strong> Drank coffee and feels energized.`);
+            }
+            return true;
+        }
+    }
+
+    if (window.uiUpdater) {
+        window.uiUpdater.addChatMessage(`<strong>System:</strong> You need a full coffee mug to drink coffee.`);
+    }
+    return false;
+}
+
+/**
+ * Execute move to coffee machine action
+ */
+function executeMoveToCofffeMachine(character) {
+    const inventory = character.inventory || [];
+    const hasEmptyMug = inventory.some(item => {
+        const itemId = typeof item === 'object' ? item.id : item;
+        return itemId === 'coffee_mug_empty' || itemId.includes('coffee_mug_empty');
+    });
+
+    if (!hasEmptyMug) {
+        if (window.uiUpdater) {
+            window.uiUpdater.addChatMessage(`<strong>System:</strong> You need an empty coffee mug to use the coffee machine.`);
+        }
+        return false;
+    }
+
+    // Transform empty mug to full mug
+    const success = removeItemFromInventory(character, 'coffee_mug_empty', 1);
+    if (success) {
+        addItemToInventory(character, 'coffee_mug_full', 1);
+        if (window.uiUpdater) {
+            window.uiUpdater.addChatMessage(`<strong>${character.name}:</strong> Filled coffee mug at the coffee machine.`);
+        }
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -350,18 +625,26 @@ function executeGiveItem(character, itemName, targetCharacter) {
     return false;
 }
 
-/**
- * NEW: Special location-based item interactions
- */
-function executeLocationAction(character, actionType) {
-    switch (actionType) {
-        case 'DRINK_COFFEE':
-        case 'MOVE_TO_COFFEE_MACHINE':
-            return executeCoffeeMachineInteraction(character);
+case 'MOVE_TO_COFFEE_MACHINE':
+            return `Go to coffee machine`;
+        case 'SEARCH_CONTAINER':
+            return `Search container`;
+        case 'WORK_AT_DESK':
+            return `Work on task at desk`;
+        case 'BROWSE_WEB':
+            return `Browse web (reduces stress)`;
+        case 'MAKE_COFFEE':
+            return `Make coffee`;
+        case 'WATCH_TV':
+            return `Watch TV (reduces stress)`;
+        case 'PLAY_GAMES':
+            return `Play games (reduces stress)`;
+        case 'USE_BATHROOM':
+            return `Use bathroom`;
+        case 'USE_WHITEBOARD':
+            return `Use whiteboard`;
         default:
-            return false;
-    }
-}
+            return keyword;
 
 /**
  * Handle coffee machine interaction
@@ -470,19 +753,22 @@ export function executePlayerAction(actionType, target, playerCharacter) {
         case 'WORK_ON_TASK':
             if (playerCharacter.assignedTask) {
                 if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>${playerCharacter.name}:</strong> Working on: ${playerCharacter.assignedTask.displayName}`);
-                // Manually progress task
-                const progressAmount = 0.2; // 20% progress per action
-                if (!playerCharacter.assignedTask.progress) {
-                    playerCharacter.assignedTask.progress = 0;
-                }
-                playerCharacter.assignedTask.progress = Math.min(1.0, 
-                    playerCharacter.assignedTask.progress + progressAmount);
                 
-                if (playerCharacter.assignedTask.progress >= 1.0) {
-                    playerCharacter.completeCurrentTask();
-                    if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Task completed! New task assigned.`);
+                // Use formal task execution through task system
+                const success = executeTask(playerCharacter, playerCharacter.assignedTask);
+                
+                if (success) {
+                    // Progress through formal task system - simulates 5 seconds of work
+                    playerCharacter.updateTaskProgress(5000); 
+                    
+                    const progressPercent = Math.round((playerCharacter.assignedTask.progress || 0) * 100);
+                    if (progressPercent >= 100) {
+                        if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Task completed! New task assigned.`);
+                    } else {
+                        if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Task progress: ${progressPercent}%`);
+                    }
                 } else {
-                    if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Task progress: ${Math.round(playerCharacter.assignedTask.progress * 100)}%`);
+                    if (window.uiUpdater) window.uiUpdater.addChatMessage(`<strong>System:</strong> Cannot work on task from current location.`);
                 }
             } else {
                 if (window.uiUpdater) window.uiUpdater.addChatMessage('<strong>System:</strong> No task assigned.');
